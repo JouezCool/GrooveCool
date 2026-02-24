@@ -1,0 +1,72 @@
+{title: AA6N - Let it Be}
+{st:John Lennon/Paul McCartney}
+{time: 6:00}
+{zoom-ipad: 1.909082}
+{c:Piano X2-A01/-5N}
+
+
+Intro piano
+Guitare début du solo sur la note Mi
+
+Wh[G]en I find myself in t[D]imes of trouble,
+Mo[Em]ther Mary c[C]omes to me,
+Sp[G]eaking words of w[D]isdom, let it [C]be [G] [Am] [G]
+And in my hour of da[D]rkness,
+She is st[Em]anding right in f[C]ront of me,
+Sp[G]eaking words of w[D]isdom, let it [C]be [G] [Am] [G]
+
+{soc:}
+Let it [Em]be, let it [D]be, let it [C]be, let it [G]be.
+Whisper words of wis[D]dom, let it [C]be [G] [Am] [G]
+{eoc:}
+
+And [G]when the broken [D]hearted people
+[Em]Living in the [C]world agree,
+[G]There will be an [D]answer, let it [C]be [G] [Am] [G]
+But though there may be [D]parted,
+There is [Em]still a chance that [C]they will see,
+[G]There will be an an[D]swer, let it [C]be [G] [Am] [G]
+
+{soc:}
+Let it [Em]be, let it [D]be, let it [C]be, let it [G]be.
+Whisper words of wis[D]dom, let it [C]be [G] [Am] [G]
+{eoc:}
+
+{soc:}
+Let it [Em]be, let it [D]be, let it [C]be, let it [G]be.
+Whisper words of wis[D]dom, let it [C]be [G] [Am] [G]
+{eoc:}
+
+Instrumental : [G]      [D]      [Em]      [C]      [G]      [D]      [C]      [G]      [Am]      [G]
+                           [G]      [D]      [Em]      [C]      [G]      [D]      [C]      [G]      [Am]      [G]
+
+{soc:}
+Let it [Em]be, let it [D]be, let it [C]be, let it [G]be.
+Whisper words of wis[D]dom, let it [C]be [G] [Am] [G]
+{eoc:}
+
+And [G]when the night is [D]cloudy,
+There is [Em]still a light that [C]shines on me,
+[G]Shine until tom[D]orrow, let it [C]be [G] [Am] [G]
+I wake up to the [D]sound of music,
+Mot[Em]her Mary [C]comes to me,
+[G]Speaking words of [D]wisdom, let it [C]be [G] [Am] [G]
+
+{soc:}
+Let it [Em]be, let it [D]be, let it [C]be, let it [G]be
+Whisper words of wis[D]dom, let it [C]be [G] [Am] [G]
+Let it [Em]be, let it [D]be, let it [C]be, let it [G]be
+There will be an ans[D]wer, let it [C]be [G] [Am] [G]
+{eoc:}
+
+Fin :  [C] [Bm] [Am] [G] [F] [C] [D] [C] [G]
+
+          [C] [Bm] [Am] [G] [F] [C] [D] [C] [G]
+
+
+
+
+
+Fin
+
+31.10.2025

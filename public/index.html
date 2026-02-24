@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BandApp Pro - Edit Mode</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root { --bg: #000; --text: #eee; --accent: #ff9800; --edit: #2196F3; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow: hidden; }
+
+        /* Bibliothèque */
+        #library { height: 100vh; overflow-y: auto; display: block; -webkit-overflow-scrolling: touch; }
+        .lib-header { padding: 20px; background: #1a1a1a; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; z-index: 5; }
+        .song-item { padding: 20px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; font-size: 1.1em; }
+
+        /* Lecteur */
+        #viewer-container { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 10; }
+        nav { display: flex; background: #1a1a1a; min-height: 60px; align-items: center; padding: 0 10px; gap: 8px; border-bottom: 1px solid #333; flex-wrap: wrap; }
+        
+        .controls-group { display:flex; align-items:center; gap:5px; background:#222; padding:5px; border-radius:8px; }
+        
+        #viewer { height: calc(100vh - 65px); overflow-y: scroll; padding: 25px; font-family: 'Courier New', Courier, monospace; -webkit-overflow-scrolling: touch; scroll-behavior: auto !important; }
+        
+        /* Style des accords corrigé (pas d'écrasement) */
+        .line { margin-bottom: 30px; position: relative; line-height: 2; white-space: pre-wrap; transition: font-size 0.2s; }
+        .chord { position: absolute; top: -1.1em; color: var(--accent); font-weight: bold; background: transparent; pointer-events: none; font-size: 0.9em; }
+        
+        /* Éditeur */
+        #editor-container { display: none; position: fixed; top: 60px; left: 0; width: 100vw; height: calc(100vh - 60px); background: #111; z-index: 20; }
+        #editor-textarea { width: 100%; height: 80%; background: #000; color: #2196F3; border: none; font-family: monospace; font-size: 16px; padding: 20px; box-sizing: border-box; }
+        .editor-footer { height: 20%; display: flex; justify-content: center; align-items: center; gap: 20px; background: #1a1a1a; }
+
+        .btn { cursor: pointer; padding: 10px 14px; border: 1px solid var(--accent); border-radius: 6px; color: var(--accent); background: none; font-size: 13px; font-weight: bold; }
+        .btn-blue { border-color: var(--edit); color: var(--edit); }
+        .leader-mode { background: var(--accent) !important; color: #000 !important; }
+        .active-btn { background: #444; color: #fff; }
+    </style>
+</head>
+<body>
+
+<div id="library">
+    <div class="lib-header">
+        <h2 style="margin:0;">Répertoire</h2>
+        <button class="btn" id="libLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
+    </div>
+    <div id="songList"></div>
+</div>
+
+<div id="viewer-container">
+    <nav>
+        <button class="btn" onclick="closeViewer()">⬅</button>
+        
+        <div class="controls-group">
+            <button class="btn" id="playBtn" onclick="toggleAutoScroll(true)">▶</button>
+            <input type="range" id="scrollSpeed" min="1" max="95" value="50">
+        </div>
+
+        <div class="controls-group">
+            <button class="btn" onclick="updateFontSize(-2)">A-</button>
+            <button class="btn" onclick="updateFontSize(2)">A+</button>
+        </div>
+
+        <div class="controls-group">
+            <button class="btn" onclick="updateTranspose(-1)">-</button>
+            <span id="transposeVal" style="min-width:20px; text-align:center">0</span>
+            <button class="btn" onclick="updateTranspose(1)">+</button>
+        </div>
+
+        <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
+        <button class="btn" id="navLeaderBtn" onclick="toggleLeader()">Solo</button>
+    </nav>
+
+    <div id="viewer">
+        <div id="songContent"></div>
+        <div style="height: 80vh;"></div>
+    </div>
+</div>
+
+<div id="editor-container">
+    <textarea id="editor-textarea" spellcheck="false"></textarea>
+    <div class="editor-footer">
+        <button class="btn" onclick="closeEditor()" style="border-color: #ff5252; color: #ff5252;">ANNULER</button>
+        <button class="btn btn-blue" onclick="saveEditor()">ENREGISTRER</button>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+    let isLeader = false, allSongs = [], currentIndex = -1;
+    let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
+    let isScrolling = false, scrollInterval;
+
+    async function fetchSongs() {
+        const res = await fetch('/list-songs');
+        allSongs = (await res.json()).sort();
+        document.getElementById('songList').innerHTML = allSongs.map((s, idx) => `
+            <div class="song-item" onclick="openSong(${idx})">
+                <b>${s.replace('.pro','').replace('.cho','')}</b><span>❯</span>
+            </div>`).join('');
+    }
+
+    function toggleLeader() {
+        isLeader = !isLeader;
+        const btns = [document.getElementById('libLeaderBtn'), document.getElementById('navLeaderBtn')];
+        btns.forEach(btn => {
+            btn.classList.toggle('leader-mode', isLeader);
+            btn.innerText = isLeader ? "Mode Leader" : "Mode Solo";
+        });
+    }
+
+    function openSong(idx) {
+        if (idx < 0 || idx >= allSongs.length) return;
+        currentIndex = idx;
+        currentFileName = allSongs[idx];
+        document.getElementById('library').style.display = 'none';
+        document.getElementById('viewer-container').style.display = 'block';
+        if(isLeader) socket.emit('change-song', currentFileName);
+        loadSong(currentFileName);
+    }
+
+    async function loadSong(f) {
+        const res = await fetch('/partitions/' + f);
+        currentRaw = await res.text();
+        transposeValue = 0;
+        document.getElementById('transposeVal').innerText = "0";
+        renderChordPro();
+    }
+
+    // --- ÉDITEUR ---
+    function openEditor() {
+        if(isScrolling) toggleAutoScroll(false);
+        document.getElementById('editor-textarea').value = currentRaw;
+        document.getElementById('editor-container').style.display = 'block';
+    }
+
+    function closeEditor() {
+        document.getElementById('editor-container').style.display = 'none';
+    }
+
+    async function saveEditor() {
+        const newContent = document.getElementById('editor-textarea').value;
+        const res = await fetch('/save-song', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ fileName: currentFileName, content: newContent })
+        });
+        if(res.ok) {
+            currentRaw = newContent;
+            renderChordPro();
+            closeEditor();
+            // Optionnel : on force le rechargement chez les autres si on est leader
+            if(isLeader) socket.emit('change-song', currentFileName);
+        }
+    }
+
+    // --- ACTIONS ---
+    function toggleAutoScroll(emitSync) {
+        isScrolling = !isScrolling;
+        const btn = document.getElementById('playBtn');
+        btn.innerText = isScrolling ? "⏸" : "▶";
+        btn.classList.toggle('active-btn', isScrolling);
+        if(isScrolling) {
+            scrollInterval = setInterval(() => {
+                document.getElementById('viewer').scrollTop += 1;
+            }, 105 - document.getElementById('scrollSpeed').value);
+        } else { clearInterval(scrollInterval); }
+        if(isLeader && emitSync) socket.emit('sync-autoscroll', {active: isScrolling, speed: document.getElementById('scrollSpeed').value});
+    }
+
+    function updateFontSize(delta) {
+        fontSize += delta;
+        renderChordPro();
+        if(isLeader) socket.emit('sync-font', fontSize);
+    }
+
+    function updateTranspose(dir) {
+        transposeValue += dir;
+        document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
+        renderChordPro();
+        if(isLeader) socket.emit('sync-transpose', transposeValue);
+    }
+
+    // --- ACCORDS ---
+    const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    const scaleLat = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
+    function transChord(chord, steps) {
+        return chord.replace(/([A-G][#b]?)/g, (match) => {
+            let note = match.replace('Bb','A#').replace('Db','C#').replace('Eb','D#').replace('Gb','F#').replace('Ab','G#');
+            let idx = scale.indexOf(note);
+            if(idx === -1) return match;
+            let newIdx = (idx + steps) % 12;
+            if(newIdx < 0) newIdx += 12;
+            return scaleLat[newIdx];
+        });
+    }
+
+    function renderChordPro() {
+        let html = "";
+        currentRaw.split('\n').forEach(line => {
+            if (line.includes('{t:')) html += `<h1 style="text-align:center">${line.match(/\{t:(.*?)\}/)[1]}</h1>`;
+            else if (line.includes('{st:')) html += `<h2 style="text-align:center; color:#888;">${line.match(/\{st:(.*?)\}/)[1]}</h2>`;
+            else {
+                let proc = line.replace(/\[(.*?)\]/g, (m, c) => `<span class="chord">${transChord(c, transposeValue)}</span>`);
+                html += `<div class="line" style="font-size:${fontSize}px">${proc}</div>`;
+            }
+        });
+        document.getElementById('songContent').innerHTML = html;
+    }
+
+    // --- SYNCHROS ---
+    socket.on('load-song', f => { if(!isLeader) openSong(allSongs.indexOf(f)); });
+    socket.on('apply-font', s => { if(!isLeader) { fontSize = s; renderChordPro(); } });
+    socket.on('apply-transpose', v => { if(!isLeader) { transposeValue = v; renderChordPro(); } });
+    socket.on('apply-autoscroll', d => { if(!isLeader) { document.getElementById('scrollSpeed').value = d.speed; if(d.active !== isScrolling) toggleAutoScroll(false); } });
+
+    function closeViewer() {
+        if(isScrolling) toggleAutoScroll(false);
+        document.getElementById('library').style.display = 'block';
+        document.getElementById('viewer-container').style.display = 'none';
+    }
+
+    fetchSongs();
+</script>
+</body>
+</html>
