@@ -1,103 +1,17 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BandApp Pro - Live Sync</title>
-    <script src="/socket.io/socket.io.js"></script>
-    <style>
-        :root { --bg: #000; --text: #eee; --accent: #ff9800; --edit: #2196F3; }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow: hidden; }
-
-        /* Bibliothèque */
-        #library { height: 100vh; overflow-y: auto; display: block; -webkit-overflow-scrolling: touch; }
-        .lib-header { padding: 20px; background: #1a1a1a; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; z-index: 5; }
-        .song-item { padding: 20px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; font-size: 1.1em; }
-
-        /* Lecteur */
-        #viewer-container { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 10; }
-        nav { display: flex; background: #1a1a1a; min-height: 60px; align-items: center; padding: 0 10px; gap: 8px; border-bottom: 1px solid #333; flex-wrap: wrap; }
-        
-        .controls-group { display:flex; align-items:center; gap:5px; background:#222; padding:5px; border-radius:8px; }
-        
-        #viewer { height: calc(100vh - 65px); overflow-y: scroll; padding: 25px; font-family: 'Courier New', Courier, monospace; -webkit-overflow-scrolling: touch; scroll-behavior: auto !important; }
-        
-        .line { margin-bottom: 30px; position: relative; line-height: 2; white-space: pre-wrap; transition: font-size 0.2s; }
-        .chord { position: absolute; top: -1.1em; color: var(--accent); font-weight: bold; background: transparent; pointer-events: none; font-size: 0.9em; }
-        
-        /* Éditeur */
-        #editor-container { display: none; position: fixed; top: 60px; left: 0; width: 100vw; height: calc(100vh - 60px); background: #111; z-index: 20; }
-        #editor-textarea { width: 100%; height: 80%; background: #000; color: #2196F3; border: none; font-family: monospace; font-size: 16px; padding: 20px; box-sizing: border-box; }
-        .editor-footer { height: 20%; display: flex; justify-content: center; align-items: center; gap: 20px; background: #1a1a1a; }
-
-        .btn { cursor: pointer; padding: 10px 14px; border: 2px solid var(--accent); border-radius: 6px; color: var(--accent); background: none; font-size: 13px; font-weight: bold; transition: 0.3s; }
-        .btn-blue { border-color: var(--edit); color: var(--edit); }
-        .leader-mode { background: var(--accent) !important; color: #000 !important; }
-        .active-btn { background: #444; color: #fff; }
-    </style>
-</head>
-<body>
-
-<div id="library">
-    <div class="lib-header">
-        <h2 style="margin:0;">Répertoire</h2>
-        <button class="btn" id="libLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
-    </div>
-    <div id="songList"></div>
-</div>
-
-<div id="viewer-container">
-    <nav>
-        <button class="btn" onclick="closeViewer()">⬅</button>
-        
-        <div class="controls-group">
-            <button class="btn" id="playBtn" onclick="toggleAutoScroll(true)">▶</button>
-            <input type="range" id="scrollSpeed" min="1" max="95" value="50">
-        </div>
-
-        <div class="controls-group">
-            <button class="btn" onclick="updateFontSize(-2)">A-</button>
-            <button class="btn" onclick="updateFontSize(2)">A+</button>
-        </div>
-
-        <div class="controls-group">
-            <button class="btn" onclick="updateTranspose(-1)">-</button>
-            <span id="transposeVal" style="min-width:20px; text-align:center">0</span>
-            <button class="btn" onclick="updateTranspose(1)">+</button>
-        </div>
-
-        <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
-        <button class="btn" id="navLeaderBtn" onclick="toggleLeader()">Solo</button>
-    </nav>
-
-    <div id="viewer">
-        <div id="songContent"></div>
-        <div style="height: 85vh;"></div>
-    </div>
-</div>
-
-<div id="editor-container">
-    <textarea id="editor-textarea" spellcheck="false"></textarea>
-    <div class="editor-footer">
-        <button class="btn" onclick="closeEditor()" style="border-color: #ff5252; color: #ff5252;">ANNULER</button>
-        <button class="btn btn-blue" onclick="saveEditor()">ENREGISTRER</button>
-    </div>
-</div>
-
 <script>
     const socket = io();
     let isLeader = false, allSongs = [], currentIndex = -1;
     let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
     let isScrolling = false, scrollInterval;
+    
+    // Sécurité pour éviter les boucles de scroll infinies
+    let isRemoteScrolling = false; 
 
-    // --- INDICATEUR DE CONNEXION ---
     socket.on('connect', () => {
-        const btn = document.getElementById('navLeaderBtn');
-        btn.style.borderColor = "#4CAF50"; // Vert si connecté
+        document.getElementById('navLeaderBtn').style.borderColor = "#4CAF50";
     });
     socket.on('disconnect', () => {
-        const btn = document.getElementById('navLeaderBtn');
-        btn.style.borderColor = "#f44336"; // Rouge si déconnecté
+        document.getElementById('navLeaderBtn').style.borderColor = "#f44336";
     });
 
     async function fetchSongs() {
@@ -137,36 +51,37 @@
         document.getElementById('viewer').scrollTop = 0;
     }
 
-    async function saveEditor() {
-        const newContent = document.getElementById('editor-textarea').value;
-        const res = await fetch('/save-song', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ fileName: currentFileName, content: newContent })
-        });
-        if(res.ok) {
-            currentRaw = newContent;
-            renderChordPro();
-            closeEditor();
-            if(isLeader) socket.emit('change-song', currentFileName);
+    // --- GESTION DU SCROLL (LEADER ET ESCLAVE) ---
+    const viewerElement = document.getElementById('viewer');
+
+    // Le Leader envoie sa position
+    viewerElement.addEventListener('scroll', () => {
+        if (isLeader && !isRemoteScrolling) {
+            const pos = viewerElement.scrollTop / (viewerElement.scrollHeight - viewerElement.clientHeight);
+            socket.emit('scroll-sync', pos);
         }
-    }
+    });
+
+    // L'Esclave reçoit la position
+    socket.on('apply-scroll', p => {
+        if (!isLeader) {
+            isRemoteScrolling = true; // On verrouille pour ne pas renvoyer l'event au serveur
+            viewerElement.scrollTop = p * (viewerElement.scrollHeight - viewerElement.clientHeight);
+            
+            // On déverrouille après un court instant
+            setTimeout(() => { isRemoteScrolling = false; }, 50);
+        }
+    });
 
     function toggleAutoScroll(emitSync) {
         isScrolling = !isScrolling;
         const btn = document.getElementById('playBtn');
-        const v = document.getElementById('viewer');
         btn.innerText = isScrolling ? "⏸" : "▶";
         btn.classList.toggle('active-btn', isScrolling);
         
         if(isScrolling) {
-            // Synchro immédiate de la position quand on fait PLAY
-            if(isLeader && emitSync) {
-                const pos = v.scrollTop / (v.scrollHeight - v.clientHeight);
-                socket.emit('scroll-sync', pos);
-            }
             scrollInterval = setInterval(() => {
-                v.scrollTop += 1;
+                viewerElement.scrollTop += 1;
             }, 105 - document.getElementById('scrollSpeed').value);
         } else { 
             clearInterval(scrollInterval); 
@@ -176,15 +91,6 @@
             socket.emit('sync-autoscroll', {active: isScrolling, speed: document.getElementById('scrollSpeed').value});
         }
     }
-
-    // --- SYNCHRO MANUELLE (SCROLL) ---
-    document.getElementById('viewer').addEventListener('scroll', () => {
-        if (isLeader) {
-            const v = document.getElementById('viewer');
-            const pos = v.scrollTop / (v.scrollHeight - v.clientHeight);
-            socket.emit('scroll-sync', pos);
-        }
-    });
 
     function updateFontSize(delta) {
         fontSize += delta;
@@ -199,8 +105,10 @@
         if(isLeader) socket.emit('sync-transpose', transposeValue);
     }
 
+    // --- MOTEUR DE RENDU ---
     const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
     const scaleLat = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
+    
     function transChord(chord, steps) {
         return chord.replace(/([A-G][#b]?)/g, (match) => {
             let note = match.replace('Bb','A#').replace('Db','C#').replace('Eb','D#').replace('Gb','F#').replace('Ab','G#');
@@ -225,7 +133,7 @@
         document.getElementById('songContent').innerHTML = html;
     }
 
-    // --- RÉCEPTION DES SYNCHROS ---
+    // --- AUTRES SYNCHROS ---
     socket.on('load-song', f => { if(!isLeader) openSong(allSongs.indexOf(f)); });
     socket.on('apply-font', s => { if(!isLeader) { fontSize = s; renderChordPro(); } });
     socket.on('apply-transpose', v => { if(!isLeader) { transposeValue = v; renderChordPro(); } });
@@ -235,19 +143,28 @@
             if(d.active !== isScrolling) toggleAutoScroll(false); 
         } 
     });
-    socket.on('apply-scroll', p => {
-        if (!isLeader) {
-            const v = document.getElementById('viewer');
-            v.scrollTop = p * (v.scrollHeight - v.clientHeight);
-        }
-    });
 
+    // --- ÉDITEUR ET VUES ---
     function openEditor() {
         if(isScrolling) toggleAutoScroll(false);
         document.getElementById('editor-textarea').value = currentRaw;
         document.getElementById('editor-container').style.display = 'block';
     }
     function closeEditor() { document.getElementById('editor-container').style.display = 'none'; }
+    async function saveEditor() {
+        const newContent = document.getElementById('editor-textarea').value;
+        const res = await fetch('/save-song', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ fileName: currentFileName, content: newContent })
+        });
+        if(res.ok) {
+            currentRaw = newContent;
+            renderChordPro();
+            closeEditor();
+            if(isLeader) socket.emit('change-song', currentFileName);
+        }
+    }
     function closeViewer() {
         if(isScrolling) toggleAutoScroll(false);
         document.getElementById('library').style.display = 'block';
@@ -256,5 +173,3 @@
 
     fetchSongs();
 </script>
-</body>
-</html>
