@@ -9,7 +9,15 @@
 
     <style>
         :root { --bg: #000; --text: #eee; --accent: #ff9800; --edit: #2196F3; }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow: hidden; }
+        body { 
+            font-family: sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            overflow: hidden; 
+            /* Empêche le "glisser pour revenir en arrière" de Safari sur iPad */
+            overscroll-behavior-x: none; 
+        }
 
         /* Bibliothèque */
         #library { height: 100vh; overflow-y: auto; display: block; -webkit-overflow-scrolling: touch; }
@@ -82,7 +90,7 @@
 </div>
 
 <script>
-    const socket = io(); // Chargé via CDN donc io est maintenant défini
+    const socket = io();
     let isLeader = false, allSongs = [], currentIndex = -1;
     let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
     let isScrolling = false, scrollInterval;
@@ -90,7 +98,7 @@
 
     const viewerElement = document.getElementById('viewer');
 
-    // Témoin de connexion
+    // Connexion témoin
     socket.on('connect', () => { document.getElementById('navLeaderBtn').style.borderColor = "#4CAF50"; });
     socket.on('disconnect', () => { document.getElementById('navLeaderBtn').style.borderColor = "#f44336"; });
 
@@ -131,7 +139,7 @@
         viewerElement.scrollTop = 0;
     }
 
-    // --- SYNCHRO SCROLL (MANUEL & AUTO) ---
+    // --- SYNCHRO SCROLL ---
     viewerElement.addEventListener('scroll', () => {
         if (isLeader && !isRemoteScrolling) {
             const pos = viewerElement.scrollTop / (viewerElement.scrollHeight - viewerElement.clientHeight);
@@ -164,7 +172,19 @@
         }
     }
 
-    // --- TRANSFORMATION ET RENDU ---
+    // --- GESTION DES GESTES (SWIPE) ---
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, false);
+    document.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        const swipeDistance = touchEndX - touchStartX;
+        if (swipeDistance > 100 && currentIndex > 0) openSong(currentIndex - 1); // Vers la droite -> Précédent
+        else if (swipeDistance < -100 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1); // Vers la gauche -> Suivant
+    }, false);
+
+    // --- RENDU ET ACCORDS ---
     function updateFontSize(delta) {
         fontSize += delta;
         renderChordPro();
@@ -205,7 +225,7 @@
         document.getElementById('songContent').innerHTML = html;
     }
 
-    // --- RECEPTION SOCKETS ---
+    // --- RÉCEPTION SOCKETS ---
     socket.on('load-song', f => { if(!isLeader) openSong(allSongs.indexOf(f)); });
     socket.on('apply-font', s => { if(!isLeader) { fontSize = s; renderChordPro(); } });
     socket.on('apply-transpose', v => { if(!isLeader) { transposeValue = v; renderChordPro(); } });
@@ -216,7 +236,7 @@
         } 
     });
 
-    // --- EDITEUR ---
+    // --- INTERFACE ---
     function openEditor() {
         if(isScrolling) toggleAutoScroll(false);
         document.getElementById('editor-textarea').value = currentRaw;
@@ -237,7 +257,6 @@
             if(isLeader) socket.emit('change-song', currentFileName);
         }
     }
-
     function closeViewer() {
         if(isScrolling) toggleAutoScroll(false);
         document.getElementById('library').style.display = 'block';
