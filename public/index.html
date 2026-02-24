@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BandApp Pro - Edit Mode</title>
+    <title>BandApp Pro - Live Sync</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --bg: #000; --text: #eee; --accent: #ff9800; --edit: #2196F3; }
@@ -22,7 +22,6 @@
         
         #viewer { height: calc(100vh - 65px); overflow-y: scroll; padding: 25px; font-family: 'Courier New', Courier, monospace; -webkit-overflow-scrolling: touch; scroll-behavior: auto !important; }
         
-        /* Style des accords corrigé (pas d'écrasement) */
         .line { margin-bottom: 30px; position: relative; line-height: 2; white-space: pre-wrap; transition: font-size 0.2s; }
         .chord { position: absolute; top: -1.1em; color: var(--accent); font-weight: bold; background: transparent; pointer-events: none; font-size: 0.9em; }
         
@@ -31,7 +30,7 @@
         #editor-textarea { width: 100%; height: 80%; background: #000; color: #2196F3; border: none; font-family: monospace; font-size: 16px; padding: 20px; box-sizing: border-box; }
         .editor-footer { height: 20%; display: flex; justify-content: center; align-items: center; gap: 20px; background: #1a1a1a; }
 
-        .btn { cursor: pointer; padding: 10px 14px; border: 1px solid var(--accent); border-radius: 6px; color: var(--accent); background: none; font-size: 13px; font-weight: bold; }
+        .btn { cursor: pointer; padding: 10px 14px; border: 2px solid var(--accent); border-radius: 6px; color: var(--accent); background: none; font-size: 13px; font-weight: bold; transition: 0.3s; }
         .btn-blue { border-color: var(--edit); color: var(--edit); }
         .leader-mode { background: var(--accent) !important; color: #000 !important; }
         .active-btn { background: #444; color: #fff; }
@@ -73,7 +72,7 @@
 
     <div id="viewer">
         <div id="songContent"></div>
-        <div style="height: 80vh;"></div>
+        <div style="height: 85vh;"></div>
     </div>
 </div>
 
@@ -90,6 +89,16 @@
     let isLeader = false, allSongs = [], currentIndex = -1;
     let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
     let isScrolling = false, scrollInterval;
+
+    // --- INDICATEUR DE CONNEXION ---
+    socket.on('connect', () => {
+        const btn = document.getElementById('navLeaderBtn');
+        btn.style.borderColor = "#4CAF50"; // Vert si connecté
+    });
+    socket.on('disconnect', () => {
+        const btn = document.getElementById('navLeaderBtn');
+        btn.style.borderColor = "#f44336"; // Rouge si déconnecté
+    });
 
     async function fetchSongs() {
         const res = await fetch('/list-songs');
@@ -125,17 +134,7 @@
         transposeValue = 0;
         document.getElementById('transposeVal').innerText = "0";
         renderChordPro();
-    }
-
-    // --- ÉDITEUR ---
-    function openEditor() {
-        if(isScrolling) toggleAutoScroll(false);
-        document.getElementById('editor-textarea').value = currentRaw;
-        document.getElementById('editor-container').style.display = 'block';
-    }
-
-    function closeEditor() {
-        document.getElementById('editor-container').style.display = 'none';
+        document.getElementById('viewer').scrollTop = 0;
     }
 
     async function saveEditor() {
@@ -149,24 +148,43 @@
             currentRaw = newContent;
             renderChordPro();
             closeEditor();
-            // Optionnel : on force le rechargement chez les autres si on est leader
             if(isLeader) socket.emit('change-song', currentFileName);
         }
     }
 
-    // --- ACTIONS ---
     function toggleAutoScroll(emitSync) {
         isScrolling = !isScrolling;
         const btn = document.getElementById('playBtn');
+        const v = document.getElementById('viewer');
         btn.innerText = isScrolling ? "⏸" : "▶";
         btn.classList.toggle('active-btn', isScrolling);
+        
         if(isScrolling) {
+            // Synchro immédiate de la position quand on fait PLAY
+            if(isLeader && emitSync) {
+                const pos = v.scrollTop / (v.scrollHeight - v.clientHeight);
+                socket.emit('scroll-sync', pos);
+            }
             scrollInterval = setInterval(() => {
-                document.getElementById('viewer').scrollTop += 1;
+                v.scrollTop += 1;
             }, 105 - document.getElementById('scrollSpeed').value);
-        } else { clearInterval(scrollInterval); }
-        if(isLeader && emitSync) socket.emit('sync-autoscroll', {active: isScrolling, speed: document.getElementById('scrollSpeed').value});
+        } else { 
+            clearInterval(scrollInterval); 
+        }
+        
+        if(isLeader && emitSync) {
+            socket.emit('sync-autoscroll', {active: isScrolling, speed: document.getElementById('scrollSpeed').value});
+        }
     }
+
+    // --- SYNCHRO MANUELLE (SCROLL) ---
+    document.getElementById('viewer').addEventListener('scroll', () => {
+        if (isLeader) {
+            const v = document.getElementById('viewer');
+            const pos = v.scrollTop / (v.scrollHeight - v.clientHeight);
+            socket.emit('scroll-sync', pos);
+        }
+    });
 
     function updateFontSize(delta) {
         fontSize += delta;
@@ -181,7 +199,6 @@
         if(isLeader) socket.emit('sync-transpose', transposeValue);
     }
 
-    // --- ACCORDS ---
     const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
     const scaleLat = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
     function transChord(chord, steps) {
@@ -208,12 +225,29 @@
         document.getElementById('songContent').innerHTML = html;
     }
 
-    // --- SYNCHROS ---
+    // --- RÉCEPTION DES SYNCHROS ---
     socket.on('load-song', f => { if(!isLeader) openSong(allSongs.indexOf(f)); });
     socket.on('apply-font', s => { if(!isLeader) { fontSize = s; renderChordPro(); } });
     socket.on('apply-transpose', v => { if(!isLeader) { transposeValue = v; renderChordPro(); } });
-    socket.on('apply-autoscroll', d => { if(!isLeader) { document.getElementById('scrollSpeed').value = d.speed; if(d.active !== isScrolling) toggleAutoScroll(false); } });
+    socket.on('apply-autoscroll', d => { 
+        if(!isLeader) { 
+            document.getElementById('scrollSpeed').value = d.speed; 
+            if(d.active !== isScrolling) toggleAutoScroll(false); 
+        } 
+    });
+    socket.on('apply-scroll', p => {
+        if (!isLeader) {
+            const v = document.getElementById('viewer');
+            v.scrollTop = p * (v.scrollHeight - v.clientHeight);
+        }
+    });
 
+    function openEditor() {
+        if(isScrolling) toggleAutoScroll(false);
+        document.getElementById('editor-textarea').value = currentRaw;
+        document.getElementById('editor-container').style.display = 'block';
+    }
+    function closeEditor() { document.getElementById('editor-container').style.display = 'none'; }
     function closeViewer() {
         if(isScrolling) toggleAutoScroll(false);
         document.getElementById('library').style.display = 'block';
