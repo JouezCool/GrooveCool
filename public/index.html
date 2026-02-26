@@ -39,39 +39,39 @@
 
     /* --- Bouton réglages FIXE (visible partout) --- */
     #settingsFixedWrap{
-  position:fixed;
-  top:10px;
-  right:10px;
-  z-index:6000;
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
+      position:fixed;
+      top:10px;
+      right:10px;
+      z-index:6000;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
 
-#settingsBtnFixed{
-  border:2px solid var(--accent);
-  border-radius:10px;
-  background:rgba(0,0,0,0.25);
-  color:var(--accent);
-  font-weight:900;
-  padding:10px 12px;
-  cursor:pointer;
-  backdrop-filter: blur(6px);
-}
+    #settingsBtnFixed{
+      border:2px solid var(--accent);
+      border-radius:10px;
+      background:rgba(0,0,0,0.25);
+      color:var(--accent);
+      font-weight:900;
+      padding:10px 12px;
+      cursor:pointer;
+      backdrop-filter: blur(6px);
+    }
 
-#settingsUserLabel{
-  font-weight:900;
-  font-size:12px;
-  color:var(--text);
-  background:rgba(0,0,0,0.25);
-  border:1px solid rgba(255,255,255,0.15);
-  padding:8px 10px;
-  border-radius:10px;
-  max-width:38vw;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
+    #settingsUserLabel{
+      font-weight:900;
+      font-size:12px;
+      color:var(--text);
+      background:rgba(0,0,0,0.25);
+      border:1px solid rgba(255,255,255,0.15);
+      padding:8px 10px;
+      border-radius:10px;
+      max-width:38vw;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
 
     /* Toast */
     #toast{
@@ -207,23 +207,23 @@
     }
 
     .version-badge{
-  font-weight:900;
-  font-size:12px;
-  padding:8px 10px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,0.18);
-  background:rgba(255,255,255,0.08);
-  color:var(--text);
-  white-space:nowrap;
-}
-.version-badge.perso{
-  border-color: rgba(59,130,246,0.55);
-  background: rgba(59,130,246,0.18);
-}
-.version-badge.off{
-  border-color: rgba(255,152,0,0.55);
-  background: rgba(255,152,0,0.18);
-}
+      font-weight:900;
+      font-size:12px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.18);
+      background:rgba(255,255,255,0.08);
+      color:var(--text);
+      white-space:nowrap;
+    }
+    .version-badge.perso{
+      border-color: rgba(59,130,246,0.55);
+      background: rgba(59,130,246,0.18);
+    }
+    .version-badge.off{
+      border-color: rgba(255,152,0,0.55);
+      background: rgba(255,152,0,0.18);
+    }
 
     /* Bandeau update */
     #updateBanner{
@@ -297,7 +297,7 @@
       border-radius:8px;
       font-family:sans-serif;
       font-weight:900;
-      font-size:18px; /* ✅ plus grand */
+      font-size:18px;
       line-height:1.2;
     }
 
@@ -387,14 +387,50 @@
     .choice:hover{ background:#101010; }
     .choice b{ color:#fff; display:block; margin-bottom:6px; }
     .choice .small{ color:#aaa; font-size:12px; display:block; }
+
+    /* === OVERLAYS (grilles perso sous une ligne, sans impacter la mise en page) === */
+    #songContent { position: relative; } /* important pour les positions absolues */
+
+    #overlayLayer{
+      position:absolute;
+      inset:0;
+      pointer-events:none; /* overlay ne bloque pas le scroll */
+      z-index:3;
+    }
+
+    /* bloc grille */
+    .gridOverlay{
+      position:absolute;
+      left:0;
+      right:0;
+      padding:0 6px;
+      pointer-events:auto;
+    }
+
+    .gridOverlay .box{
+      display:inline-block;          /* largeur = contenu */
+      max-width:100%;
+      background: rgba(34, 197, 94, 0.18);
+      border: 1px solid rgba(34, 197, 94, 0.45);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-weight: 800;
+      font-size: 14px;
+      line-height: 1.25;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
   </style>
 </head>
 
 <body>
-    <div id="settingsFixedWrap">
-        <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
-        <span id="settingsUserLabel"></span>
-      </div>
+  <div id="settingsFixedWrap">
+    <span id="topVersionBadge" class="version-badge">—</span>
+    <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
+    <span id="settingsUserLabel"></span>
+  </div>
 
   <!-- Toast -->
   <div id="toast"></div>
@@ -436,7 +472,7 @@
   <div id="library">
     <div class="lib-header">
       <h2 style="margin:0;">Répertoire</h2>
-      <span style="opacity:.8; font-size:12px;"> </span>
+      <span style="opacity:.8; font-size:12px;"></span>
     </div>
     <div id="songList"></div>
   </div>
@@ -462,8 +498,8 @@
       </div>
 
       <button class="btn" onclick="toggleNotes()">NOTES</button>
+      <button class="btn" onclick="addGridUnderCurrentLine()">➕ GRILLE</button>
       <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
-      <span id="topVersionBadge" class="version-badge">—</span>
     </nav>
 
     <div id="updateBanner">
@@ -502,18 +538,14 @@
       </header>
 
       <div style="padding:14px 16px; display:grid; gap:10px;">
-
         <button class="btn" onclick="openUserFromSettings()">👤 Utilisateur</button>
-
         <button class="btn" id="settingsLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
-
         <button class="btn" id="settingsChordBtn" onclick="toggleChordStyle()">Accords: Do</button>
-
         <button class="btn" id="settingsThemeBtn" onclick="toggleTheme()">Thème: Sombre</button>
         <button class="btn" onclick="exportBackup()">⬇️ Exporter sauvegarde</button>
-<button class="btn" onclick="triggerImport()">⬆️ Importer sauvegarde</button>
-<button class="btn" onclick="revertToOfficial()">↩︎ Revenir à la version officielle</button>
-<input id="importFile" type="file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
+        <button class="btn" onclick="triggerImport()">⬆️ Importer sauvegarde</button>
+        <button class="btn" onclick="revertToOfficial()">↩︎ Revenir à la version officielle</button>
+        <input id="importFile" type="file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
       </div>
 
       <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end;">
@@ -593,14 +625,13 @@
         root.style.setProperty('--panel-bg', '#ffffff');
         root.style.setProperty('--panel-border', '#d6d6d6');
 
-        root.style.setProperty('--chorus-bg', '#eaf2ff');      /* ✅ clair */
+        root.style.setProperty('--chorus-bg', '#eaf2ff');
         root.style.setProperty('--chorus-border', '#3b82f6');
-        root.style.setProperty('--chorus-text', '#111');       /* ✅ texte noir lisible */
+        root.style.setProperty('--chorus-text', '#111');
 
         root.style.setProperty('--comment-bg', '#ffe08a');
         root.style.setProperty('--comment-text', '#111');
 
-        // bouton fixe : fond plus clair
         settingsBtnFixed.style.background = 'rgba(255,255,255,0.7)';
       } else {
         root.style.setProperty('--bg', '#000');
@@ -623,47 +654,46 @@
     }
 
     function updateVersionIndicator() {
-  const badge = document.getElementById('topVersionBadge');
-  if (!badge) return;
+      const badge = document.getElementById('topVersionBadge');
+      if (!badge) return;
 
-  const hasSong = !!currentFileName;
-  const hasPersonal = hasSong && !!getPersonalSong(currentFileName);
+      const hasSong = !!currentFileName;
+      const hasPersonal = hasSong && !!getPersonalSong(currentFileName);
 
-  if (!hasSong) {
-    badge.textContent = "—";
-    badge.classList.remove('perso','off');
-  } else if (hasPersonal) {
-    badge.textContent = "PERSO";
-    badge.classList.add('perso');
-    badge.classList.remove('off');
-  } else {
-    badge.textContent = "OFFICIELLE";
-    badge.classList.add('off');
-    badge.classList.remove('perso');
-  }
-}
+      if (!hasSong) {
+        badge.textContent = "—";
+        badge.classList.remove('perso','off');
+      } else if (hasPersonal) {
+        badge.textContent = "PERSO";
+        badge.classList.add('perso');
+        badge.classList.remove('off');
+      } else {
+        badge.textContent = "OFFICIELLE";
+        badge.classList.add('off');
+        badge.classList.remove('perso');
+      }
+    }
+
     function revertToOfficial() {
-  if (!currentFileName) {
-    showToast("Aucune chanson ouverte");
-    return;
-  }
+      if (!currentFileName) {
+        showToast("Aucune chanson ouverte");
+        return;
+      }
 
-  const ok = confirm(
-    "Revenir à la version officielle ?\n\n" +
-    "Cela supprimera ta version personnelle pour ce morceau (uniquement pour toi)."
-  );
-  if (!ok) return;
+      const ok = confirm(
+        "Revenir à la version officielle ?\n\n" +
+        "Cela supprimera ta version personnelle pour ce morceau (uniquement pour toi)."
+      );
+      if (!ok) return;
 
-  // efface la version perso de cet utilisateur pour ce morceau
-  localStorage.removeItem(personalSongKey(currentFileName));
+      localStorage.removeItem(personalSongKey(currentFileName));
 
-  // recharge la version officielle
-  stopAutoScroll();
-  loadSong(currentFileName);
-  updateVersionIndicator();
+      stopAutoScroll();
+      loadSong(currentFileName);
+      updateVersionIndicator();
 
-  showToast("Version officielle restaurée ✅");
-}
+      showToast("Version officielle restaurée ✅");
+    }
 
     function toggleTheme() {
       themeMode = (themeMode === 'dark') ? 'light' : 'dark';
@@ -673,13 +703,15 @@
     }
 
     function openSettings() {
-  syncSettingsUI();
-  settingsBackdrop.style.display = 'flex';
-}
+      syncSettingsUI();
+      settingsBackdrop.style.display = 'flex';
+    }
+
     function openUserFromSettings() {
-  closeSettings();                 // ✅ ferme la fenêtre réglages
-  setTimeout(() => openUserPicker(true), 50); // ✅ ouvre ensuite le choix utilisateur
-}
+      closeSettings();
+      setTimeout(() => openUserPicker(true), 50);
+    }
+
     function closeSettings() {
       settingsBackdrop.style.display = 'none';
     }
@@ -729,10 +761,11 @@
       if (lab) lab.textContent = currentUser;
 
       if (currentFileName) {
-  stopAutoScroll();
-  loadSong(currentFileName);   // ✅ recharge avec la version perso du nouvel user
-  loadNotes();
-}
+        stopAutoScroll();
+        loadSong(currentFileName);
+        loadNotes();
+        renderGrids();
+      }
 
       if (fromPicker) {
         userOverlay.style.display = 'none';
@@ -804,25 +837,24 @@
       if (isLeader) socket.emit('change-song', currentFileName);
 
       loadSong(currentFileName);
-      setTimeout(updateVersionIndicator, 50);
       setTimeout(loadNotes, 10);
     }
 
     async function loadSong(f) {
-  const res = await fetch('/partitions/' + f);
-  const base = await res.text();
+      const res = await fetch('/partitions/' + f);
+      const base = await res.text();
 
-  // ✅ si une version perso existe, on l’utilise
-  const personal = getPersonalSong(f);
-  currentRaw = personal ? personal : base;
+      const personal = getPersonalSong(f);
+      currentRaw = personal ? personal : base;
 
-  transposeValue = 0;
-  document.getElementById('transposeVal').innerText = "0";
-  renderChordPro();
-  viewerElement.scrollTop = 0;
-  updateBanner.style.display = 'none';
-  updateVersionIndicator();
-}
+      transposeValue = 0;
+      document.getElementById('transposeVal').innerText = "0";
+      renderChordPro();
+      renderGrids();          // ✅ overlay grilles
+      viewerElement.scrollTop = 0;
+      updateBanner.style.display = 'none';
+      updateVersionIndicator();
+    }
 
     // --- SONG UPDATED ---
     function normName(s) {
@@ -862,49 +894,72 @@
     }
     notesTextarea.addEventListener('input', saveNotes);
 
+    // --- SYNCHRO SCROLL (anchres) ---
+    function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
     function getTopLyricAnchorState() {
-  const blocks = viewerElement.querySelectorAll('[data-kind="lyric"][data-anchor]');
-  if (!blocks.length) return null;
+      const blocks = viewerElement.querySelectorAll('[data-kind="lyric"][data-anchor]');
+      if (!blocks.length) return null;
 
-  const st = viewerElement.scrollTop;
-  // on prend le premier bloc dont le bas est sous le haut de l’écran
-  for (const el of blocks) {
-    const top = el.offsetTop;
-    const h = el.offsetHeight || 1;
-    if (top + h > st + 8) {
-      const progress = clamp01((st - top) / h);
-      return { anchor: el.dataset.anchor, progress };
+      const st = viewerElement.scrollTop;
+      for (const el of blocks) {
+        const top = el.offsetTop;
+        const h = el.offsetHeight || 1;
+        if (top + h > st + 8) {
+          const progress = clamp01((st - top) / h);
+          return { anchor: el.dataset.anchor, progress };
+        }
+      }
+
+      const last = blocks[blocks.length - 1];
+      return { anchor: last.dataset.anchor, progress: 1 };
     }
-  }
 
-  // si on est tout en bas, on prend le dernier
-  const last = blocks[blocks.length - 1];
-  return { anchor: last.dataset.anchor, progress: 1 };
-}
+    let lastEmitAt = 0;
+    let lastEmitAnchor = "";
+    let lastEmitProg = -1;
 
-let lastEmitAt = 0;
-let lastEmitAnchor = "";
-let lastEmitProg = -1;
+    viewerElement.addEventListener('scroll', () => {
+      if (!isLeader || isRemoteScrolling) return;
 
-viewerElement.addEventListener('scroll', () => {
-  if (!isLeader || isRemoteScrolling) return;
+      const state = getTopLyricAnchorState();
+      if (!state) return;
 
-  const state = getTopLyricAnchorState();
-  if (!state) return;
+      const now = Date.now();
+      if (now - lastEmitAt < 80 &&
+          state.anchor === lastEmitAnchor &&
+          Math.abs(state.progress - lastEmitProg) < 0.03) {
+        return;
+      }
 
-  const now = Date.now();
-  if (now - lastEmitAt < 80 &&
-      state.anchor === lastEmitAnchor &&
-      Math.abs(state.progress - lastEmitProg) < 0.03) {
-    return;
-  }
+      lastEmitAt = now;
+      lastEmitAnchor = state.anchor;
+      lastEmitProg = state.progress;
 
-  lastEmitAt = now;
-  lastEmitAnchor = state.anchor;
-  lastEmitProg = state.progress;
+      socket.emit('scroll-sync', state);
+    });
 
-  socket.emit('scroll-sync', state); // ✅ objet {anchor, progress}
-});
+    socket.on('apply-scroll', data => {
+      if (isLeader) return;
+
+      const anchor = data?.anchor;
+      const progress = clamp01(Number(data?.progress) || 0);
+
+      const el = anchor ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`) : null;
+
+      isRemoteScrolling = true;
+
+      if (el) {
+        const top = el.offsetTop;
+        const h = el.offsetHeight || 1;
+        viewerElement.scrollTop = top + progress * h;
+      } else {
+        const max = viewerElement.scrollHeight - viewerElement.clientHeight;
+        viewerElement.scrollTop = progress * (max > 0 ? max : 0);
+      }
+
+      setTimeout(() => { isRemoteScrolling = false; }, 50);
+    });
 
     function isEditorOpen() {
       return document.getElementById('editor-container').style.display === 'block';
@@ -936,30 +991,6 @@ viewerElement.addEventListener('scroll', () => {
       if (dx > 0 && currentIndex > 0) openSong(currentIndex - 1);
       else if (dx < 0 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
     }, { passive: true });
-
-    socket.on('apply-scroll', data => {
-  if (isLeader) return;
-
-  const anchor = data?.anchor;
-  const progress = clamp01(Number(data?.progress) || 0);
-
-  // ✅ on se cale sur le même bloc de paroles, même si la hauteur totale diffère
-  const el = anchor ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`) : null;
-
-  isRemoteScrolling = true;
-
-  if (el) {
-    const top = el.offsetTop;
-    const h = el.offsetHeight || 1;
-    viewerElement.scrollTop = top + progress * h;
-  } else {
-    // fallback si jamais pas trouvé (cas rare)
-    const max = viewerElement.scrollHeight - viewerElement.clientHeight;
-    viewerElement.scrollTop = progress * (max > 0 ? max : 0);
-  }
-
-  setTimeout(() => { isRemoteScrolling = false; }, 50);
-});
 
     // --- AUTO-SCROLL ---
     function sliderToPxPerSecond(value) {
@@ -1029,11 +1060,12 @@ viewerElement.addEventListener('scroll', () => {
     });
 
     // --- RENDU / POLICES / TRANSPOSITION ---
-    function updateFontSize(delta) { fontSize += delta; renderChordPro(); }
+    function updateFontSize(delta) { fontSize += delta; renderChordPro(); renderGrids(); }
     function updateTranspose(dir) {
       transposeValue += dir;
       document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
       renderChordPro();
+      renderGrids();
     }
 
     function toggleChordStyle() {
@@ -1041,6 +1073,7 @@ viewerElement.addEventListener('scroll', () => {
       localStorage.setItem('bandapp_chordStyle', chordStyle);
       syncSettingsUI();
       renderChordPro();
+      renderGrids();
     }
 
     const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1122,47 +1155,48 @@ viewerElement.addEventListener('scroll', () => {
     }
 
     function addChordBlock(chordLine, lyricLine, targetEl, anchorId) {
-  const block = document.createElement('div');
-  block.className = 'block';
-  block.style.fontSize = fontSize + 'px';
+      const block = document.createElement('div');
+      block.className = 'block';
+      block.style.fontSize = fontSize + 'px';
 
-  // ✅ ancre pour la synchro (uniquement sur les blocs de paroles)
-  block.dataset.kind = 'lyric';
-  if (anchorId) block.dataset.anchor = anchorId;
+      block.dataset.kind = 'lyric';
+      if (anchorId) block.dataset.anchor = anchorId;
 
-  const preChord = document.createElement('pre');
-  preChord.className = 'chordline';
-  preChord.textContent = chordLine;
+      const preChord = document.createElement('pre');
+      preChord.className = 'chordline';
+      preChord.textContent = chordLine;
 
-  const preLyric = document.createElement('pre');
-  preLyric.className = 'lyricline';
-  preLyric.textContent = lyricLine;
+      const preLyric = document.createElement('pre');
+      preLyric.className = 'lyricline';
+      preLyric.textContent = lyricLine;
 
-  if (chordLine.trim().length > 0) block.appendChild(preChord);
-  block.appendChild(preLyric);
+      if (chordLine.trim().length > 0) block.appendChild(preChord);
+      block.appendChild(preLyric);
 
-  targetEl.appendChild(block);
-}
+      targetEl.appendChild(block);
+    }
 
-    function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+    function normAnchorText(s){
+      return String(s || "")
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
 
-function normAnchorText(s){
-  return String(s || "")
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-// petit hash stable (djb2) pour éviter des IDs trop longs
-function hashDJB2(str){
-  let h = 5381;
-  for (let i=0; i<str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i);
-  return (h >>> 0).toString(16);
-}
+    function hashDJB2(str){
+      let h = 5381;
+      for (let i=0; i<str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i);
+      return (h >>> 0).toString(16);
+    }
 
     function renderChordPro() {
       clearSongContent();
-      renderChordPro._occ = {}; // ✅ reset compteur d’ancres à chaque rendu
+      renderChordPro._occ = {};
+
+      // ✅ layer overlays (grilles perso)
+      const overlayLayer = document.createElement('div');
+      overlayLayer.id = 'overlayLayer';
+      songContentEl.appendChild(overlayLayer);
 
       let inChorus = false;
       let chorusContainer = null;
@@ -1172,14 +1206,12 @@ function hashDJB2(str){
       for (const line of lines) {
         const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
 
-        // Titre / Sous-titre (t/title, st/subtitle)
         const title = line.match(/\{(?:t|title)\s*:\s*(.*?)\}/i);
         if (title) { addCenteredTitle(title[1], 1); continue; }
 
         const subtitle = line.match(/\{(?:st|subtitle)\s*:\s*(.*?)\}/i);
         if (subtitle) { addCenteredTitle(subtitle[1], 2); continue; }
 
-        // Chorus
         if (/\{soc\s*:\s*\}/i.test(line) || /\{soc\s*\}/i.test(line)) {
           inChorus = true;
           chorusContainer = document.createElement('div');
@@ -1193,25 +1225,19 @@ function hashDJB2(str){
           continue;
         }
 
-        // Commentaires
         const comment = line.match(/\{c\s*:\s*(.*?)\}/i);
         if (comment) {
           addCommentLine(comment[1], target);
           continue;
         }
 
-        // Ligne standard
         const { chordLine, lyricLine } = parseChordProLine(line);
 
-// ✅ anchor basée sur les paroles (sans accords)
-// + compteur pour éviter collisions si la même ligne revient
-const key = normAnchorText(lyricLine);
-if (!renderChordPro._occ) renderChordPro._occ = {};
-renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
+        const key = normAnchorText(lyricLine);
+        renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
+        const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
 
-const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
-
-addChordBlock(chordLine, lyricLine, target, anchorId);
+        addChordBlock(chordLine, lyricLine, target, anchorId);
       }
     }
 
@@ -1224,16 +1250,9 @@ addChordBlock(chordLine, lyricLine, target, anchorId);
     });
 
     // --- EDIT UI ---
-    function openEditChoice() {
-      document.getElementById('editChoiceBackdrop').style.display = 'flex';
-    }
-    function closeEditChoice() {
-      document.getElementById('editChoiceBackdrop').style.display = 'none';
-    }
-    function openEditor() {
-      stopAutoScroll();
-      openEditChoice();
-    }
+    function openEditChoice() { document.getElementById('editChoiceBackdrop').style.display = 'flex'; }
+    function closeEditChoice() { document.getElementById('editChoiceBackdrop').style.display = 'none'; }
+    function openEditor() { stopAutoScroll(); openEditChoice(); }
 
     // Perso : partition perso complète, stockée localement (PAR UTILISATEUR)
     function personalSongKey(fileName) {
@@ -1287,13 +1306,14 @@ addChordBlock(chordLine, lyricLine, target, anchorId);
       if (!currentFileName) return;
 
       if (editMode === "personal") {
-  setPersonalSong(currentFileName, newContent);   // ✅ on sauvegarde d’abord
-  currentRaw = newContent;
-  renderChordPro();
-  closeEditor();
-  updateVersionIndicator();                       // ✅ puis on met à jour l’indicateur
-  return;
-}
+        setPersonalSong(currentFileName, newContent);
+        currentRaw = newContent;
+        renderChordPro();
+        renderGrids();
+        closeEditor();
+        updateVersionIndicator();
+        return;
+      }
 
       const pin = String(globalPinCache || "").trim();
       if (!pin) {
@@ -1310,6 +1330,7 @@ addChordBlock(chordLine, lyricLine, target, anchorId);
       if (res.ok) {
         currentRaw = newContent;
         renderChordPro();
+        renderGrids();
         closeEditor();
 
         if (isLeader) socket.emit('change-song', currentFileName);
@@ -1329,97 +1350,167 @@ addChordBlock(chordLine, lyricLine, target, anchorId);
       document.getElementById('library').style.display = 'block';
       document.getElementById('viewer-container').style.display = 'none';
     }
+
+    // === GRILLES PERSO "SOUS LA LIGNE" (overlay, par utilisateur + par chanson) ===
+    function gridsKey(fileName){
+      const u = currentUser || "unknown";
+      return `grids:${u}:${fileName}`;
+    }
+
+    function loadGrids(fileName){
+      try {
+        const raw = localStorage.getItem(gridsKey(fileName)) || "[]";
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveGrids(fileName, arr){
+      localStorage.setItem(gridsKey(fileName), JSON.stringify(arr || []));
+    }
+
+    function renderGrids(){
+      if (!currentFileName) return;
+
+      const layer = document.getElementById('overlayLayer');
+      if (!layer) return;
+      layer.innerHTML = "";
+
+      const grids = loadGrids(currentFileName);
+
+      for (const g of grids){
+        const anchor = g?.anchor;
+        const text = String(g?.text || "").trim();
+        if (!anchor || !text) continue;
+
+        const el = viewerElement.querySelector(
+          `[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`
+        );
+        if (!el) continue;
+
+        const top = el.offsetTop + el.offsetHeight + 6;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'gridOverlay';
+        wrap.style.top = top + "px";
+
+        const box = document.createElement('div');
+        box.className = 'box';
+        box.textContent = text;
+
+        wrap.appendChild(box);
+        layer.appendChild(wrap);
+      }
+    }
+
+    function addGridUnderCurrentLine(){
+      if (!currentFileName) { showToast("Aucune chanson ouverte"); return; }
+
+      const state = getTopLyricAnchorState?.();
+      if (!state?.anchor) { showToast("Impossible de trouver une ligne"); return; }
+
+      const txt = prompt("Grille à afficher sous cette ligne (ex: Am | F | C | G)") || "";
+      const clean = String(txt).trim();
+      if (!clean) return;
+
+      const grids = loadGrids(currentFileName);
+      grids.push({ anchor: state.anchor, text: clean });
+
+      saveGrids(currentFileName, grids);
+      renderGrids();
+      showToast("Grille ajoutée ✅");
+    }
+
     // --- BACKUP EXPORT / IMPORT ---
-const BACKUP_PREFIXES = ['bandapp_', 'personalSong:', 'notes:', 'overlay:'];
+    const BACKUP_PREFIXES = ['bandapp_', 'personalSong:', 'notes:', 'overlay:', 'grids:'];
 
-function isBackupKey(k) {
-  return BACKUP_PREFIXES.some(p => k.startsWith(p));
-}
-
-function exportBackup() {
-  try {
-    const data = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (!key) continue;
-      if (!isBackupKey(key)) continue;
-      data[key] = localStorage.getItem(key);
+    function isBackupKey(k) {
+      return BACKUP_PREFIXES.some(p => k.startsWith(p));
     }
 
-    const payload = {
-      app: "bandapp",
-      schemaVersion: 1,
-      exportedAt: new Date().toISOString(),
-      data
-    };
+    function exportBackup() {
+      try {
+        const data = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key) continue;
+          if (!isBackupKey(key)) continue;
+          data[key] = localStorage.getItem(key);
+        }
 
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
+        const payload = {
+          app: "bandapp",
+          schemaVersion: 1,
+          exportedAt: new Date().toISOString(),
+          data
+        };
 
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const filename = `bandapp-backup-${y}-${m}-${day}.json`;
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const filename = `bandapp-backup-${y}-${m}-${day}.json`;
 
-    URL.revokeObjectURL(url);
-    showToast("Sauvegarde exportée ✅");
-  } catch (e) {
-    console.error(e);
-    alert("Erreur export sauvegarde");
-  }
-}
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
 
-function triggerImport() {
-  // ✅ on ferme la fenêtre réglages pour éviter le souci de superposition
-  closeSettings();
-  const input = document.getElementById('importFile');
-  if (!input) return;
-  input.value = ""; // permet de ré-importer le même fichier si besoin
-  setTimeout(() => input.click(), 80);
-}
-
-function handleImportFile(event) {
-  const file = event?.target?.files?.[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const txt = String(reader.result || "");
-      const json = JSON.parse(txt);
-
-      if (!json || json.app !== "bandapp" || typeof json.data !== "object") {
-        alert("Fichier de sauvegarde invalide.");
-        return;
+        URL.revokeObjectURL(url);
+        showToast("Sauvegarde exportée ✅");
+      } catch (e) {
+        console.error(e);
+        alert("Erreur export sauvegarde");
       }
-
-      // Fusion (merge) : on écrase uniquement les clés présentes dans le backup
-      const keys = Object.keys(json.data);
-      for (const k of keys) {
-        localStorage.setItem(k, json.data[k]);
-      }
-
-      showToast("Sauvegarde importée ✅");
-      // Recharge pour appliquer thème/utilisateur/etc
-      setTimeout(() => location.reload(), 600);
-
-    } catch (e) {
-      console.error(e);
-      alert("Erreur : impossible d'importer la sauvegarde.");
     }
-  };
-  reader.readAsText(file);
-}
 
-    // INIT
+    function triggerImport() {
+      closeSettings();
+      const input = document.getElementById('importFile');
+      if (!input) return;
+      input.value = "";
+      setTimeout(() => input.click(), 80);
+    }
+
+    function handleImportFile(event) {
+      const file = event?.target?.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const txt = String(reader.result || "");
+          const json = JSON.parse(txt);
+
+          if (!json || json.app !== "bandapp" || typeof json.data !== "object") {
+            alert("Fichier de sauvegarde invalide.");
+            return;
+          }
+
+          const keys = Object.keys(json.data);
+          for (const k of keys) {
+            localStorage.setItem(k, json.data[k]);
+          }
+
+          showToast("Sauvegarde importée ✅");
+          setTimeout(() => location.reload(), 600);
+
+        } catch (e) {
+          console.error(e);
+          alert("Erreur : impossible d'importer la sauvegarde.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // --- INIT ---
     applyTheme();
     initUsers();
     fetchSongs();
