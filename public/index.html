@@ -712,7 +712,11 @@
       const lab = document.getElementById('settingsUserLabel');
       if (lab) lab.textContent = currentUser;
 
-      if (currentFileName) loadNotes();
+      if (currentFileName) {
+  stopAutoScroll();
+  loadSong(currentFileName);   // ✅ recharge avec la version perso du nouvel user
+  loadNotes();
+}
 
       if (fromPicker) {
         userOverlay.style.display = 'none';
@@ -801,6 +805,7 @@
   renderChordPro();
   viewerElement.scrollTop = 0;
   updateBanner.style.display = 'none';
+  updateVersionIndicator();
 }
 
     // --- SONG UPDATED ---
@@ -1195,13 +1200,13 @@
       if (!currentFileName) return;
 
       if (editMode === "personal") {
-        updateVersionIndicator();
-        setPersonalSong(currentFileName, newContent);
-        currentRaw = newContent;
-        renderChordPro();
-        closeEditor();
-        return;
-      }
+  setPersonalSong(currentFileName, newContent);   // ✅ on sauvegarde d’abord
+  currentRaw = newContent;
+  renderChordPro();
+  closeEditor();
+  updateVersionIndicator();                       // ✅ puis on met à jour l’indicateur
+  return;
+}
 
       const pin = String(globalPinCache || "").trim();
       if (!pin) {
