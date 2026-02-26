@@ -7,7 +7,7 @@ const path = require('path');
 
 app.use(express.json());
 
-// Anti-cache simple (évite index.html pas à jour)
+// Anti-cache simple
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store');
   next();
@@ -16,7 +16,7 @@ app.use((req, res, next) => {
 app.use(express.static('public', { etag: false, maxAge: 0 }));
 
 const PARTITIONS_DIR = path.join(__dirname, 'public', 'partitions');
-const LEADER_PIN = String(process.env.LEADER_PIN || '1234'); // <-- change si tu veux
+const LEADER_PIN = String(process.env.LEADER_PIN || '1234');
 
 function isValidSongName(name) {
   if (typeof name !== 'string') return false;
@@ -29,6 +29,13 @@ function isValidSongName(name) {
 
 function pinOk(pin) {
   return String(pin || '') === LEADER_PIN;
+}
+
+function cleanSessionId(s) {
+  // petit nettoyage, pour éviter trucs bizarres
+  const v = String(s || '').trim();
+  if (!v) return 'default';
+  return v.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'default';
 }
 
 // Lister les morceaux
@@ -45,41 +52,48 @@ app.get('/list-songs', (req, res) => {
   }
 });
 
-// Sauvegarder (protégé PIN)
+// Sauvegarder (protégé PIN) + émission room
 app.post('/save-song', (req, res) => {
-  const { fileName, content, pin } = req.body;
+  const { fileName, content, pin, sessionId } = req.body;
 
-  if (!pinOk(pin)) {
-    return res.status(403).send("PIN invalide");
-  }
-  if (!isValidSongName(fileName)) {
-    return res.status(400).send("Nom de fichier invalide");
-  }
+  if (!pinOk(pin)) return res.status(403).send("PIN invalide");
+  if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
 
   const filePath = path.join(PARTITIONS_DIR, fileName);
   if (!filePath.startsWith(PARTITIONS_DIR + path.sep)) {
     return res.status(400).send("Chemin invalide");
   }
 
+  const room = cleanSessionId(sessionId);
+
   fs.writeFile(filePath, String(content ?? ""), 'utf8', (err) => {
     if (err) return res.status(500).send("Erreur");
 
-    io.emit('song-updated', { fileName, at: Date.now() });
+    io.to(room).emit('song-updated', { fileName, at: Date.now() });
     res.send("OK");
   });
 });
 
 io.on('connection', (socket) => {
-  console.log('📱 Appareil connecté', socket.id, '| clients:', io.engine.clientsCount);
+  console.log('📱 connecté', socket.id);
 
-  socket.on('disconnect', () => {
-    console.log('📴 Appareil déconnecté', socket.id, '| clients:', io.engine.clientsCount);
+  // room courante (par défaut)
+  socket.data.room = 'default';
+
+  socket.on('join-session', ({ sessionId }) => {
+    const room = cleanSessionId(sessionId);
+    // quitter ancienne room
+    socket.leave(socket.data.room);
+    // rejoindre nouvelle
+    socket.join(room);
+    socket.data.room = room;
+
+    console.log('🔗', socket.id, '-> room', room);
+    socket.emit('session-joined', { room });
   });
 
-  // helper : vérif PIN sur events sensibles
   function requirePin(payload, cb) {
-    const pin = payload && payload.pin;
-    const ok = pinOk(pin);
+    const ok = pinOk(payload && payload.pin);
     if (!ok) {
       if (typeof cb === 'function') cb({ ok: false, error: 'PIN invalide' });
       return false;
@@ -88,16 +102,13 @@ io.on('connection', (socket) => {
   }
 
   socket.on('change-song', (payload, cb) => {
-    // payload: { fileName, pin }
     if (!requirePin(payload, cb)) return;
-    io.emit('load-song', payload.fileName);
+    io.to(socket.data.room).emit('load-song', payload.fileName);
     if (typeof cb === 'function') cb({ ok: true });
   });
 
-  // scroll-sync (protégé + throttle)
   let lastScrollAt = 0;
   socket.on('scroll-sync', (payload, cb) => {
-    // payload: { pos, pin }
     if (!requirePin(payload, cb)) return;
 
     const now = Date.now();
@@ -105,28 +116,25 @@ io.on('connection', (socket) => {
     lastScrollAt = now;
 
     const pos = Math.max(0, Math.min(1, Number(payload.pos) || 0));
-    socket.broadcast.emit('apply-scroll', pos);
+    socket.to(socket.data.room).emit('apply-scroll', pos);
     if (typeof cb === 'function') cb({ ok: true });
   });
 
   socket.on('sync-font', (payload, cb) => {
-    // payload: { fontSize, pin }
     if (!requirePin(payload, cb)) return;
-    socket.broadcast.emit('apply-font', payload.fontSize);
+    socket.to(socket.data.room).emit('apply-font', payload.fontSize);
     if (typeof cb === 'function') cb({ ok: true });
   });
 
   socket.on('sync-transpose', (payload, cb) => {
-    // payload: { transposeValue, pin }
     if (!requirePin(payload, cb)) return;
-    socket.broadcast.emit('apply-transpose', payload.transposeValue);
+    socket.to(socket.data.room).emit('apply-transpose', payload.transposeValue);
     if (typeof cb === 'function') cb({ ok: true });
   });
 
   socket.on('sync-autoscroll', (payload, cb) => {
-    // payload: { active, speed, pin }
     if (!requirePin(payload, cb)) return;
-    socket.broadcast.emit('apply-autoscroll', { active: !!payload.active, speed: payload.speed });
+    socket.to(socket.data.room).emit('apply-autoscroll', { active: !!payload.active, speed: payload.speed });
     if (typeof cb === 'function') cb({ ok: true });
   });
 });
