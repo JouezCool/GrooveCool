@@ -117,8 +117,10 @@
 
     // Auto-scroll (RAF)
     let isScrolling = false;
-    let rafId = null;
-    let lastRafTime = 0;
+let rafId = null;
+let lastRafTime = 0;
+let scrollCarry = 0; // accumule les fractions (important iPad)
+
 
     const viewerElement = document.getElementById('viewer');
     const songContentEl = document.getElementById('songContent');
@@ -213,29 +215,41 @@
       const pxPerSec = sliderToPxPerSecond(speedInput.value);
       const deltaPx = (dt / 1000) * pxPerSec;
 
-      viewerElement.scrollTop += deltaPx;
+// iPad: scrollTop peut ignorer les fractions -> on accumule
+scrollCarry += deltaPx;
+const step = Math.floor(scrollCarry);
 
-      rafId = requestAnimationFrame(autoScrollLoop);
+if (step >= 1) {
+  viewerElement.scrollTop += step;
+  scrollCarry -= step;
+}
+
+rafId = requestAnimationFrame(autoScrollLoop);
+
     }
 
     function startAutoScroll() {
-      if (isScrolling) return;
-      isScrolling = true;
-      document.getElementById('playBtn').innerText = "⏸";
-      document.getElementById('playBtn').classList.add('active-btn');
-      lastRafTime = 0;
-      rafId = requestAnimationFrame(autoScrollLoop);
-    }
+  if (isScrolling) return;
+  isScrolling = true;
+  document.getElementById('playBtn').innerText = "⏸";
+  document.getElementById('playBtn').classList.add('active-btn');
+  lastRafTime = 0;
+  scrollCarry = 0; // <-- AJOUT
+  rafId = requestAnimationFrame(autoScrollLoop);
+}
 
-    function stopAutoScroll() {
-      if (!isScrolling) return;
-      isScrolling = false;
-      document.getElementById('playBtn').innerText = "▶";
-      document.getElementById('playBtn').classList.remove('active-btn');
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = null;
-      lastRafTime = 0;
-    }
+
+function stopAutoScroll() {
+  if (!isScrolling) return;
+  isScrolling = false;
+  document.getElementById('playBtn').innerText = "▶";
+  document.getElementById('playBtn').classList.remove('active-btn');
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  lastRafTime = 0;
+  scrollCarry = 0; // <-- AJOUT
+}
+
 
     function toggleAutoScroll(emitSync) {
       if (isScrolling) stopAutoScroll();
