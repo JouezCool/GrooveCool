@@ -9,66 +9,32 @@
 
   <style>
     :root { --bg: #000; --text: #eee; --accent: #ff9800; --edit: #2196F3; }
-    body {
-      font-family: sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      margin: 0;
-      overflow: hidden;
-      overscroll-behavior-x: none;
-    }
+    body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow: hidden; overscroll-behavior-x: none; }
 
-    /* Bibliothèque */
     #library { height: 100vh; overflow-y: auto; display: block; -webkit-overflow-scrolling: touch; }
     .lib-header { padding: 20px; background: #1a1a1a; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; z-index: 5; }
     .song-item { padding: 20px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; font-size: 1.1em; cursor: pointer; }
 
-    /* Lecteur */
     #viewer-container { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 10; }
     nav { display: flex; background: #1a1a1a; min-height: 60px; align-items: center; padding: 0 10px; gap: 8px; border-bottom: 1px solid #333; flex-wrap: wrap; }
-
     .controls-group { display:flex; align-items:center; gap:5px; background:#222; padding:5px; border-radius:8px; }
 
-    /* Bandeau update */
     #updateBanner {
-      position: sticky;
-      top: 0;
-      z-index: 999;
-      display: none;
-      background: #222;
-      border-bottom: 1px solid #444;
-      padding: 10px 12px;
-      font-size: 14px;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
+      position: sticky; top: 0; z-index: 999; display: none;
+      background: #222; border-bottom: 1px solid #444; padding: 10px 12px;
+      font-size: 14px; align-items: center; justify-content: space-between; gap: 10px;
     }
     #updateBanner .msg { color: #ddd; }
     #updateBanner .btn-small { padding: 8px 10px; border-radius: 6px; font-size: 12px; }
 
-    /* Notes panel */
     #notesPanel {
-      display: none;
-      position: sticky;
-      top: 0;
-      z-index: 998;
-      background: #111;
-      border-bottom: 1px solid #333;
-      padding: 10px 12px;
-      gap: 10px;
+      display: none; position: sticky; top: 0; z-index: 998;
+      background: #111; border-bottom: 1px solid #333; padding: 10px 12px; gap: 10px;
     }
     #notesPanel textarea {
-      width: 100%;
-      height: 110px;
-      background: #000;
-      color: #ddd;
-      border: 1px solid #333;
-      border-radius: 8px;
-      font-family: monospace;
-      font-size: 14px;
-      padding: 10px;
-      box-sizing: border-box;
-      resize: none;
+      width: 100%; height: 110px; background: #000; color: #ddd;
+      border: 1px solid #333; border-radius: 8px;
+      font-family: monospace; font-size: 14px; padding: 10px; box-sizing: border-box; resize: none;
     }
     .notes-row { display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap: wrap; }
     .note-hint { color:#aaa; font-size:12px; }
@@ -83,12 +49,10 @@
       touch-action: pan-y;
     }
 
-    /* Rendu ChordPro (aligné) */
     .block { margin-bottom: 26px; }
     .chordline, .lyricline { white-space: pre; line-height: 1.6; margin: 0; }
     .chordline { color: var(--accent); font-weight: bold; }
 
-    /* Éditeur */
     #editor-container { display: none; position: fixed; top: 60px; left: 0; width: 100vw; height: calc(100vh - 60px); background: #111; z-index: 20; }
     #editor-textarea { width: 100%; height: 80%; background: #000; color: #2196F3; border: none; font-family: monospace; font-size: 16px; padding: 20px; box-sizing: border-box; }
     .editor-footer { height: 20%; display: flex; justify-content: center; align-items: center; gap: 20px; background: #1a1a1a; }
@@ -131,12 +95,10 @@
       </div>
 
       <button class="btn" id="notesBtn" onclick="toggleNotes()">NOTES</button>
-
       <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
       <button class="btn" id="navLeaderBtn" onclick="toggleLeader()">Solo</button>
     </nav>
 
-    <!-- Bandeau update -->
     <div id="updateBanner">
       <div class="msg">Une mise à jour de cette chanson est disponible.</div>
       <div style="display:flex; gap:8px;">
@@ -145,7 +107,6 @@
       </div>
     </div>
 
-    <!-- Notes personnelles -->
     <div id="notesPanel">
       <div class="notes-row">
         <div class="note-hint">Notes personnelles (ne modifie pas la partition globale)</div>
@@ -172,18 +133,7 @@
   <script>
     const socket = io();
 
-    // ---------- Session (room) ----------
-    const sessionId =
-      new URLSearchParams(location.search).get('session') ||
-      localStorage.getItem('sessionId') ||
-      'default';
-
-    localStorage.setItem('sessionId', sessionId);
-
-    socket.emit('join-session', { sessionId });
-    socket.on('session-joined', ({ room }) => console.log('Session join OK:', room));
-
-    // ---------- Device id (pour notes/settings locales) ----------
+    // Device id (notes perso par appareil)
     const deviceIdKey = 'deviceId';
     let deviceId = localStorage.getItem(deviceIdKey);
     if (!deviceId) {
@@ -191,18 +141,18 @@
       localStorage.setItem(deviceIdKey, deviceId);
     }
 
-    // ---------- PIN (édition globale) ----------
+    // PIN
     let leaderPin = localStorage.getItem('leaderPin') || '';
-    function requirePin() {
-      if (leaderPin && leaderPin.length > 0) return leaderPin;
-      const p = prompt("PIN édition ?");
+    function requirePin(forcePrompt = false) {
+      if (!forcePrompt && leaderPin && leaderPin.length > 0) return leaderPin;
+      const p = prompt("PIN édition / leader ?");
       if (p === null) return '';
       leaderPin = String(p).trim();
       localStorage.setItem('leaderPin', leaderPin);
       return leaderPin;
     }
 
-    // ---------- State ----------
+    // State
     let isLeader = false, allSongs = [], currentIndex = -1;
     let currentRaw = "", currentFileName = "";
 
@@ -212,13 +162,13 @@
 
     let isRemoteScrolling = false;
 
-    // Auto-scroll leader (local)
+    // Auto-scroll leader local
     let isScrolling = false;
     let rafId = null;
     let lastRafTime = 0;
     let scrollCarry = 0;
 
-    // Follower: le leader “joue” ?
+    // Follower: leader play ?
     let leaderIsPlaying = false;
 
     const viewerElement = document.getElementById('viewer');
@@ -226,67 +176,44 @@
     const speedInput = document.getElementById('scrollSpeed');
 
     const updateBanner = document.getElementById('updateBanner');
-    let pendingUpdateForCurrent = false;
 
     const notesPanel = document.getElementById('notesPanel');
     const notesTextarea = document.getElementById('notesTextarea');
     const notesBtn = document.getElementById('notesBtn');
 
-    // Connexion témoin
     socket.on('connect', () => { document.getElementById('navLeaderBtn').style.borderColor = "#4CAF50"; });
     socket.on('disconnect', () => { document.getElementById('navLeaderBtn').style.borderColor = "#f44336"; });
 
-    // ---------- Helpers ----------
-    function normName(s) {
-      return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    }
+    function normName(s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+    function isEditorOpen() { return document.getElementById('editor-container').style.display === 'block'; }
+    function isViewerOpen() { return document.getElementById('viewer-container').style.display === 'block'; }
 
-    function isEditorOpen() {
-      return document.getElementById('editor-container').style.display === 'block';
-    }
-
-    function notesKeyForSong(fileName) {
-      return `notes:${deviceId}:${fileName}`;
-    }
-
+    // Notes
+    function notesKeyForSong(fileName) { return `notes:${deviceId}:${fileName}`; }
     function loadNotesForSong(fileName) {
       if (!fileName) return;
-      const key = notesKeyForSong(fileName);
-      notesTextarea.value = localStorage.getItem(key) || '';
+      notesTextarea.value = localStorage.getItem(notesKeyForSong(fileName)) || '';
       updateNotesBtn();
     }
-
     function saveNotesForSong(fileName) {
       if (!fileName) return;
-      const key = notesKeyForSong(fileName);
-      localStorage.setItem(key, notesTextarea.value || '');
+      localStorage.setItem(notesKeyForSong(fileName), notesTextarea.value || '');
       updateNotesBtn();
     }
-
     function updateNotesBtn() {
       const has = (notesTextarea.value || '').trim().length > 0;
       notesBtn.classList.toggle('active-btn', has);
     }
-
-    // autosave notes (débouce)
     let notesTimer = null;
     notesTextarea.addEventListener('input', () => {
       updateNotesBtn();
       clearTimeout(notesTimer);
       notesTimer = setTimeout(() => saveNotesForSong(currentFileName), 250);
     });
+    function toggleNotes() { notesPanel.style.display = (notesPanel.style.display === 'block') ? 'none' : 'block'; }
+    function clearNotes() { notesTextarea.value = ''; saveNotesForSong(currentFileName); }
 
-    function toggleNotes() {
-      const open = notesPanel.style.display === 'block';
-      notesPanel.style.display = open ? 'none' : 'block';
-    }
-
-    function clearNotes() {
-      notesTextarea.value = '';
-      saveNotesForSong(currentFileName);
-    }
-
-    // ---------- Library ----------
+    // Library
     async function fetchSongs() {
       const res = await fetch('/list-songs');
       allSongs = (await res.json()).sort();
@@ -296,12 +223,24 @@
         </div>`).join('');
     }
 
+    function refreshControlsLock() {
+      const playBtn = document.getElementById('playBtn');
+      const lock = (!isLeader && leaderIsPlaying);
+      playBtn.classList.toggle('disabled', lock);
+    }
+
     function toggleLeader() {
-      isLeader = !isLeader;
+      const next = !isLeader;
 
-      // si on passe follower, on stoppe son autoscroll local
-      if (!isLeader) stopAutoScroll();
+      // si on active leader => demander PIN tout de suite (pour que synchro marche)
+      if (next) {
+        const pin = requirePin(false);
+        if (!pin) return; // annule si pas de PIN
+      } else {
+        stopAutoScroll();
+      }
 
+      isLeader = next;
       const btns = [document.getElementById('libLeaderBtn'), document.getElementById('navLeaderBtn')];
       btns.forEach(btn => {
         btn.classList.toggle('leader-mode', isLeader);
@@ -311,32 +250,21 @@
       refreshControlsLock();
     }
 
-    function refreshControlsLock() {
-      // En follower + leader en lecture => on bloque le bouton play pour éviter un conflit
-      const playBtn = document.getElementById('playBtn');
-      const lock = (!isLeader && leaderIsPlaying);
-      playBtn.classList.toggle('disabled', lock);
-    }
-
     function openSong(idx) {
       if (idx < 0 || idx >= allSongs.length) return;
       currentIndex = idx;
       currentFileName = allSongs[idx];
 
-      pendingUpdateForCurrent = false;
       updateBanner.style.display = 'none';
 
       document.getElementById('library').style.display = 'none';
       document.getElementById('viewer-container').style.display = 'block';
 
-      // charger notes
       loadNotesForSong(currentFileName);
-
-      // afficher transpo
       document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
 
       if (isLeader) {
-        const pin = requirePin();
+        const pin = requirePin(false);
         if (!pin) return;
         socket.emit('change-song', { fileName: currentFileName, pin });
       }
@@ -349,37 +277,21 @@
       currentRaw = await res.text();
       renderChordPro();
       viewerElement.scrollTop = 0;
-
-      pendingUpdateForCurrent = false;
       updateBanner.style.display = 'none';
     }
 
-    // ---------- song-updated ----------
+    // Update banner
     socket.on('song-updated', ({ fileName }) => {
-      const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
-      if (!viewerOpen) return;
-
-      const sameSong = normName(fileName) === normName(currentFileName);
-      if (sameSong) {
-        pendingUpdateForCurrent = true;
+      if (!isViewerOpen()) return;
+      if (normName(fileName) === normName(currentFileName)) {
         updateBanner.style.display = 'flex';
       }
     });
+    function dismissUpdate() { updateBanner.style.display = 'none'; }
+    function reloadCurrentSong() { stopAutoScroll(); loadSong(currentFileName); }
 
-    function dismissUpdate() {
-      updateBanner.style.display = 'none';
-    }
-
-    function reloadCurrentSong() {
-      if (!currentFileName) return;
-      stopAutoScroll();
-      loadSong(currentFileName);
-    }
-
-    // ---------- Option A: synchro scroll par position ----------
-    let lastEmitAt = 0;
-    let lastEmitPos = -1;
-
+    // Option A: sync scroll position
+    let lastEmitAt = 0, lastEmitPos = -1;
     viewerElement.addEventListener('scroll', () => {
       if (!isLeader || isRemoteScrolling) return;
 
@@ -392,30 +304,27 @@
       lastEmitAt = now;
       lastEmitPos = pos;
 
-      const pin = requirePin();
+      const pin = requirePin(false);
       if (!pin) return;
       socket.emit('scroll-sync', { pos, pin });
     });
 
-    socket.on('apply-scroll', p => {
+    socket.on('apply-scroll', (p) => {
       if (isLeader) return;
-
       isRemoteScrolling = true;
       const max = viewerElement.scrollHeight - viewerElement.clientHeight;
       viewerElement.scrollTop = (Number(p) || 0) * (max > 0 ? max : 0);
       setTimeout(() => { isRemoteScrolling = false; }, 40);
     });
 
-    // ---------- Auto-scroll leader local ----------
+    // Leader autoscroll local
     function sliderToPxPerSecond(value) {
       const v = Number(value) || 50;
       const delayMs = Math.max(10, 105 - v);
       return 1000 / delayMs;
     }
-
     function autoScrollLoop(t) {
       if (!isScrolling) return;
-
       if (!lastRafTime) lastRafTime = t;
       const dt = t - lastRafTime;
       lastRafTime = t;
@@ -425,98 +334,74 @@
 
       scrollCarry += deltaPx;
       const step = Math.floor(scrollCarry);
-
       if (step >= 1) {
         viewerElement.scrollTop += step;
         scrollCarry -= step;
       }
-
       rafId = requestAnimationFrame(autoScrollLoop);
     }
-
     function startAutoScroll() {
       if (isScrolling) return;
       isScrolling = true;
       document.getElementById('playBtn').innerText = "⏸";
       document.getElementById('playBtn').classList.add('active-btn');
-      lastRafTime = 0;
-      scrollCarry = 0;
+      lastRafTime = 0; scrollCarry = 0;
       rafId = requestAnimationFrame(autoScrollLoop);
     }
-
     function stopAutoScroll() {
       if (!isScrolling) return;
       isScrolling = false;
       document.getElementById('playBtn').innerText = "▶";
       document.getElementById('playBtn').classList.remove('active-btn');
       if (rafId) cancelAnimationFrame(rafId);
-      rafId = null;
-      lastRafTime = 0;
-      scrollCarry = 0;
+      rafId = null; lastRafTime = 0; scrollCarry = 0;
     }
 
     function toggleAutoScroll(emitSync) {
-      // Followers: on ne lance pas d'autoscroll si le leader est en lecture (pour éviter conflit)
       if (!isLeader && leaderIsPlaying) return;
 
       if (isScrolling) stopAutoScroll();
       else startAutoScroll();
 
-      // Le leader annonce juste play/pause (pas de vitesse)
       if (isLeader && emitSync) {
-        const pin = requirePin();
+        const pin = requirePin(false);
         if (!pin) return;
         socket.emit('sync-autoscroll', { active: isScrolling, pin });
       }
     }
 
-    socket.on('apply-autoscroll', d => {
+    socket.on('apply-autoscroll', (d) => {
       if (isLeader) return;
       leaderIsPlaying = !!d.active;
-
-      // si leader play => on stoppe ton autoscroll local
       if (leaderIsPlaying) stopAutoScroll();
-
       refreshControlsLock();
     });
 
-    // ---------- Swipe ----------
+    // Swipe
     let touchStartX = 0, touchStartY = 0;
-    const SWIPE_MIN_X = 110;
-    const SWIPE_RATIO = 1.4;
-
-    function isViewerOpen() {
-      return document.getElementById('viewer-container').style.display === 'block';
-    }
-
+    const SWIPE_MIN_X = 110, SWIPE_RATIO = 1.4;
     viewerElement.addEventListener('touchstart', (e) => {
       if (!isViewerOpen() || isEditorOpen()) return;
       const t = e.changedTouches[0];
-      touchStartX = t.screenX;
-      touchStartY = t.screenY;
+      touchStartX = t.screenX; touchStartY = t.screenY;
     }, { passive: true });
-
     viewerElement.addEventListener('touchend', (e) => {
       if (!isViewerOpen() || isEditorOpen()) return;
-
       const t = e.changedTouches[0];
       const dx = t.screenX - touchStartX;
       const dy = t.screenY - touchStartY;
-
       if (Math.abs(dx) < SWIPE_MIN_X) return;
       if (Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return;
-
       if (dx > 0 && currentIndex > 0) openSong(currentIndex - 1);
       else if (dx < 0 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
     }, { passive: true });
 
-    // ---------- Réglages perso (non synchronisés) ----------
+    // Réglages perso (non sync)
     function updateFontSize(delta) {
       fontSize += delta;
       localStorage.setItem('pref_fontSize', String(fontSize));
       renderChordPro();
     }
-
     function updateTranspose(dir) {
       transposeValue += dir;
       localStorage.setItem('pref_transpose', String(transposeValue));
@@ -524,19 +409,13 @@
       renderChordPro();
     }
 
-    // ---------- ChordPro rendering ----------
+    // ChordPro rendering
     const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
     const scaleLat = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
 
     function normalizeNote(note) {
-      return note
-        .replace('Bb','A#')
-        .replace('Db','C#')
-        .replace('Eb','D#')
-        .replace('Gb','F#')
-        .replace('Ab','G#');
+      return note.replace('Bb','A#').replace('Db','C#').replace('Eb','D#').replace('Gb','F#').replace('Ab','G#');
     }
-
     function transChord(chord, steps) {
       return chord.replace(/([A-G][#b]?)/g, (match) => {
         const n = normalizeNote(match);
@@ -547,43 +426,31 @@
         return scaleLat[newIdx];
       });
     }
-
     function parseChordProLine(line) {
-      let chordLine = '';
-      let lyricLine = '';
+      let chordLine = '', lyricLine = '';
       let i = 0;
-
       while (i < line.length) {
         const ch = line[i];
-
         if (ch === '[') {
           const end = line.indexOf(']', i);
           if (end !== -1) {
             const chordRaw = line.slice(i + 1, end);
             const chord = transChord(chordRaw, transposeValue);
-
             const pos = lyricLine.length;
             if (chordLine.length < pos) chordLine += ' '.repeat(pos - chordLine.length);
-
             chordLine = chordLine.slice(0, pos) + chord + chordLine.slice(pos + chord.length);
             i = end + 1;
             continue;
           }
         }
-
         lyricLine += ch;
         chordLine += (ch === '\t') ? '\t' : ' ';
         i++;
       }
-
       if (chordLine.length < lyricLine.length) chordLine += ' '.repeat(lyricLine.length - chordLine.length);
       return { chordLine, lyricLine };
     }
-
-    function clearSongContent() {
-      songContentEl.replaceChildren();
-    }
-
+    function clearSongContent() { songContentEl.replaceChildren(); }
     function addCenteredTitle(text, level) {
       const el = document.createElement(level === 1 ? 'h1' : 'h2');
       el.style.textAlign = 'center';
@@ -591,81 +458,70 @@
       el.textContent = text;
       songContentEl.appendChild(el);
     }
-
     function addChordBlock(chordLine, lyricLine) {
       const block = document.createElement('div');
       block.className = 'block';
       block.style.fontSize = fontSize + 'px';
-
       const preChord = document.createElement('pre');
       preChord.className = 'chordline';
       preChord.textContent = chordLine;
-
       const preLyric = document.createElement('pre');
       preLyric.className = 'lyricline';
       preLyric.textContent = lyricLine;
-
       if (chordLine.trim().length > 0) block.appendChild(preChord);
       block.appendChild(preLyric);
-
       songContentEl.appendChild(block);
     }
-
     function renderChordPro() {
       clearSongContent();
-
       const lines = currentRaw.split('\n');
       for (const line of lines) {
         const t = line.match(/\{t:(.*?)\}/);
         if (t) { addCenteredTitle(t[1], 1); continue; }
-
         const st = line.match(/\{st:(.*?)\}/);
         if (st) { addCenteredTitle(st[1], 2); continue; }
-
         const { chordLine, lyricLine } = parseChordProLine(line);
         addChordBlock(chordLine, lyricLine);
       }
     }
 
-    // ---------- Sockets ----------
-    socket.on('load-song', f => {
+    // Sockets: load-song
+    socket.on('load-song', (f) => {
       if (!isLeader) {
         const idx = allSongs.indexOf(f);
         if (idx !== -1) openSong(idx);
       }
     });
 
-    // ---------- Editor (global) ----------
+    // Editor: demander PIN AU CLIC “ÉDITER”
     function openEditor() {
+      const pin = requirePin(false);
+      if (!pin) return;              // <- PIN demandé ici
       stopAutoScroll();
       document.getElementById('editor-textarea').value = currentRaw;
       document.getElementById('editor-container').style.display = 'block';
     }
-
-    function closeEditor() {
-      document.getElementById('editor-container').style.display = 'none';
-    }
+    function closeEditor() { document.getElementById('editor-container').style.display = 'none'; }
 
     async function saveEditor() {
       const newContent = document.getElementById('editor-textarea').value;
 
-      const pin = requirePin();
+      // On redemande pas si déjà en cache
+      const pin = requirePin(false);
       if (!pin) return;
 
       const res = await fetch('/save-song', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: currentFileName, content: newContent, pin, sessionId })
+        body: JSON.stringify({ fileName: currentFileName, content: newContent, pin })
       });
 
       if (res.ok) {
         currentRaw = newContent;
         renderChordPro();
         closeEditor();
-
-        if (isLeader) {
-          socket.emit('change-song', { fileName: currentFileName, pin });
-        }
+        // optionnel : si leader, on renvoie “load-song” (pas obligatoire, mais ok)
+        if (isLeader) socket.emit('change-song', { fileName: currentFileName, pin });
       } else if (res.status === 403) {
         alert("PIN invalide");
         leaderPin = '';
@@ -681,9 +537,7 @@
       document.getElementById('viewer-container').style.display = 'none';
     }
 
-    // init affichage transpo
     document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
-
     fetchSongs();
   </script>
 </body>

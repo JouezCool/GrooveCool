@@ -16,7 +16,7 @@ app.use((req, res, next) => {
 app.use(express.static('public', { etag: false, maxAge: 0 }));
 
 const PARTITIONS_DIR = path.join(__dirname, 'public', 'partitions');
-const LEADER_PIN = String(process.env.LEADER_PIN || '1991'); // <-- mets 1991 ici
+const LEADER_PIN = String(process.env.LEADER_PIN || '1991'); // <-- ton PIN
 
 function isValidSongName(name) {
   if (typeof name !== 'string') return false;
@@ -29,12 +29,6 @@ function isValidSongName(name) {
 
 function pinOk(pin) {
   return String(pin || '') === LEADER_PIN;
-}
-
-function cleanSessionId(s) {
-  const v = String(s || '').trim();
-  if (!v) return 'default';
-  return v.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'default';
 }
 
 // Lister les morceaux
@@ -51,9 +45,9 @@ app.get('/list-songs', (req, res) => {
   }
 });
 
-// Sauvegarder (protégé PIN) + émission dans la room
+// Sauvegarder (protégé PIN) + broadcast à tous
 app.post('/save-song', (req, res) => {
-  const { fileName, content, pin, sessionId } = req.body;
+  const { fileName, content, pin } = req.body;
 
   if (!pinOk(pin)) return res.status(403).send("PIN invalide");
   if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
@@ -63,30 +57,16 @@ app.post('/save-song', (req, res) => {
     return res.status(400).send("Chemin invalide");
   }
 
-  const room = cleanSessionId(sessionId);
-
   fs.writeFile(filePath, String(content ?? ""), 'utf8', (err) => {
     if (err) return res.status(500).send("Erreur");
 
-    io.to(room).emit('song-updated', { fileName, at: Date.now() });
+    io.emit('song-updated', { fileName, at: Date.now() });
     res.send("OK");
   });
 });
 
 io.on('connection', (socket) => {
   console.log('📱 connecté', socket.id);
-
-  socket.data.room = 'default';
-
-  socket.on('join-session', ({ sessionId }) => {
-    const room = cleanSessionId(sessionId);
-    socket.leave(socket.data.room);
-    socket.join(room);
-    socket.data.room = room;
-
-    console.log('🔗', socket.id, '-> room', room);
-    socket.emit('session-joined', { room });
-  });
 
   function requirePin(payload, cb) {
     const ok = pinOk(payload && payload.pin);
@@ -97,31 +77,30 @@ io.on('connection', (socket) => {
     return true;
   }
 
-  // Changement de morceau (dans la room)
   socket.on('change-song', (payload, cb) => {
     if (!requirePin(payload, cb)) return;
-    io.to(socket.data.room).emit('load-song', payload.fileName);
+    io.emit('load-song', payload.fileName);
     if (typeof cb === 'function') cb({ ok: true });
   });
 
-  // Option A : synchro par position uniquement (throttle)
+  // Option A : synchro par position uniquement
   let lastScrollAt = 0;
   socket.on('scroll-sync', (payload, cb) => {
     if (!requirePin(payload, cb)) return;
 
     const now = Date.now();
-    if (now - lastScrollAt < 60) return; // un peu plus fluide
+    if (now - lastScrollAt < 60) return;
     lastScrollAt = now;
 
     const pos = Math.max(0, Math.min(1, Number(payload.pos) || 0));
-    socket.to(socket.data.room).emit('apply-scroll', pos);
+    socket.broadcast.emit('apply-scroll', pos);
     if (typeof cb === 'function') cb({ ok: true });
   });
 
-  // Etat play/pause du leader (Option A: les followers ne scrolleront pas seuls)
+  // Play/pause “état leader”
   socket.on('sync-autoscroll', (payload, cb) => {
     if (!requirePin(payload, cb)) return;
-    socket.to(socket.data.room).emit('apply-autoscroll', { active: !!payload.active });
+    socket.broadcast.emit('apply-autoscroll', { active: !!payload.active });
     if (typeof cb === 'function') cb({ ok: true });
   });
 });
