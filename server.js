@@ -16,7 +16,7 @@ app.use((req, res, next) => {
 app.use(express.static('public', { etag: false, maxAge: 0 }));
 
 const PARTITIONS_DIR = path.join(__dirname, 'public', 'partitions');
-const LEADER_PIN = String(process.env.LEADER_PIN || '1991'); // <-- ton PIN
+const LEADER_PIN = String(process.env.LEADER_PIN || '1991'); // <-- ton code
 
 function isValidSongName(name) {
   if (typeof name !== 'string') return false;
@@ -45,7 +45,7 @@ app.get('/list-songs', (req, res) => {
   }
 });
 
-// Sauvegarder (protégé PIN) + broadcast à tous
+// Sauvegarder (protégé PIN) + broadcast update
 app.post('/save-song', (req, res) => {
   const { fileName, content, pin } = req.body;
 
@@ -83,7 +83,6 @@ io.on('connection', (socket) => {
     if (typeof cb === 'function') cb({ ok: true });
   });
 
-  // Option A : synchro par position uniquement
   let lastScrollAt = 0;
   socket.on('scroll-sync', (payload, cb) => {
     if (!requirePin(payload, cb)) return;
@@ -97,10 +96,9 @@ io.on('connection', (socket) => {
     if (typeof cb === 'function') cb({ ok: true });
   });
 
-  // Play/pause “état leader”
   socket.on('sync-autoscroll', (payload, cb) => {
     if (!requirePin(payload, cb)) return;
-    socket.broadcast.emit('apply-autoscroll', { active: !!payload.active });
+    socket.broadcast.emit('apply-autoscroll', { active: !!payload.active, speed: payload.speed });
     if (typeof cb === 'function') cb({ ok: true });
   });
 });

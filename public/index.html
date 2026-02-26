@@ -14,9 +14,6 @@
     #library { height: 100vh; overflow-y: auto; display: block; -webkit-overflow-scrolling: touch; }
     .lib-header { padding: 20px; background: #1a1a1a; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; z-index: 5; gap: 10px; }
     .song-item { padding: 20px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; font-size: 1.1em; cursor: pointer; }
-    .user-chip { display:flex; align-items:center; gap:8px; background:#222; border:1px solid #333; padding:8px 10px; border-radius:999px; font-size:12px; }
-    .user-chip b { font-size: 12px; color: #fff; }
-    .user-chip button { padding:6px 10px; border-radius:999px; font-size:12px; }
 
     #viewer-container { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 10; }
     nav { display: flex; background: #1a1a1a; min-height: 60px; align-items: center; padding: 0 10px; gap: 8px; border-bottom: 1px solid #333; flex-wrap: wrap; }
@@ -68,83 +65,40 @@
 
     /* -------- Modals -------- */
     .modal-backdrop {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.75);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 2000;
-      padding: 18px;
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      display: none; align-items: center; justify-content: center;
+      z-index: 2000; padding: 18px;
     }
     .modal {
-      width: min(520px, 100%);
-      background: #121212;
-      border: 1px solid #2a2a2a;
-      border-radius: 14px;
+      width: min(560px, 100%);
+      background: #121212; border: 1px solid #2a2a2a; border-radius: 14px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.6);
       overflow: hidden;
     }
     .modal header {
-      padding: 14px 16px;
-      border-bottom: 1px solid #2a2a2a;
-      display:flex; justify-content:space-between; align-items:center;
-      background:#161616;
+      padding: 14px 16px; border-bottom: 1px solid #2a2a2a;
+      display:flex; justify-content:space-between; align-items:center; background:#161616;
     }
     .modal header h3 { margin:0; font-size: 14px; color:#fff; }
     .modal .content { padding: 14px 16px; }
-    .modal .row { display:flex; gap:10px; flex-wrap: wrap; align-items:center; }
-    .modal input, .modal select {
-      width: 100%;
-      background: #000;
-      color: #eee;
-      border: 1px solid #333;
-      border-radius: 10px;
-      padding: 10px 12px;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
     .modal .actions { padding: 14px 16px; border-top: 1px solid #2a2a2a; display:flex; gap:10px; justify-content:flex-end; }
-    .pill {
-      display:inline-flex; align-items:center; gap:8px;
-      padding: 10px 12px; border-radius: 12px;
-      border: 1px solid #333; background:#0b0b0b;
-      cursor: pointer;
-      user-select: none;
+    .modal input {
+      width: 100%; background: #000; color: #eee; border: 1px solid #333;
+      border-radius: 10px; padding: 10px 12px; font-size: 14px; box-sizing: border-box;
     }
-    .pill:hover { background:#101010; }
-    .pill b { color:#fff; font-size: 14px; }
     .small { color:#aaa; font-size: 12px; }
+
+    .choice {
+      border:1px solid #333; background:#0b0b0b; border-radius: 12px;
+      padding: 12px; cursor:pointer;
+    }
+    .choice:hover { background:#101010; }
+    .choice b { color:#fff; }
+    .choice .small { display:block; margin-top:6px; }
   </style>
 </head>
 
 <body>
-
-  <!-- USER MODAL -->
-  <div id="userModalBackdrop" class="modal-backdrop">
-    <div class="modal">
-      <header>
-        <h3>Choisir un utilisateur</h3>
-      </header>
-      <div class="content">
-        <div class="small" style="margin-bottom:10px;">
-          Les notes et réglages (taille, transpo) seront liés à cet utilisateur sur cet appareil.
-        </div>
-
-        <div id="userList" style="display:flex; flex-direction:column; gap:10px;"></div>
-
-        <div style="margin-top:14px; border-top:1px solid #2a2a2a; padding-top:14px;">
-          <div class="small" style="margin-bottom:8px;">Ajouter un utilisateur</div>
-          <div class="row">
-            <input id="newUserInput" placeholder="Nom (ex: Nemo)" />
-            <button class="btn btn-blue" onclick="addUser()">AJOUTER</button>
-          </div>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn" onclick="closeUserModal()" style="border-color:#777;color:#777;">PLUS TARD</button>
-      </div>
-    </div>
-  </div>
 
   <!-- PIN MODAL -->
   <div id="pinModalBackdrop" class="modal-backdrop">
@@ -163,22 +117,33 @@
     </div>
   </div>
 
+  <!-- EDIT CHOICE MODAL -->
+  <div id="editChoiceBackdrop" class="modal-backdrop">
+    <div class="modal">
+      <header>
+        <h3>Type de modification</h3>
+      </header>
+      <div class="content">
+        <div class="choice" onclick="chooseEditMode('personal')">
+          <b>Modification personnelle</b>
+          <span class="small">Stockée sur cet appareil pour cet utilisateur. Ne modifie pas la partition pour le groupe.</span>
+        </div>
+        <div style="height:10px"></div>
+        <div class="choice" onclick="chooseEditMode('global')">
+          <b>Modification pour tout le monde</b>
+          <span class="small">Modifie le fichier partagé. Le code PIN sera demandé.</span>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="closeEditChoice()" style="border-color:#777;color:#777;">ANNULER</button>
+      </div>
+    </div>
+  </div>
+
   <div id="library">
     <div class="lib-header">
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        <h2 style="margin:0;">Répertoire</h2>
-        <div class="small">Synchro: défilement leader (Option A) + réglages/notes perso</div>
-      </div>
-
-      <div style="display:flex; gap:10px; align-items:center;">
-        <div class="user-chip" title="Utilisateur courant">
-          <span>👤</span>
-          <b id="currentUserLabel">—</b>
-          <button class="btn" style="padding:6px 10px;" onclick="openUserModal()">Changer</button>
-        </div>
-
-        <button class="btn" id="libLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
-      </div>
+      <h2 style="margin:0;">Répertoire</h2>
+      <button class="btn" id="libLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
     </div>
     <div id="songList"></div>
   </div>
@@ -218,11 +183,11 @@
 
     <div id="notesPanel">
       <div class="notes-row">
-        <div class="note-hint">Notes personnelles (ne modifie pas la partition globale)</div>
+        <div class="note-hint">Notes personnelles</div>
         <button class="btn btn-small" onclick="clearNotes()" style="border-color:#ff5252;color:#ff5252;">EFFACER</button>
       </div>
-      <textarea id="notesTextarea" placeholder="Ex: Refrain 2: attention au break / Entrée basse après 2 temps / etc."></textarea>
-      <div class="note-hint">Sauvegarde auto pour l’utilisateur sélectionné.</div>
+      <textarea id="notesTextarea" placeholder="Notes personnelles..."></textarea>
+      <div class="note-hint">Sauvegarde auto (local).</div>
     </div>
 
     <div id="viewer">
@@ -242,109 +207,9 @@
   <script>
     const socket = io();
 
-// ------------------ USERS ------------------
-
-const defaultUsers = [
-  "Nemo",
-  "Estelle",
-  "Gillou",
-  "Bubu",
-  "Christian",
-  "Christophe"
-];
-
-const USERS_KEY = "bandapp_users";
-const USERS_VER_KEY = "bandapp_users_version";
-const CURRENT_USER_KEY = "bandapp_current_user";
-
-// 🔴 IMPORTANT : augmente ce numéro si tu modifies la liste plus tard
-const USERS_VERSION = 2;
-
-function loadUsers() {
-  const storedVer = Number(localStorage.getItem(USERS_VER_KEY) || "0");
-  const raw = localStorage.getItem(USERS_KEY);
-
-  // Si version différente → on écrase avec la nouvelle liste
-  if (storedVer !== USERS_VERSION) {
-    localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
-    localStorage.setItem(USERS_VER_KEY, String(USERS_VERSION));
-    return [...defaultUsers];
-  }
-
-  if (raw) {
-    try {
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr) && arr.length) return arr;
-    } catch {}
-  }
-
-  localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
-  localStorage.setItem(USERS_VER_KEY, String(USERS_VERSION));
-  return [...defaultUsers];
-}
-
-function saveUsers(list) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(list));
-  localStorage.setItem(USERS_VER_KEY, String(USERS_VERSION));
-}
-
-function getCurrentUser() {
-  return localStorage.getItem(CURRENT_USER_KEY) || "";
-}
-
-function setCurrentUser(name) {
-  localStorage.setItem(CURRENT_USER_KEY, name);
-  document.getElementById("currentUserLabel").textContent = name || "—";
-  loadUserPrefs();
-  loadNotesForSong(currentFileName);
-}
-
-
-    function openUserModal() {
-      renderUserList();
-      document.getElementById("userModalBackdrop").style.display = "flex";
-    }
-
-    function closeUserModal() {
-      document.getElementById("userModalBackdrop").style.display = "none";
-    }
-
-    function renderUserList() {
-      const users = loadUsers();
-      const container = document.getElementById("userList");
-      container.replaceChildren();
-
-      users.forEach(u => {
-        const pill = document.createElement("div");
-        pill.className = "pill";
-        pill.innerHTML = `<b>${escapeHtml(u)}</b><span class="small">Sélectionner</span>`;
-        pill.onclick = () => {
-          setCurrentUser(u);
-          closeUserModal();
-        };
-        container.appendChild(pill);
-      });
-    }
-
-    function addUser() {
-      const input = document.getElementById("newUserInput");
-      const name = (input.value || "").trim();
-      if (!name) return;
-
-      const users = loadUsers();
-      if (!users.includes(name)) {
-        users.push(name);
-        users.sort((a,b) => a.localeCompare(b));
-        saveUsers(users);
-      }
-      input.value = "";
-      renderUserList();
-    }
-
-    // ------------------ PIN MODAL ------------------
+    // --- PIN (modal fiable iPad) ---
     let leaderPin = localStorage.getItem('leaderPin') || '';
-    let pinResolve = null;
-    let pinReject = null;
+    let pinResolve = null, pinReject = null;
 
     function openPinModal(title, hint) {
       document.getElementById("pinTitle").textContent = title || "Code requis";
@@ -352,7 +217,7 @@ function setCurrentUser(name) {
       const inp = document.getElementById("pinInput");
       inp.value = "";
       document.getElementById("pinModalBackdrop").style.display = "flex";
-      setTimeout(() => inp.focus(), 50);
+      setTimeout(() => inp.focus(), 60);
 
       return new Promise((resolve, reject) => {
         pinResolve = resolve;
@@ -387,103 +252,63 @@ function setCurrentUser(name) {
       localStorage.removeItem("leaderPin");
     }
 
-    // ------------------ STATE ------------------
+    // --- STATE ---
     let isLeader = false, allSongs = [], currentIndex = -1;
-    let currentRaw = "", currentFileName = "";
+    let currentFileName = "", currentRaw = "";
+    let fontSize = 26, transposeValue = 0;
 
-    // prefs per-user
-    let fontSize = 26;
-    let transposeValue = 0;
+    // Autoscroll leader
+    let isScrolling = false;
+    let rafId = null, lastRafTime = 0, scrollCarry = 0;
 
     let isRemoteScrolling = false;
-
-    // Auto-scroll leader local
-    let isScrolling = false;
-    let rafId = null;
-    let lastRafTime = 0;
-    let scrollCarry = 0;
-
-    // follower: leader play ?
-    let leaderIsPlaying = false;
 
     const viewerElement = document.getElementById('viewer');
     const songContentEl = document.getElementById('songContent');
     const speedInput = document.getElementById('scrollSpeed');
-
     const updateBanner = document.getElementById('updateBanner');
 
+    // Notes
     const notesPanel = document.getElementById('notesPanel');
     const notesTextarea = document.getElementById('notesTextarea');
-    const notesBtn = document.getElementById('notesBtn');
 
+    // --- Perso override (partition perso) ---
+    // Stocke une version complète personnalisée de la partition (seulement si tu choisis "personnelle")
+    function personalSongKey(fileName) {
+      return `personalSong:${fileName}`;
+    }
+    function hasPersonalSong(fileName) {
+      return !!localStorage.getItem(personalSongKey(fileName));
+    }
+    function getPersonalSong(fileName) {
+      return localStorage.getItem(personalSongKey(fileName)) || "";
+    }
+    function setPersonalSong(fileName, content) {
+      localStorage.setItem(personalSongKey(fileName), content || "");
+    }
+    function clearPersonalSong(fileName) {
+      localStorage.removeItem(personalSongKey(fileName));
+    }
+
+    // --- Edit mode choice modal ---
+    let editMode = null; // "personal" | "global"
+    function openEditChoice() {
+      editMode = null;
+      document.getElementById("editChoiceBackdrop").style.display = "flex";
+    }
+    function closeEditChoice() {
+      document.getElementById("editChoiceBackdrop").style.display = "none";
+    }
+    function chooseEditMode(mode) {
+      editMode = mode;
+      closeEditChoice();
+      startEditorWithMode(mode);
+    }
+
+    // Connexion témoin
     socket.on('connect', () => { document.getElementById('navLeaderBtn').style.borderColor = "#4CAF50"; });
     socket.on('disconnect', () => { document.getElementById('navLeaderBtn').style.borderColor = "#f44336"; });
 
-    function normName(s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
-    function isEditorOpen() { return document.getElementById('editor-container').style.display === 'block'; }
-    function isViewerOpen() { return document.getElementById('viewer-container').style.display === 'block'; }
-
-    // ------------------ PREFS / NOTES (per user) ------------------
-    function prefsKey() {
-      const u = getCurrentUser() || "anonymous";
-      return `prefs:${u}`;
-    }
-
-    function loadUserPrefs() {
-      const raw = localStorage.getItem(prefsKey());
-      if (raw) {
-        try {
-          const p = JSON.parse(raw);
-          fontSize = Number(p.fontSize ?? 26) || 26;
-          transposeValue = Number(p.transpose ?? 0) || 0;
-        } catch {
-          fontSize = 26; transposeValue = 0;
-        }
-      } else {
-        fontSize = 26; transposeValue = 0;
-      }
-      document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
-      if (currentRaw) renderChordPro();
-    }
-
-    function saveUserPrefs() {
-      const u = getCurrentUser() || "anonymous";
-      localStorage.setItem(`prefs:${u}`, JSON.stringify({ fontSize, transpose: transposeValue }));
-    }
-
-    function notesKeyForSong(fileName) {
-      const u = getCurrentUser() || "anonymous";
-      return `notes:${u}:${fileName}`;
-    }
-
-    function loadNotesForSong(fileName) {
-      if (!fileName) return;
-      notesTextarea.value = localStorage.getItem(notesKeyForSong(fileName)) || '';
-      updateNotesBtn();
-    }
-
-    function saveNotesForSong(fileName) {
-      if (!fileName) return;
-      localStorage.setItem(notesKeyForSong(fileName), notesTextarea.value || '');
-      updateNotesBtn();
-    }
-
-    function updateNotesBtn() {
-      const has = (notesTextarea.value || '').trim().length > 0;
-      notesBtn.classList.toggle('active-btn', has);
-    }
-
-    let notesTimer = null;
-    notesTextarea.addEventListener('input', () => {
-      updateNotesBtn();
-      clearTimeout(notesTimer);
-      notesTimer = setTimeout(() => saveNotesForSong(currentFileName), 250);
-    });
-
-    function toggleNotes() { notesPanel.style.display = (notesPanel.style.display === 'block') ? 'none' : 'block'; }
-    function clearNotes() { notesTextarea.value = ''; saveNotesForSong(currentFileName); }
-
-    // ------------------ Library ------------------
     async function fetchSongs() {
       const res = await fetch('/list-songs');
       allSongs = (await res.json()).sort();
@@ -493,12 +318,7 @@ function setCurrentUser(name) {
         </div>`).join('');
     }
 
-    function refreshControlsLock() {
-      const playBtn = document.getElementById('playBtn');
-      const lock = (!isLeader && leaderIsPlaying);
-      playBtn.classList.toggle('disabled', lock);
-    }
-
+    // ✅ IMPORTANT : toggleLeader DOIT être async sinon le PIN modal ne peut pas être attendu
     async function toggleLeader() {
       const next = !isLeader;
 
@@ -510,13 +330,12 @@ function setCurrentUser(name) {
       }
 
       isLeader = next;
+
       const btns = [document.getElementById('libLeaderBtn'), document.getElementById('navLeaderBtn')];
       btns.forEach(btn => {
         btn.classList.toggle('leader-mode', isLeader);
         btn.innerText = isLeader ? "Mode Leader" : "Mode Solo";
       });
-
-      refreshControlsLock();
     }
 
     async function openSong(idx) {
@@ -525,13 +344,13 @@ function setCurrentUser(name) {
       currentFileName = allSongs[idx];
 
       updateBanner.style.display = 'none';
+
       document.getElementById('library').style.display = 'none';
       document.getElementById('viewer-container').style.display = 'block';
 
-      loadNotesForSong(currentFileName);
-
+      // sync song (leader)
       if (isLeader) {
-        const pin = await requirePinUI("PIN Leader", "PIN requis pour synchroniser les autres appareils.");
+        const pin = await requirePinUI("PIN Leader", "PIN requis pour envoyer la chanson aux autres.");
         if (!pin) return;
         socket.emit('change-song', { fileName: currentFileName, pin });
       }
@@ -541,24 +360,40 @@ function setCurrentUser(name) {
 
     async function loadSong(f) {
       const res = await fetch('/partitions/' + f);
-      currentRaw = await res.text();
+      const globalContent = await res.text();
+
+      // Si version perso existe, on l’utilise pour l’affichage
+      const localOverride = hasPersonalSong(f) ? getPersonalSong(f) : "";
+      currentRaw = localOverride || globalContent;
+
+      transposeValue = 0;
+      document.getElementById('transposeVal').innerText = "0";
       renderChordPro();
       viewerElement.scrollTop = 0;
+
       updateBanner.style.display = 'none';
     }
 
-    // ------------------ Update banner ------------------
+    // --- Update banner ---
+    function normName(s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+
     socket.on('song-updated', ({ fileName }) => {
-      if (!isViewerOpen()) return;
+      const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
+      if (!viewerOpen) return;
+
+      // Si j’ai une version perso, je peux ignorer l’update global, ou l’afficher quand même.
+      // Ici : on l’affiche quand même (mais recharger remettra la version globale à jour).
       if (normName(fileName) === normName(currentFileName)) {
         updateBanner.style.display = 'flex';
       }
     });
-    function dismissUpdate() { updateBanner.style.display = 'none'; }
-    function reloadCurrentSong() { stopAutoScroll(); loadSong(currentFileName); }
 
-    // ------------------ Option A: sync scroll position ------------------
+    function dismissUpdate() { updateBanner.style.display = 'none'; }
+    async function reloadCurrentSong() { stopAutoScroll(); await loadSong(currentFileName); }
+
+    // --- Sync scroll (Leader) ---
     let lastEmitAt = 0, lastEmitPos = -1;
+
     viewerElement.addEventListener('scroll', async () => {
       if (!isLeader || isRemoteScrolling) return;
 
@@ -566,13 +401,14 @@ function setCurrentUser(name) {
       const pos = max > 0 ? (viewerElement.scrollTop / max) : 0;
 
       const now = Date.now();
-      if (now - lastEmitAt < 60 && Math.abs(pos - lastEmitPos) < 0.002) return;
+      if (now - lastEmitAt < 80 && Math.abs(pos - lastEmitPos) < 0.003) return;
 
       lastEmitAt = now;
       lastEmitPos = pos;
 
-      const pin = await requirePinUI("PIN Leader", "PIN requis pour synchroniser le défilement.");
+      const pin = await requirePinUI("PIN Leader", "PIN requis pour synchroniser le scroll.");
       if (!pin) return;
+
       socket.emit('scroll-sync', { pos, pin });
     });
 
@@ -581,10 +417,10 @@ function setCurrentUser(name) {
       isRemoteScrolling = true;
       const max = viewerElement.scrollHeight - viewerElement.clientHeight;
       viewerElement.scrollTop = (Number(p) || 0) * (max > 0 ? max : 0);
-      setTimeout(() => { isRemoteScrolling = false; }, 40);
+      setTimeout(() => { isRemoteScrolling = false; }, 50);
     });
 
-    // ------------------ Leader autoscroll local ------------------
+    // --- Autoscroll (leader local + annonce play/pause) ---
     function sliderToPxPerSecond(value) {
       const v = Number(value) || 50;
       const delayMs = Math.max(10, 105 - v);
@@ -593,6 +429,7 @@ function setCurrentUser(name) {
 
     function autoScrollLoop(t) {
       if (!isScrolling) return;
+
       if (!lastRafTime) lastRafTime = t;
       const dt = t - lastRafTime;
       lastRafTime = t;
@@ -602,10 +439,12 @@ function setCurrentUser(name) {
 
       scrollCarry += deltaPx;
       const step = Math.floor(scrollCarry);
+
       if (step >= 1) {
         viewerElement.scrollTop += step;
         scrollCarry -= step;
       }
+
       rafId = requestAnimationFrame(autoScrollLoop);
     }
 
@@ -614,7 +453,8 @@ function setCurrentUser(name) {
       isScrolling = true;
       document.getElementById('playBtn').innerText = "⏸";
       document.getElementById('playBtn').classList.add('active-btn');
-      lastRafTime = 0; scrollCarry = 0;
+      lastRafTime = 0;
+      scrollCarry = 0;
       rafId = requestAnimationFrame(autoScrollLoop);
     }
 
@@ -624,71 +464,52 @@ function setCurrentUser(name) {
       document.getElementById('playBtn').innerText = "▶";
       document.getElementById('playBtn').classList.remove('active-btn');
       if (rafId) cancelAnimationFrame(rafId);
-      rafId = null; lastRafTime = 0; scrollCarry = 0;
+      rafId = null;
+      lastRafTime = 0;
+      scrollCarry = 0;
     }
 
     async function toggleAutoScroll(emitSync) {
-      if (!isLeader && leaderIsPlaying) return;
-
       if (isScrolling) stopAutoScroll();
       else startAutoScroll();
 
       if (isLeader && emitSync) {
         const pin = await requirePinUI("PIN Leader", "PIN requis pour annoncer Play/Pause.");
         if (!pin) return;
-        socket.emit('sync-autoscroll', { active: isScrolling, pin });
+        socket.emit('sync-autoscroll', { active: isScrolling, speed: speedInput.value, pin });
       }
     }
 
     socket.on('apply-autoscroll', (d) => {
       if (isLeader) return;
-      leaderIsPlaying = !!d.active;
-      if (leaderIsPlaying) stopAutoScroll();
-      refreshControlsLock();
+      // Follower : option A => on ne force pas sa vitesse, on bloque juste play local si leader joue.
+      // Ici, on ne fait rien de spécial à part si tu veux un indicateur.
     });
 
-    // ------------------ Swipe ------------------
-    let touchStartX = 0, touchStartY = 0;
-    const SWIPE_MIN_X = 110, SWIPE_RATIO = 1.4;
-
-    viewerElement.addEventListener('touchstart', (e) => {
-      if (!isViewerOpen() || isEditorOpen()) return;
-      const t = e.changedTouches[0];
-      touchStartX = t.screenX; touchStartY = t.screenY;
-    }, { passive: true });
-
-    viewerElement.addEventListener('touchend', (e) => {
-      if (!isViewerOpen() || isEditorOpen()) return;
-      const t = e.changedTouches[0];
-      const dx = t.screenX - touchStartX;
-      const dy = t.screenY - touchStartY;
-      if (Math.abs(dx) < SWIPE_MIN_X) return;
-      if (Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return;
-      if (dx > 0 && currentIndex > 0) openSong(currentIndex - 1);
-      else if (dx < 0 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
-    }, { passive: true });
-
-    // ------------------ Personal prefs ------------------
+    // --- Taille / Transpo (perso) ---
     function updateFontSize(delta) {
       fontSize += delta;
-      saveUserPrefs();
       renderChordPro();
     }
 
     function updateTranspose(dir) {
       transposeValue += dir;
-      saveUserPrefs();
       document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
       renderChordPro();
     }
 
-    // ------------------ ChordPro rendering ------------------
+    // --- Notes ---
+    function toggleNotes() { notesPanel.style.display = (notesPanel.style.display === 'block') ? 'none' : 'block'; }
+    function clearNotes() { notesTextarea.value = ''; }
+
+    // --- Rendu ChordPro aligné ---
     const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
     const scaleLat = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
 
     function normalizeNote(note) {
       return note.replace('Bb','A#').replace('Db','C#').replace('Eb','D#').replace('Gb','F#').replace('Ab','G#');
     }
+
     function transChord(chord, steps) {
       return chord.replace(/([A-G][#b]?)/g, (match) => {
         const n = normalizeNote(match);
@@ -701,31 +522,39 @@ function setCurrentUser(name) {
     }
 
     function parseChordProLine(line) {
-      let chordLine = '', lyricLine = '';
+      let chordLine = '';
+      let lyricLine = '';
+
       let i = 0;
       while (i < line.length) {
         const ch = line[i];
+
         if (ch === '[') {
           const end = line.indexOf(']', i);
           if (end !== -1) {
             const chordRaw = line.slice(i + 1, end);
             const chord = transChord(chordRaw, transposeValue);
+
             const pos = lyricLine.length;
             if (chordLine.length < pos) chordLine += ' '.repeat(pos - chordLine.length);
+
             chordLine = chordLine.slice(0, pos) + chord + chordLine.slice(pos + chord.length);
             i = end + 1;
             continue;
           }
         }
+
         lyricLine += ch;
         chordLine += (ch === '\t') ? '\t' : ' ';
         i++;
       }
+
       if (chordLine.length < lyricLine.length) chordLine += ' '.repeat(lyricLine.length - chordLine.length);
       return { chordLine, lyricLine };
     }
 
     function clearSongContent() { songContentEl.replaceChildren(); }
+
     function addCenteredTitle(text, level) {
       const el = document.createElement(level === 1 ? 'h1' : 'h2');
       el.style.textAlign = 'center';
@@ -733,34 +562,42 @@ function setCurrentUser(name) {
       el.textContent = text;
       songContentEl.appendChild(el);
     }
+
     function addChordBlock(chordLine, lyricLine) {
       const block = document.createElement('div');
       block.className = 'block';
       block.style.fontSize = fontSize + 'px';
+
       const preChord = document.createElement('pre');
       preChord.className = 'chordline';
       preChord.textContent = chordLine;
+
       const preLyric = document.createElement('pre');
       preLyric.className = 'lyricline';
       preLyric.textContent = lyricLine;
+
       if (chordLine.trim().length > 0) block.appendChild(preChord);
       block.appendChild(preLyric);
+
       songContentEl.appendChild(block);
     }
+
     function renderChordPro() {
       clearSongContent();
       const lines = currentRaw.split('\n');
       for (const line of lines) {
         const t = line.match(/\{t:(.*?)\}/);
         if (t) { addCenteredTitle(t[1], 1); continue; }
+
         const st = line.match(/\{st:(.*?)\}/);
         if (st) { addCenteredTitle(st[1], 2); continue; }
+
         const { chordLine, lyricLine } = parseChordProLine(line);
         addChordBlock(chordLine, lyricLine);
       }
     }
 
-    // ------------------ sockets: load-song ------------------
+    // --- SOCKETS ---
     socket.on('load-song', (f) => {
       if (!isLeader) {
         const idx = allSongs.indexOf(f);
@@ -768,40 +605,77 @@ function setCurrentUser(name) {
       }
     });
 
-    // ------------------ Editor (global) ------------------
-    async function openEditor() {
-      const pin = await requirePinUI("PIN édition", "Entrez le PIN pour modifier la partition globale.");
-      if (!pin) return;
+    // --- ÉDITEUR ---
+    function openEditor() {
+      // ✅ toujours demander “perso ou global” en premier
+      openEditChoice();
+    }
 
+    async function startEditorWithMode(mode) {
       stopAutoScroll();
-      document.getElementById('editor-textarea').value = currentRaw;
+
+      // Si perso: on charge la version perso si elle existe sinon la version affichée actuelle
+      if (mode === "personal") {
+        const personal = hasPersonalSong(currentFileName) ? getPersonalSong(currentFileName) : "";
+        document.getElementById('editor-textarea').value = personal || currentRaw;
+      }
+
+      // Si global: on charge la version globale actuelle (celle affichée peut être perso => on refetch)
+      if (mode === "global") {
+        const pin = await requirePinUI("PIN édition", "Entrez le PIN pour modifier la partition pour tout le monde.");
+        if (!pin) return;
+
+        const res = await fetch('/partitions/' + currentFileName);
+        const globalContent = await res.text();
+        document.getElementById('editor-textarea').value = globalContent;
+      }
+
       document.getElementById('editor-container').style.display = 'block';
     }
 
-    function closeEditor() { document.getElementById('editor-container').style.display = 'none'; }
+    function closeEditor() {
+      document.getElementById('editor-container').style.display = 'none';
+    }
 
     async function saveEditor() {
       const newContent = document.getElementById('editor-textarea').value;
 
-      const pin = await requirePinUI("PIN édition", "PIN requis pour enregistrer.");
-      if (!pin) return;
+      if (!currentFileName) return;
 
-      const res = await fetch('/save-song', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: currentFileName, content: newContent, pin })
-      });
-
-      if (res.ok) {
+      // ✅ Perso : pas de PIN, on sauvegarde localement (uniquement pour ce device/user pour l’instant)
+      if (editMode === "personal") {
+        setPersonalSong(currentFileName, newContent);
         currentRaw = newContent;
         renderChordPro();
         closeEditor();
-        if (isLeader) socket.emit('change-song', { fileName: currentFileName, pin });
-      } else if (res.status === 403) {
-        alert("PIN invalide");
-        clearStoredPin();
-      } else {
-        alert("Erreur d'enregistrement");
+        return;
+      }
+
+      // ✅ Global : PIN requis
+      if (editMode === "global") {
+        const pin = await requirePinUI("PIN édition", "PIN requis pour enregistrer pour tout le monde.");
+        if (!pin) return;
+
+        const res = await fetch('/save-song', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName: currentFileName, content: newContent, pin })
+        });
+
+        if (res.ok) {
+          // Après un global save, on veut afficher la version globale (et garder éventuellement la perso à part)
+          currentRaw = newContent;
+          renderChordPro();
+          closeEditor();
+
+          if (isLeader) socket.emit('change-song', { fileName: currentFileName, pin });
+
+        } else if (res.status === 403) {
+          alert("PIN invalide");
+          clearStoredPin();
+        } else {
+          alert("Erreur d'enregistrement");
+        }
       }
     }
 
@@ -811,24 +685,7 @@ function setCurrentUser(name) {
       document.getElementById('viewer-container').style.display = 'none';
     }
 
-    // ------------------ utils ------------------
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-    }
-
-    // ------------------ init ------------------
     fetchSongs();
-
-    // user init
-    const cu = getCurrentUser();
-    if (cu) {
-      document.getElementById("currentUserLabel").textContent = cu;
-      loadUserPrefs();
-    } else {
-      document.getElementById("currentUserLabel").textContent = "—";
-      openUserModal();
-      // prefs seront chargés dès sélection
-    }
   </script>
 </body>
 </html>
