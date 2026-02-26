@@ -8,232 +8,355 @@
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
   <style>
-    :root { --bg: #000; --text: #eee; --accent: #ff9800; --edit: #2196F3; }
-    body {
-      font-family: sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      margin: 0;
-      overflow: hidden;
-      overscroll-behavior-x: none;
+    :root{
+      --bg:#000;
+      --text:#eee;
+      --accent:#ff9800;
+      --edit:#2196F3;
+
+      /* thèmes */
+      --nav-bg:#1a1a1a;
+      --nav-text:#eee;
+      --panel-bg:#111;
+      --panel-border:#333;
+
+      --chorus-bg:#111827;
+      --chorus-border:#60a5fa;
+      --chorus-text: var(--text);
+
+      --comment-bg:#ffd54f;
+      --comment-text:#000;
+    }
+
+    body{
+      font-family:sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      margin:0;
+      overflow:hidden;
+      overscroll-behavior-x:none;
+    }
+
+    /* --- Bouton réglages FIXE (visible partout) --- */
+    #settingsBtnFixed{
+      position:fixed;
+      top:10px;
+      left:10px;
+      z-index:6000;
+      border:2px solid var(--accent);
+      border-radius:10px;
+      background:rgba(0,0,0,0.25);
+      color:var(--accent);
+      font-weight:900;
+      padding:10px 12px;
+      cursor:pointer;
+      backdrop-filter: blur(6px);
+    }
+
+    /* Toast */
+    #toast{
+      position:fixed;
+      left:50%;
+      top:18px;
+      transform:translateX(-50%);
+      z-index:7000;
+      background:rgba(0,0,0,0.85);
+      color:#fff;
+      padding:10px 14px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.15);
+      display:none;
+      font-size:14px;
+      font-weight:700;
+      max-width:min(92vw, 520px);
+      text-align:center;
     }
 
     /* ==== USER PICKER ==== */
-    #userOverlay {
-      position: fixed;
-      inset: 0;
-      z-index: 5000;
-      display: none;
-      background: rgba(0,0,0,0.92);
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
+    #userOverlay{
+      position:fixed;
+      inset:0;
+      z-index:5000;
+      display:none;
+      background:rgba(0,0,0,0.92);
+      align-items:center;
+      justify-content:center;
+      padding:18px;
     }
-    #userModal {
-      width: min(560px, 100%);
-      background: #111;
-      border: 1px solid #2a2a2a;
-      border-radius: 14px;
-      overflow: hidden;
+    #userModal{
+      width:min(560px,100%);
+      background:#111;
+      border:1px solid #2a2a2a;
+      border-radius:14px;
+      overflow:hidden;
     }
-    #userModal header {
-      padding: 14px 16px;
-      border-bottom: 1px solid #2a2a2a;
-      background: #161616;
+    #userModal header{
+      padding:14px 16px;
+      border-bottom:1px solid #2a2a2a;
+      background:#161616;
     }
-    #userModal header h3 {
-      margin: 0;
-      font-size: 14px;
-      color: #fff;
+    #userModal header h3{
+      margin:0;
+      font-size:14px;
+      color:#fff;
     }
-    #userModal .content { padding: 14px 16px; }
-    #userModal .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+    #userModal .content{ padding:14px 16px; }
+    #userModal .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
     }
-    .user-choice {
-      border: 1px solid #333;
-      background: #0b0b0b;
-      border-radius: 12px;
-      padding: 12px;
-      cursor: pointer;
-      text-align: center;
-      font-weight: bold;
-      color: #fff;
-      user-select: none;
+    .user-choice{
+      border:1px solid #333;
+      background:#0b0b0b;
+      border-radius:12px;
+      padding:12px;
+      cursor:pointer;
+      text-align:center;
+      font-weight:bold;
+      color:#fff;
+      user-select:none;
     }
-    .user-choice:hover { background: #101010; }
-    #userModal .actions {
-      padding: 14px 16px;
-      border-top: 1px solid #2a2a2a;
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
+    .user-choice:hover{ background:#101010; }
+    #userModal .actions{
+      padding:14px 16px;
+      border-top:1px solid #2a2a2a;
+      display:flex;
+      justify-content:flex-start;
+      gap:10px;
+      flex-wrap:wrap;
     }
-    #userBadge {
-      position: fixed;
-      top: 8px;
-      right: 8px;
-      z-index: 3000;
-      background: rgba(20,20,20,0.9);
-      border: 1px solid #333;
-      border-radius: 10px;
-      padding: 8px 10px;
-      font-size: 12px;
-      display: none;
-      align-items: center;
-      gap: 10px;
-    }
-    #userBadge b { color: #fff; }
 
     /* Bibliothèque */
-    #library { height: 100vh; overflow-y: auto; display: block; -webkit-overflow-scrolling: touch; }
-    .lib-header { padding: 20px; background: #1a1a1a; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; z-index: 5; }
-    .song-item { padding: 20px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; font-size: 1.1em; cursor: pointer; }
+    #library{
+      height:100vh;
+      overflow-y:auto;
+      display:block;
+      -webkit-overflow-scrolling:touch;
+    }
+    .lib-header{
+      padding:20px;
+      background:var(--nav-bg);
+      border-bottom:2px solid var(--accent);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      position:sticky;
+      top:0;
+      z-index:5;
+      color:var(--nav-text);
+    }
+    .song-item{
+      padding:20px;
+      border-bottom:1px solid #222;
+      display:flex;
+      justify-content:space-between;
+      font-size:1.1em;
+      cursor:pointer;
+    }
 
     /* Lecteur */
-    #viewer-container { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 10; }
-    nav { display: flex; background: #1a1a1a; min-height: 60px; align-items: center; padding: 0 10px; gap: 8px; border-bottom: 1px solid #333; flex-wrap: wrap; }
-    .controls-group { display:flex; align-items:center; gap:5px; background:#222; padding:5px; border-radius:8px; }
+    #viewer-container{
+      display:none;
+      position:fixed;
+      top:0;
+      left:0;
+      width:100vw;
+      height:100vh;
+      background:var(--bg);
+      z-index:10;
+    }
+    nav{
+      display:flex;
+      background:var(--nav-bg);
+      color:var(--nav-text);
+      min-height:60px;
+      align-items:center;
+      padding:0 10px;
+      gap:8px;
+      border-bottom:1px solid var(--panel-border);
+      flex-wrap:wrap;
+    }
+    .controls-group{
+      display:flex;
+      align-items:center;
+      gap:5px;
+      background:rgba(255,255,255,0.06);
+      padding:5px;
+      border-radius:8px;
+    }
 
     /* Bandeau update */
-    #updateBanner {
-      position: sticky;
-      top: 0;
-      z-index: 999;
-      display: none;
-      background: #222;
-      border-bottom: 1px solid #444;
-      padding: 10px 12px;
-      font-size: 14px;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
+    #updateBanner{
+      position:sticky;
+      top:0;
+      z-index:999;
+      display:none;
+      background:rgba(255,255,255,0.06);
+      border-bottom:1px solid var(--panel-border);
+      padding:10px 12px;
+      font-size:14px;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      color:var(--text);
     }
-    #updateBanner .msg { color: #ddd; }
-    #updateBanner .btn-small {
-      padding: 8px 10px;
-      border-radius: 6px;
-      font-size: 12px;
+    #updateBanner .msg{ color:var(--text); }
+    #updateBanner .btn-small{
+      padding:8px 10px;
+      border-radius:6px;
+      font-size:12px;
     }
 
     /* Panneau notes */
-    #notesPanel {
-      display: none;
-      background: #111;
-      border-bottom: 1px solid #333;
-      padding: 12px;
+    #notesPanel{
+      display:none;
+      background:var(--panel-bg);
+      border-bottom:1px solid var(--panel-border);
+      padding:12px;
     }
-    #notesTextarea {
-      width: 100%;
-      min-height: 120px;
-      background: #000;
-      color: #0f0;
-      border: 1px solid #333;
-      padding: 10px;
-      font-family: monospace;
-      resize: vertical;
-      box-sizing: border-box;
-    }
-
-    #viewer {
-      height: calc(100vh - 65px);
-      overflow-y: scroll;
-      padding: 25px;
-      font-family: 'Courier New', Courier, monospace;
-      -webkit-overflow-scrolling: touch;
-      scroll-behavior: auto !important;
-      touch-action: pan-y;
+    #notesTextarea{
+      width:100%;
+      min-height:120px;
+      background:#000;
+      color:#0f0;
+      border:1px solid #333;
+      padding:10px;
+      font-family:monospace;
+      resize:vertical;
+      box-sizing:border-box;
     }
 
-    /* Rendu ChordPro (aligné) */
-    .block { margin-bottom: 26px; }
-    .chordline, .lyricline {
-      white-space: pre-wrap;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      line-height: 1.6;
-      margin: 0;
-    }
-    .chordline { color: var(--accent); font-weight: bold; }
-
-    /* Commentaires {c:...} : surlignage seulement sur le texte */
-    .commentwrap { margin: 10px 0; }
-    .commentline {
-      display: inline-block;
-      background: #ffd54f;
-      color: #000;
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-family: sans-serif;
-      font-weight: 800;
+    #viewer{
+      height:calc(100vh - 65px);
+      overflow-y:scroll;
+      padding:25px;
+      font-family:'Courier New', Courier, monospace;
+      -webkit-overflow-scrolling:touch;
+      scroll-behavior:auto !important;
+      touch-action:pan-y;
     }
 
-    /* Chorus bloc {soc:}...{eoc:} : un gros bloc */
-    .chorus-block {
-      background: #111827;
-      border-left: 4px solid #60a5fa;
-      padding: 10px 10px;
-      border-radius: 12px;
-      margin: 14px 0;
+    /* Rendu ChordPro */
+    .block{ margin-bottom:26px; }
+    .chordline,.lyricline{
+      white-space:pre-wrap;
+      word-break:break-word;
+      overflow-wrap:anywhere;
+      line-height:1.6;
+      margin:0;
+    }
+    .chordline{ color:var(--accent); font-weight:bold; }
+
+    /* Commentaires {c:...} : surlignage sur le texte uniquement + police plus grande */
+    .commentwrap{ margin:12px 0; }
+    .commentline{
+      display:inline-block;
+      background:var(--comment-bg);
+      color:var(--comment-text);
+      padding:6px 10px;
+      border-radius:8px;
+      font-family:sans-serif;
+      font-weight:900;
+      font-size:18px; /* ✅ plus grand */
+      line-height:1.2;
+    }
+
+    /* Chorus bloc */
+    .chorus-block{
+      background:var(--chorus-bg);
+      border-left:4px solid var(--chorus-border);
+      padding:12px 12px;
+      border-radius:12px;
+      margin:14px 0;
+      color:var(--chorus-text);
     }
 
     /* Éditeur */
-    #editor-container { display: none; position: fixed; top: 60px; left: 0; width: 100vw; height: calc(100vh - 60px); background: #111; z-index: 20; }
-    #editor-textarea { width: 100%; height: 80%; background: #000; color: #2196F3; border: none; font-family: monospace; font-size: 16px; padding: 20px; box-sizing: border-box; }
-    .editor-footer { height: 20%; display: flex; justify-content: center; align-items: center; gap: 20px; background: #1a1a1a; }
-
-    .btn { cursor: pointer; padding: 10px 14px; border: 2px solid var(--accent); border-radius: 6px; color: var(--accent); background: none; font-size: 13px; font-weight: bold; }
-    .btn-blue { border-color: var(--edit); color: var(--edit); }
-    .active-btn { background: #444; color: #fff; }
-
-    /* Modal choix (simple) */
-    #editChoiceBackdrop {
-      position: fixed;
-      inset: 0;
-      display: none;
-      z-index: 2000;
-      background: rgba(0,0,0,0.75);
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
+    #editor-container{
+      display:none;
+      position:fixed;
+      top:60px;
+      left:0;
+      width:100vw;
+      height:calc(100vh - 60px);
+      background:#111;
+      z-index:20;
     }
-    #editChoiceModal {
-      width: min(560px, 100%);
-      background: #121212;
-      border: 1px solid #2a2a2a;
-      border-radius: 14px;
-      overflow: hidden;
+    #editor-textarea{
+      width:100%;
+      height:80%;
+      background:#000;
+      color:#2196F3;
+      border:none;
+      font-family:monospace;
+      font-size:16px;
+      padding:20px;
+      box-sizing:border-box;
     }
-    #editChoiceModal header { padding: 14px 16px; border-bottom: 1px solid #2a2a2a; background: #161616; }
-    #editChoiceModal header h3 { margin: 0; font-size: 14px; color: #fff; }
-    #editChoiceModal .content { padding: 14px 16px; }
-    #editChoiceModal .actions { padding: 14px 16px; border-top: 1px solid #2a2a2a; display: flex; justify-content: flex-end; }
-
-    .choice {
-      border: 1px solid #333;
-      background: #0b0b0b;
-      border-radius: 12px;
-      padding: 12px;
-      cursor: pointer;
+    .editor-footer{
+      height:20%;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:20px;
+      background:var(--nav-bg);
     }
-    .choice:hover { background: #101010; }
-    .choice b { color: #fff; display:block; margin-bottom: 6px; }
-    .choice .small { color:#aaa; font-size:12px; display:block; }
 
-    /* Settings modal backdrop inline styles are in HTML */
+    .btn{
+      cursor:pointer;
+      padding:10px 14px;
+      border:2px solid var(--accent);
+      border-radius:6px;
+      color:var(--accent);
+      background:none;
+      font-size:13px;
+      font-weight:bold;
+    }
+    .btn-blue{ border-color:var(--edit); color:var(--edit); }
+    .active-btn{ background:#444; color:#fff; }
+
+    /* Modal choix édition */
+    #editChoiceBackdrop{
+      position:fixed;
+      inset:0;
+      display:none;
+      z-index:2000;
+      background:rgba(0,0,0,0.75);
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    #editChoiceModal{
+      width:min(560px,100%);
+      background:#121212;
+      border:1px solid #2a2a2a;
+      border-radius:14px;
+      overflow:hidden;
+    }
+    #editChoiceModal header{ padding:14px 16px; border-bottom:1px solid #2a2a2a; background:#161616; }
+    #editChoiceModal header h3{ margin:0; font-size:14px; color:#fff; }
+    #editChoiceModal .content{ padding:14px 16px; }
+    #editChoiceModal .actions{ padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end; }
+    .choice{
+      border:1px solid #333;
+      background:#0b0b0b;
+      border-radius:12px;
+      padding:12px;
+      cursor:pointer;
+    }
+    .choice:hover{ background:#101010; }
+    .choice b{ color:#fff; display:block; margin-bottom:6px; }
+    .choice .small{ color:#aaa; font-size:12px; display:block; }
   </style>
 </head>
 
 <body>
-  <!-- Badge user (toujours visible) -->
-  <div id="userBadge">
-    <span>Utilisateur :</span>
-    <b id="userNameLabel">—</b>
-    <button class="btn" style="padding:6px 10px; font-size:12px;" onclick="openUserPicker(true)">Changer</button>
-  </div>
+  <!-- Bouton réglages FIXE -->
+  <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
+
+  <!-- Toast -->
+  <div id="toast"></div>
 
   <!-- Overlay choix utilisateur -->
   <div id="userOverlay">
@@ -244,7 +367,6 @@
       </div>
       <div class="actions">
         <button class="btn" style="border-color:#777;color:#777;" onclick="addUser()">+ Ajouter</button>
-        <button class="btn btn-blue" onclick="closeUserPicker()">OK</button>
       </div>
     </div>
   </div>
@@ -273,7 +395,7 @@
   <div id="library">
     <div class="lib-header">
       <h2 style="margin:0;">Répertoire</h2>
-      <!-- Plus de bouton leader ici (déplacé dans ⚙️) -->
+      <span style="opacity:.8; font-size:12px;"> </span>
     </div>
     <div id="songList"></div>
   </div>
@@ -281,9 +403,6 @@
   <div id="viewer-container">
     <nav>
       <button class="btn" onclick="closeViewer()">⬅</button>
-
-      <!-- ⚙️ Réglages -->
-      <button class="btn" id="settingsBtn" onclick="openSettings()">⚙️</button>
 
       <div class="controls-group">
         <button class="btn" id="playBtn" onclick="toggleAutoScroll(true)">▶</button>
@@ -313,7 +432,6 @@
       </div>
     </div>
 
-    <!-- Notes personnelles -->
     <div id="notesPanel">
       <textarea id="notesTextarea" placeholder="Tes annotations personnelles..."></textarea>
     </div>
@@ -334,9 +452,9 @@
 
   <!-- Modal Réglages -->
   <div id="settingsBackdrop" style="
-    position:fixed; inset:0; display:none; z-index:4000;
+    position:fixed; inset:0; display:none; z-index:6500;
     background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:18px;">
-    <div style="width:min(560px,100%); background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden;">
+    <div id="settingsModal" style="width:min(560px,100%); background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden;">
       <header style="padding:14px 16px; border-bottom:1px solid #2a2a2a; background:#161616;">
         <h3 style="margin:0; font-size:14px; color:#fff;">Réglages</h3>
       </header>
@@ -365,61 +483,95 @@
 
     let isRemoteScrolling = false;
 
-    // Auto-scroll (RAF + carry)
+    // Auto-scroll
     let isScrolling = false;
     let rafId = null;
     let lastRafTime = 0;
     let scrollCarry = 0;
 
     const viewerElement = document.getElementById('viewer');
+    const songContentEl = document.getElementById('songContent');
+    const speedInput = document.getElementById('scrollSpeed');
+    const updateBanner = document.getElementById('updateBanner');
 
-    // --- SWIPE (précédent/suivant) ---
+    const notesPanel = document.getElementById('notesPanel');
+    const notesTextarea = document.getElementById('notesTextarea');
+
+    // --- SWIPE ---
     let touchStartX = 0, touchStartY = 0;
     const SWIPE_MIN_X = 110;
     const SWIPE_RATIO = 1.4;
 
-    const songContentEl = document.getElementById('songContent');
-    const speedInput = document.getElementById('scrollSpeed');
+    // --- EDIT MODE + PIN CACHE ---
+    let editMode = null;
+    let globalPinCache = "";
 
-    // Update banner
-    const updateBanner = document.getElementById('updateBanner');
-
-    // Notes
-    const notesPanel = document.getElementById('notesPanel');
-    const notesTextarea = document.getElementById('notesTextarea');
-
-    // ---- EDIT MODE + PIN CACHE ----
-    let editMode = null;        // 'personal' | 'global'
-    let globalPinCache = "";    // PIN saisi au moment du choix global
-
-    // ---- USERS ----
+    // --- USERS ---
     const DEFAULT_USERS = ["Nemo","Estelle","Gillou","Bubu","Christian","Christophe"];
     let currentUser = "";
     let users = [];
 
     const userOverlay = document.getElementById('userOverlay');
     const userGrid = document.getElementById('userGrid');
-    const userBadge = document.getElementById('userBadge');
-    const userNameLabel = document.getElementById('userNameLabel');
 
-    // ---- SETTINGS ----
+    // --- SETTINGS ---
     const settingsBackdrop = document.getElementById('settingsBackdrop');
-    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsBtnFixed = document.getElementById('settingsBtnFixed');
 
-    // --- CHORD STYLE (latin/américain) ---
-    let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin'; // 'latin' | 'american'
+    // --- TOAST ---
+    const toastEl = document.getElementById('toast');
+    let toastTimer = null;
+    function showToast(msg) {
+      if (toastTimer) clearTimeout(toastTimer);
+      toastEl.textContent = msg;
+      toastEl.style.display = 'block';
+      toastTimer = setTimeout(() => { toastEl.style.display = 'none'; }, 1700);
+    }
 
-    // --- THEME (dark/light) ---
-    let themeMode = localStorage.getItem('bandapp_theme') || 'dark'; // 'dark' | 'light'
+    // --- CHORD STYLE ---
+    let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin'; // latin|american
+
+    // --- THEME ---
+    let themeMode = localStorage.getItem('bandapp_theme') || 'dark'; // dark|light
 
     function applyTheme() {
       const root = document.documentElement;
+
       if (themeMode === 'light') {
         root.style.setProperty('--bg', '#f7f7f7');
         root.style.setProperty('--text', '#111');
+
+        root.style.setProperty('--nav-bg', '#ffffff');
+        root.style.setProperty('--nav-text', '#111');
+        root.style.setProperty('--panel-bg', '#ffffff');
+        root.style.setProperty('--panel-border', '#d6d6d6');
+
+        root.style.setProperty('--chorus-bg', '#eaf2ff');      /* ✅ clair */
+        root.style.setProperty('--chorus-border', '#3b82f6');
+        root.style.setProperty('--chorus-text', '#111');       /* ✅ texte noir lisible */
+
+        root.style.setProperty('--comment-bg', '#ffe08a');
+        root.style.setProperty('--comment-text', '#111');
+
+        // bouton fixe : fond plus clair
+        settingsBtnFixed.style.background = 'rgba(255,255,255,0.7)';
       } else {
         root.style.setProperty('--bg', '#000');
         root.style.setProperty('--text', '#eee');
+
+        root.style.setProperty('--nav-bg', '#1a1a1a');
+        root.style.setProperty('--nav-text', '#eee');
+        root.style.setProperty('--panel-bg', '#111');
+        root.style.setProperty('--panel-border', '#333');
+
+        root.style.setProperty('--chorus-bg', '#111827');
+        root.style.setProperty('--chorus-border', '#60a5fa');
+        root.style.setProperty('--chorus-text', '#eee');
+
+        root.style.setProperty('--comment-bg', '#ffd54f');
+        root.style.setProperty('--comment-text', '#000');
+
+        settingsBtnFixed.style.background = 'rgba(0,0,0,0.25)';
       }
     }
 
@@ -434,7 +586,6 @@
       syncSettingsUI();
       settingsBackdrop.style.display = 'flex';
     }
-
     function closeSettings() {
       settingsBackdrop.style.display = 'none';
     }
@@ -471,32 +622,29 @@
         const div = document.createElement('div');
         div.className = 'user-choice';
         div.textContent = name;
-        div.onclick = () => setCurrentUser(name);
+        div.onclick = () => setCurrentUser(name, true);
         userGrid.appendChild(div);
       });
     }
 
-    function setCurrentUser(name) {
+    function setCurrentUser(name, fromPicker) {
       currentUser = String(name || "").trim();
       if (!currentUser) return;
       localStorage.setItem('bandapp_currentUser', currentUser);
-      userNameLabel.textContent = currentUser;
-      userBadge.style.display = 'flex';
 
       if (currentFileName) loadNotes();
+
+      if (fromPicker) {
+        userOverlay.style.display = 'none';
+        showToast(`Bienvenue ${currentUser}`);
+      }
     }
 
     function openUserPicker(force) {
       const saved = localStorage.getItem('bandapp_currentUser') || "";
       if (!force && saved) return;
-
       userOverlay.style.display = 'flex';
       renderUserGrid();
-    }
-
-    function closeUserPicker() {
-      userOverlay.style.display = 'none';
-      if (!currentUser && users.length) setCurrentUser(users[0]);
     }
 
     function addUser() {
@@ -517,15 +665,15 @@
 
       const saved = localStorage.getItem('bandapp_currentUser') || "";
       if (saved) {
-        setCurrentUser(saved);
+        setCurrentUser(saved, false);
       } else {
         openUserPicker(true);
       }
     }
 
-    // Connexion témoin (bordure du bouton ⚙️)
-    socket.on('connect', () => { if (settingsBtn) settingsBtn.style.borderColor = "#4CAF50"; });
-    socket.on('disconnect', () => { if (settingsBtn) settingsBtn.style.borderColor = "#f44336"; });
+    // Connexion témoin (bordure du bouton fixe)
+    socket.on('connect', () => { settingsBtnFixed.style.borderColor = "#4CAF50"; });
+    socket.on('disconnect', () => { settingsBtnFixed.style.borderColor = "#f44336"; });
 
     async function fetchSongs() {
       const res = await fetch('/list-songs');
@@ -586,29 +734,25 @@
       loadSong(currentFileName);
     }
 
-    // --- NOTES PERSONNELLES (PAR UTILISATEUR) ---
+    // --- NOTES ---
     function notesKey(fileName) {
       const u = currentUser || "unknown";
       return "notes:" + u + ":" + fileName;
     }
-
     function loadNotes() {
       if (!currentFileName) return;
       const val = localStorage.getItem(notesKey(currentFileName)) || "";
       notesTextarea.value = val;
     }
-
     function saveNotes() {
       if (!currentFileName) return;
       localStorage.setItem(notesKey(currentFileName), notesTextarea.value || "");
     }
-
     function toggleNotes() {
       const visible = notesPanel.style.display === "block";
       notesPanel.style.display = visible ? "none" : "block";
       if (!visible) loadNotes();
     }
-
     notesTextarea.addEventListener('input', saveNotes);
 
     // --- SYNCHRO SCROLL ---
@@ -812,7 +956,7 @@
     function addCenteredTitle(text, level) {
       const el = document.createElement(level === 1 ? 'h1' : 'h2');
       el.style.textAlign = 'center';
-      if (level === 2) el.style.color = '#888';
+      if (level === 2) el.style.color = (themeMode === 'light' ? '#555' : '#888');
       el.textContent = text;
       songContentEl.appendChild(el);
     }
@@ -908,7 +1052,6 @@
     function closeEditChoice() {
       document.getElementById('editChoiceBackdrop').style.display = 'none';
     }
-
     function openEditor() {
       stopAutoScroll();
       openEditChoice();
