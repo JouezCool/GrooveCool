@@ -242,38 +242,63 @@
   <script>
     const socket = io();
 
-    // ------------------ USERS ------------------
-    const defaultUsers = ["Nemo", "Estelle", "Gillou", "Bubu", "Christophe", "Christian"]; // <-- adapte ta liste
-    const USERS_KEY = "bandapp_users";
-    const CURRENT_USER_KEY = "bandapp_current_user";
+// ------------------ USERS ------------------
 
-    function loadUsers() {
-      const raw = localStorage.getItem(USERS_KEY);
-      if (raw) {
-        try {
-          const arr = JSON.parse(raw);
-          if (Array.isArray(arr) && arr.length) return arr;
-        } catch {}
-      }
-      localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
-      return [...defaultUsers];
-    }
+const defaultUsers = [
+  "Nemo",
+  "Estelle",
+  "Gillou",
+  "Bubu",
+  "Christian",
+  "Christophe"
+];
 
-    function saveUsers(list) {
-      localStorage.setItem(USERS_KEY, JSON.stringify(list));
-    }
+const USERS_KEY = "bandapp_users";
+const USERS_VER_KEY = "bandapp_users_version";
+const CURRENT_USER_KEY = "bandapp_current_user";
 
-    function getCurrentUser() {
-      return localStorage.getItem(CURRENT_USER_KEY) || "";
-    }
+// 🔴 IMPORTANT : augmente ce numéro si tu modifies la liste plus tard
+const USERS_VERSION = 2;
 
-    function setCurrentUser(name) {
-      localStorage.setItem(CURRENT_USER_KEY, name);
-      document.getElementById("currentUserLabel").textContent = name || "—";
-      // recharger prefs + notes pour cet user
-      loadUserPrefs();
-      loadNotesForSong(currentFileName);
-    }
+function loadUsers() {
+  const storedVer = Number(localStorage.getItem(USERS_VER_KEY) || "0");
+  const raw = localStorage.getItem(USERS_KEY);
+
+  // Si version différente → on écrase avec la nouvelle liste
+  if (storedVer !== USERS_VERSION) {
+    localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
+    localStorage.setItem(USERS_VER_KEY, String(USERS_VERSION));
+    return [...defaultUsers];
+  }
+
+  if (raw) {
+    try {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length) return arr;
+    } catch {}
+  }
+
+  localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
+  localStorage.setItem(USERS_VER_KEY, String(USERS_VERSION));
+  return [...defaultUsers];
+}
+
+function saveUsers(list) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(list));
+  localStorage.setItem(USERS_VER_KEY, String(USERS_VERSION));
+}
+
+function getCurrentUser() {
+  return localStorage.getItem(CURRENT_USER_KEY) || "";
+}
+
+function setCurrentUser(name) {
+  localStorage.setItem(CURRENT_USER_KEY, name);
+  document.getElementById("currentUserLabel").textContent = name || "—";
+  loadUserPrefs();
+  loadNotesForSong(currentFileName);
+}
+
 
     function openUserModal() {
       renderUserList();
