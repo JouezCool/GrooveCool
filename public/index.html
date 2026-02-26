@@ -467,6 +467,9 @@
         <button class="btn" id="settingsChordBtn" onclick="toggleChordStyle()">Accords: Do</button>
 
         <button class="btn" id="settingsThemeBtn" onclick="toggleTheme()">Thème: Sombre</button>
+        <button class="btn" onclick="exportBackup()">⬇️ Exporter sauvegarde</button>
+<button class="btn" onclick="triggerImport()">⬆️ Importer sauvegarde</button>
+<input id="importFile" type="file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
       </div>
 
       <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end;">
@@ -1154,6 +1157,95 @@
       document.getElementById('library').style.display = 'block';
       document.getElementById('viewer-container').style.display = 'none';
     }
+    // --- BACKUP EXPORT / IMPORT ---
+const BACKUP_PREFIXES = ['bandapp_', 'personalSong:', 'notes:', 'overlay:'];
+
+function isBackupKey(k) {
+  return BACKUP_PREFIXES.some(p => k.startsWith(p));
+}
+
+function exportBackup() {
+  try {
+    const data = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (!isBackupKey(key)) continue;
+      data[key] = localStorage.getItem(key);
+    }
+
+    const payload = {
+      app: "bandapp",
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      data
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const filename = `bandapp-backup-${y}-${m}-${day}.json`;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+    showToast("Sauvegarde exportée ✅");
+  } catch (e) {
+    console.error(e);
+    alert("Erreur export sauvegarde");
+  }
+}
+
+function triggerImport() {
+  // ✅ on ferme la fenêtre réglages pour éviter le souci de superposition
+  closeSettings();
+  const input = document.getElementById('importFile');
+  if (!input) return;
+  input.value = ""; // permet de ré-importer le même fichier si besoin
+  setTimeout(() => input.click(), 80);
+}
+
+function handleImportFile(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const txt = String(reader.result || "");
+      const json = JSON.parse(txt);
+
+      if (!json || json.app !== "bandapp" || typeof json.data !== "object") {
+        alert("Fichier de sauvegarde invalide.");
+        return;
+      }
+
+      // Fusion (merge) : on écrase uniquement les clés présentes dans le backup
+      const keys = Object.keys(json.data);
+      for (const k of keys) {
+        localStorage.setItem(k, json.data[k]);
+      }
+
+      showToast("Sauvegarde importée ✅");
+      // Recharge pour appliquer thème/utilisateur/etc
+      setTimeout(() => location.reload(), 600);
+
+    } catch (e) {
+      console.error(e);
+      alert("Erreur : impossible d'importer la sauvegarde.");
+    }
+  };
+  reader.readAsText(file);
+}
 
     // INIT
     applyTheme();
