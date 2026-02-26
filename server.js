@@ -75,13 +75,15 @@ io.on('connection', (socket) => {
   });
 
   let lastScrollAt = 0;
-  socket.on('scroll-sync', (pos) => {
+  socket.on('scroll-sync', (payload) => {
     const now = Date.now();
     if (now - lastScrollAt < 60) return;
     lastScrollAt = now;
-
-    const p = Math.max(0, Math.min(1, Number(pos) || 0));
-    socket.broadcast.emit('apply-scroll', p);
+  
+    const anchor = String(payload?.anchor || "");
+    const progress = Math.max(0, Math.min(1, Number(payload?.progress) || 0));
+  
+    socket.broadcast.emit('apply-scroll', { anchor, progress });
   });
 
   socket.on('sync-autoscroll', (d) => {

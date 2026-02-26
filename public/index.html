@@ -392,7 +392,6 @@
 
 <body>
     <div id="settingsFixedWrap">
-        <span id="topVersionBadge" class="version-badge">—</span>
         <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
         <span id="settingsUserLabel"></span>
       </div>
@@ -863,23 +862,49 @@
     }
     notesTextarea.addEventListener('input', saveNotes);
 
-    // --- SYNCHRO SCROLL ---
-    let lastEmitAt = 0;
-    let lastEmitPos = -1;
+    function getTopLyricAnchorState() {
+  const blocks = viewerElement.querySelectorAll('[data-kind="lyric"][data-anchor]');
+  if (!blocks.length) return null;
 
-    viewerElement.addEventListener('scroll', () => {
-      if (!isLeader || isRemoteScrolling) return;
+  const st = viewerElement.scrollTop;
+  // on prend le premier bloc dont le bas est sous le haut de l’écran
+  for (const el of blocks) {
+    const top = el.offsetTop;
+    const h = el.offsetHeight || 1;
+    if (top + h > st + 8) {
+      const progress = clamp01((st - top) / h);
+      return { anchor: el.dataset.anchor, progress };
+    }
+  }
 
-      const max = viewerElement.scrollHeight - viewerElement.clientHeight;
-      const pos = max > 0 ? (viewerElement.scrollTop / max) : 0;
+  // si on est tout en bas, on prend le dernier
+  const last = blocks[blocks.length - 1];
+  return { anchor: last.dataset.anchor, progress: 1 };
+}
 
-      const now = Date.now();
-      if (now - lastEmitAt < 80 && Math.abs(pos - lastEmitPos) < 0.003) return;
+let lastEmitAt = 0;
+let lastEmitAnchor = "";
+let lastEmitProg = -1;
 
-      lastEmitAt = now;
-      lastEmitPos = pos;
-      socket.emit('scroll-sync', pos);
-    });
+viewerElement.addEventListener('scroll', () => {
+  if (!isLeader || isRemoteScrolling) return;
+
+  const state = getTopLyricAnchorState();
+  if (!state) return;
+
+  const now = Date.now();
+  if (now - lastEmitAt < 80 &&
+      state.anchor === lastEmitAnchor &&
+      Math.abs(state.progress - lastEmitProg) < 0.03) {
+    return;
+  }
+
+  lastEmitAt = now;
+  lastEmitAnchor = state.anchor;
+  lastEmitProg = state.progress;
+
+  socket.emit('scroll-sync', state); // ✅ objet {anchor, progress}
+});
 
     function isEditorOpen() {
       return document.getElementById('editor-container').style.display === 'block';
@@ -912,14 +937,29 @@
       else if (dx < 0 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
     }, { passive: true });
 
-    socket.on('apply-scroll', p => {
-      if (!isLeader) {
-        isRemoteScrolling = true;
-        const max = viewerElement.scrollHeight - viewerElement.clientHeight;
-        viewerElement.scrollTop = (Number(p) || 0) * (max > 0 ? max : 0);
-        setTimeout(() => { isRemoteScrolling = false; }, 50);
-      }
-    });
+    socket.on('apply-scroll', data => {
+  if (isLeader) return;
+
+  const anchor = data?.anchor;
+  const progress = clamp01(Number(data?.progress) || 0);
+
+  // ✅ on se cale sur le même bloc de paroles, même si la hauteur totale diffère
+  const el = anchor ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`) : null;
+
+  isRemoteScrolling = true;
+
+  if (el) {
+    const top = el.offsetTop;
+    const h = el.offsetHeight || 1;
+    viewerElement.scrollTop = top + progress * h;
+  } else {
+    // fallback si jamais pas trouvé (cas rare)
+    const max = viewerElement.scrollHeight - viewerElement.clientHeight;
+    viewerElement.scrollTop = progress * (max > 0 ? max : 0);
+  }
+
+  setTimeout(() => { isRemoteScrolling = false; }, 50);
+});
 
     // --- AUTO-SCROLL ---
     function sliderToPxPerSecond(value) {
@@ -1081,27 +1121,48 @@
       targetEl.appendChild(wrap);
     }
 
-    function addChordBlock(chordLine, lyricLine, targetEl) {
-      const block = document.createElement('div');
-      block.className = 'block';
-      block.style.fontSize = fontSize + 'px';
+    function addChordBlock(chordLine, lyricLine, targetEl, anchorId) {
+  const block = document.createElement('div');
+  block.className = 'block';
+  block.style.fontSize = fontSize + 'px';
 
-      const preChord = document.createElement('pre');
-      preChord.className = 'chordline';
-      preChord.textContent = chordLine;
+  // ✅ ancre pour la synchro (uniquement sur les blocs de paroles)
+  block.dataset.kind = 'lyric';
+  if (anchorId) block.dataset.anchor = anchorId;
 
-      const preLyric = document.createElement('pre');
-      preLyric.className = 'lyricline';
-      preLyric.textContent = lyricLine;
+  const preChord = document.createElement('pre');
+  preChord.className = 'chordline';
+  preChord.textContent = chordLine;
 
-      if (chordLine.trim().length > 0) block.appendChild(preChord);
-      block.appendChild(preLyric);
+  const preLyric = document.createElement('pre');
+  preLyric.className = 'lyricline';
+  preLyric.textContent = lyricLine;
 
-      targetEl.appendChild(block);
-    }
+  if (chordLine.trim().length > 0) block.appendChild(preChord);
+  block.appendChild(preLyric);
+
+  targetEl.appendChild(block);
+}
+
+    function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
+function normAnchorText(s){
+  return String(s || "")
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// petit hash stable (djb2) pour éviter des IDs trop longs
+function hashDJB2(str){
+  let h = 5381;
+  for (let i=0; i<str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i);
+  return (h >>> 0).toString(16);
+}
 
     function renderChordPro() {
       clearSongContent();
+      renderChordPro._occ = {}; // ✅ reset compteur d’ancres à chaque rendu
 
       let inChorus = false;
       let chorusContainer = null;
@@ -1141,7 +1202,16 @@
 
         // Ligne standard
         const { chordLine, lyricLine } = parseChordProLine(line);
-        addChordBlock(chordLine, lyricLine, target);
+
+// ✅ anchor basée sur les paroles (sans accords)
+// + compteur pour éviter collisions si la même ligne revient
+const key = normAnchorText(lyricLine);
+if (!renderChordPro._occ) renderChordPro._occ = {};
+renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
+
+const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
+
+addChordBlock(chordLine, lyricLine, target, anchorId);
       }
     }
 
