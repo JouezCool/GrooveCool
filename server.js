@@ -69,7 +69,7 @@ app.post('/save-song', (req, res) => {
 io.on('connection', (socket) => {
   console.log('📱 connecté', socket.id);
 
-  // ✅ plus de PIN sur la synchro
+  // Synchro sans PIN côté socket (comme ton code)
   socket.on('change-song', (fileName) => {
     io.emit('load-song', fileName);
   });
