@@ -44,11 +44,34 @@
       gap: 10px;
     }
     #updateBanner .msg { color: #ddd; }
-    #updateBanner .btn-small {
-      padding: 8px 10px;
-      border-radius: 6px;
-      font-size: 12px;
+    #updateBanner .btn-small { padding: 8px 10px; border-radius: 6px; font-size: 12px; }
+
+    /* Notes panel */
+    #notesPanel {
+      display: none;
+      position: sticky;
+      top: 0;
+      z-index: 998;
+      background: #111;
+      border-bottom: 1px solid #333;
+      padding: 10px 12px;
+      gap: 10px;
     }
+    #notesPanel textarea {
+      width: 100%;
+      height: 110px;
+      background: #000;
+      color: #ddd;
+      border: 1px solid #333;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 14px;
+      padding: 10px;
+      box-sizing: border-box;
+      resize: none;
+    }
+    .notes-row { display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap: wrap; }
+    .note-hint { color:#aaa; font-size:12px; }
 
     #viewer {
       height: calc(100vh - 65px);
@@ -62,11 +85,7 @@
 
     /* Rendu ChordPro (aligné) */
     .block { margin-bottom: 26px; }
-    .chordline, .lyricline {
-      white-space: pre;
-      line-height: 1.6;
-      margin: 0;
-    }
+    .chordline, .lyricline { white-space: pre; line-height: 1.6; margin: 0; }
     .chordline { color: var(--accent); font-weight: bold; }
 
     /* Éditeur */
@@ -78,6 +97,7 @@
     .btn-blue { border-color: var(--edit); color: var(--edit); }
     .leader-mode { background: var(--accent) !important; color: #000 !important; }
     .active-btn { background: #444; color: #fff; }
+    .disabled { opacity: 0.5; pointer-events: none; }
   </style>
 </head>
 
@@ -110,17 +130,29 @@
         <button class="btn" onclick="updateTranspose(1)">+</button>
       </div>
 
+      <button class="btn" id="notesBtn" onclick="toggleNotes()">NOTES</button>
+
       <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
       <button class="btn" id="navLeaderBtn" onclick="toggleLeader()">Solo</button>
     </nav>
 
-    <!-- Bandeau update (dans le viewer) -->
+    <!-- Bandeau update -->
     <div id="updateBanner">
       <div class="msg">Une mise à jour de cette chanson est disponible.</div>
       <div style="display:flex; gap:8px;">
         <button class="btn btn-small" onclick="dismissUpdate()">PLUS TARD</button>
         <button class="btn btn-blue btn-small" onclick="reloadCurrentSong()">RECHARGER</button>
       </div>
+    </div>
+
+    <!-- Notes personnelles -->
+    <div id="notesPanel">
+      <div class="notes-row">
+        <div class="note-hint">Notes personnelles (ne modifie pas la partition globale)</div>
+        <button class="btn btn-small" onclick="clearNotes()" style="border-color:#ff5252;color:#ff5252;">EFFACER</button>
+      </div>
+      <textarea id="notesTextarea" placeholder="Ex: Refrain 2: attention au break / Entrée basse après 2 temps / etc."></textarea>
+      <div class="note-hint">Sauvegarde auto sur cet appareil.</div>
     </div>
 
     <div id="viewer">
@@ -140,7 +172,7 @@
   <script>
     const socket = io();
 
-    // Session (room)
+    // ---------- Session (room) ----------
     const sessionId =
       new URLSearchParams(location.search).get('session') ||
       localStorage.getItem('sessionId') ||
@@ -148,47 +180,113 @@
 
     localStorage.setItem('sessionId', sessionId);
 
-    // Rejoindre la room
     socket.emit('join-session', { sessionId });
-    socket.on('session-joined', ({ room }) => {
-      console.log('Session join OK:', room);
-    });
+    socket.on('session-joined', ({ room }) => console.log('Session join OK:', room));
 
-    // PIN
+    // ---------- Device id (pour notes/settings locales) ----------
+    const deviceIdKey = 'deviceId';
+    let deviceId = localStorage.getItem(deviceIdKey);
+    if (!deviceId) {
+      deviceId = (crypto?.randomUUID?.() || ('dev_' + Math.random().toString(16).slice(2) + Date.now()));
+      localStorage.setItem(deviceIdKey, deviceId);
+    }
+
+    // ---------- PIN (édition globale) ----------
     let leaderPin = localStorage.getItem('leaderPin') || '';
-
     function requirePin() {
       if (leaderPin && leaderPin.length > 0) return leaderPin;
-      const p = prompt("PIN Leader ?");
+      const p = prompt("PIN édition ?");
       if (p === null) return '';
       leaderPin = String(p).trim();
       localStorage.setItem('leaderPin', leaderPin);
       return leaderPin;
     }
 
+    // ---------- State ----------
     let isLeader = false, allSongs = [], currentIndex = -1;
-    let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
+    let currentRaw = "", currentFileName = "";
+
+    // Réglages perso (locaux)
+    let fontSize = Number(localStorage.getItem('pref_fontSize') || 26);
+    let transposeValue = Number(localStorage.getItem('pref_transpose') || 0);
 
     let isRemoteScrolling = false;
 
-    // Auto-scroll (RAF + carry)
+    // Auto-scroll leader (local)
     let isScrolling = false;
     let rafId = null;
     let lastRafTime = 0;
     let scrollCarry = 0;
 
+    // Follower: le leader “joue” ?
+    let leaderIsPlaying = false;
+
     const viewerElement = document.getElementById('viewer');
     const songContentEl = document.getElementById('songContent');
     const speedInput = document.getElementById('scrollSpeed');
 
-    // Update banner
     const updateBanner = document.getElementById('updateBanner');
     let pendingUpdateForCurrent = false;
+
+    const notesPanel = document.getElementById('notesPanel');
+    const notesTextarea = document.getElementById('notesTextarea');
+    const notesBtn = document.getElementById('notesBtn');
 
     // Connexion témoin
     socket.on('connect', () => { document.getElementById('navLeaderBtn').style.borderColor = "#4CAF50"; });
     socket.on('disconnect', () => { document.getElementById('navLeaderBtn').style.borderColor = "#f44336"; });
 
+    // ---------- Helpers ----------
+    function normName(s) {
+      return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    function isEditorOpen() {
+      return document.getElementById('editor-container').style.display === 'block';
+    }
+
+    function notesKeyForSong(fileName) {
+      return `notes:${deviceId}:${fileName}`;
+    }
+
+    function loadNotesForSong(fileName) {
+      if (!fileName) return;
+      const key = notesKeyForSong(fileName);
+      notesTextarea.value = localStorage.getItem(key) || '';
+      updateNotesBtn();
+    }
+
+    function saveNotesForSong(fileName) {
+      if (!fileName) return;
+      const key = notesKeyForSong(fileName);
+      localStorage.setItem(key, notesTextarea.value || '');
+      updateNotesBtn();
+    }
+
+    function updateNotesBtn() {
+      const has = (notesTextarea.value || '').trim().length > 0;
+      notesBtn.classList.toggle('active-btn', has);
+    }
+
+    // autosave notes (débouce)
+    let notesTimer = null;
+    notesTextarea.addEventListener('input', () => {
+      updateNotesBtn();
+      clearTimeout(notesTimer);
+      notesTimer = setTimeout(() => saveNotesForSong(currentFileName), 250);
+    });
+
+    function toggleNotes() {
+      const open = notesPanel.style.display === 'block';
+      notesPanel.style.display = open ? 'none' : 'block';
+    }
+
+    function clearNotes() {
+      notesTextarea.value = '';
+      saveNotesForSong(currentFileName);
+    }
+
+    // ---------- Library ----------
     async function fetchSongs() {
       const res = await fetch('/list-songs');
       allSongs = (await res.json()).sort();
@@ -200,11 +298,24 @@
 
     function toggleLeader() {
       isLeader = !isLeader;
+
+      // si on passe follower, on stoppe son autoscroll local
+      if (!isLeader) stopAutoScroll();
+
       const btns = [document.getElementById('libLeaderBtn'), document.getElementById('navLeaderBtn')];
       btns.forEach(btn => {
         btn.classList.toggle('leader-mode', isLeader);
         btn.innerText = isLeader ? "Mode Leader" : "Mode Solo";
       });
+
+      refreshControlsLock();
+    }
+
+    function refreshControlsLock() {
+      // En follower + leader en lecture => on bloque le bouton play pour éviter un conflit
+      const playBtn = document.getElementById('playBtn');
+      const lock = (!isLeader && leaderIsPlaying);
+      playBtn.classList.toggle('disabled', lock);
     }
 
     function openSong(idx) {
@@ -218,6 +329,12 @@
       document.getElementById('library').style.display = 'none';
       document.getElementById('viewer-container').style.display = 'block';
 
+      // charger notes
+      loadNotesForSong(currentFileName);
+
+      // afficher transpo
+      document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
+
       if (isLeader) {
         const pin = requirePin();
         if (!pin) return;
@@ -230,8 +347,6 @@
     async function loadSong(f) {
       const res = await fetch('/partitions/' + f);
       currentRaw = await res.text();
-      transposeValue = 0;
-      document.getElementById('transposeVal').innerText = "0";
       renderChordPro();
       viewerElement.scrollTop = 0;
 
@@ -239,11 +354,7 @@
       updateBanner.style.display = 'none';
     }
 
-    // --- SONG UPDATED ---
-    function normName(s) {
-      return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    }
-
+    // ---------- song-updated ----------
     socket.on('song-updated', ({ fileName }) => {
       const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
       if (!viewerOpen) return;
@@ -265,7 +376,7 @@
       loadSong(currentFileName);
     }
 
-    // --- SYNCHRO SCROLL ---
+    // ---------- Option A: synchro scroll par position ----------
     let lastEmitAt = 0;
     let lastEmitPos = -1;
 
@@ -276,7 +387,7 @@
       const pos = max > 0 ? (viewerElement.scrollTop / max) : 0;
 
       const now = Date.now();
-      if (now - lastEmitAt < 80 && Math.abs(pos - lastEmitPos) < 0.003) return;
+      if (now - lastEmitAt < 60 && Math.abs(pos - lastEmitPos) < 0.002) return;
 
       lastEmitAt = now;
       lastEmitPos = pos;
@@ -287,15 +398,15 @@
     });
 
     socket.on('apply-scroll', p => {
-      if (!isLeader) {
-        isRemoteScrolling = true;
-        const max = viewerElement.scrollHeight - viewerElement.clientHeight;
-        viewerElement.scrollTop = (Number(p) || 0) * (max > 0 ? max : 0);
-        setTimeout(() => { isRemoteScrolling = false; }, 50);
-      }
+      if (isLeader) return;
+
+      isRemoteScrolling = true;
+      const max = viewerElement.scrollHeight - viewerElement.clientHeight;
+      viewerElement.scrollTop = (Number(p) || 0) * (max > 0 ? max : 0);
+      setTimeout(() => { isRemoteScrolling = false; }, 40);
     });
 
-    // --- AUTO-SCROLL ---
+    // ---------- Auto-scroll leader local ----------
     function sliderToPxPerSecond(value) {
       const v = Number(value) || 50;
       const delayMs = Math.max(10, 105 - v);
@@ -345,47 +456,35 @@
     }
 
     function toggleAutoScroll(emitSync) {
+      // Followers: on ne lance pas d'autoscroll si le leader est en lecture (pour éviter conflit)
+      if (!isLeader && leaderIsPlaying) return;
+
       if (isScrolling) stopAutoScroll();
       else startAutoScroll();
 
+      // Le leader annonce juste play/pause (pas de vitesse)
       if (isLeader && emitSync) {
         const pin = requirePin();
         if (!pin) return;
-        socket.emit('sync-autoscroll', { active: isScrolling, speed: speedInput.value, pin });
+        socket.emit('sync-autoscroll', { active: isScrolling, pin });
       }
     }
 
-    // Sync vitesse (anti-spam)
-    let lastSpeedSyncAt = 0;
-    speedInput.addEventListener('input', () => {
-      if (isLeader) {
-        const now = Date.now();
-        if (now - lastSpeedSyncAt > 120) {
-          lastSpeedSyncAt = now;
-          const pin = requirePin();
-          if (!pin) return;
-          socket.emit('sync-autoscroll', { active: isScrolling, speed: speedInput.value, pin });
-        }
-      }
-    });
-
     socket.on('apply-autoscroll', d => {
-      if (!isLeader) {
-        speedInput.value = d.speed;
-        const wantActive = !!d.active;
-        if (wantActive && !isScrolling) startAutoScroll();
-        if (!wantActive && isScrolling) stopAutoScroll();
-      }
+      if (isLeader) return;
+      leaderIsPlaying = !!d.active;
+
+      // si leader play => on stoppe ton autoscroll local
+      if (leaderIsPlaying) stopAutoScroll();
+
+      refreshControlsLock();
     });
 
-    // --- SWIPE ---
+    // ---------- Swipe ----------
     let touchStartX = 0, touchStartY = 0;
     const SWIPE_MIN_X = 110;
     const SWIPE_RATIO = 1.4;
 
-    function isEditorOpen() {
-      return document.getElementById('editor-container').style.display === 'block';
-    }
     function isViewerOpen() {
       return document.getElementById('viewer-container').style.display === 'block';
     }
@@ -411,28 +510,21 @@
       else if (dx < 0 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
     }, { passive: true });
 
-    // --- FONT / TRANSPOSE ---
+    // ---------- Réglages perso (non synchronisés) ----------
     function updateFontSize(delta) {
       fontSize += delta;
+      localStorage.setItem('pref_fontSize', String(fontSize));
       renderChordPro();
-      if (isLeader) {
-        const pin = requirePin();
-        if (!pin) return;
-        socket.emit('sync-font', { fontSize, pin });
-      }
     }
 
     function updateTranspose(dir) {
       transposeValue += dir;
+      localStorage.setItem('pref_transpose', String(transposeValue));
       document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
       renderChordPro();
-      if (isLeader) {
-        const pin = requirePin();
-        if (!pin) return;
-        socket.emit('sync-transpose', { transposeValue, pin });
-      }
     }
 
+    // ---------- ChordPro rendering ----------
     const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
     const scaleLat = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
 
@@ -459,8 +551,8 @@
     function parseChordProLine(line) {
       let chordLine = '';
       let lyricLine = '';
-
       let i = 0;
+
       while (i < line.length) {
         const ch = line[i];
 
@@ -474,7 +566,6 @@
             if (chordLine.length < pos) chordLine += ' '.repeat(pos - chordLine.length);
 
             chordLine = chordLine.slice(0, pos) + chord + chordLine.slice(pos + chord.length);
-
             i = end + 1;
             continue;
           }
@@ -536,7 +627,7 @@
       }
     }
 
-    // --- SOCKETS ---
+    // ---------- Sockets ----------
     socket.on('load-song', f => {
       if (!isLeader) {
         const idx = allSongs.indexOf(f);
@@ -544,22 +635,7 @@
       }
     });
 
-    socket.on('apply-font', s => {
-      if (!isLeader) {
-        fontSize = Number(s) || fontSize;
-        renderChordPro();
-      }
-    });
-
-    socket.on('apply-transpose', v => {
-      if (!isLeader) {
-        transposeValue = Number(v) || 0;
-        document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
-        renderChordPro();
-      }
-    });
-
-    // --- INTERFACE ---
+    // ---------- Editor (global) ----------
     function openEditor() {
       stopAutoScroll();
       document.getElementById('editor-textarea').value = currentRaw;
@@ -576,7 +652,6 @@
       const pin = requirePin();
       if (!pin) return;
 
-      // ✅ B : on envoie aussi sessionId au serveur
       const res = await fetch('/save-song', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -605,6 +680,9 @@
       document.getElementById('library').style.display = 'block';
       document.getElementById('viewer-container').style.display = 'none';
     }
+
+    // init affichage transpo
+    document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
 
     fetchSongs();
   </script>

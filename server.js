@@ -16,7 +16,7 @@ app.use((req, res, next) => {
 app.use(express.static('public', { etag: false, maxAge: 0 }));
 
 const PARTITIONS_DIR = path.join(__dirname, 'public', 'partitions');
-const LEADER_PIN = String(process.env.LEADER_PIN || '1234');
+const LEADER_PIN = String(process.env.LEADER_PIN || '1991'); // <-- mets 1991 ici
 
 function isValidSongName(name) {
   if (typeof name !== 'string') return false;
@@ -32,7 +32,6 @@ function pinOk(pin) {
 }
 
 function cleanSessionId(s) {
-  // petit nettoyage, pour éviter trucs bizarres
   const v = String(s || '').trim();
   if (!v) return 'default';
   return v.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'default';
@@ -52,7 +51,7 @@ app.get('/list-songs', (req, res) => {
   }
 });
 
-// Sauvegarder (protégé PIN) + émission room
+// Sauvegarder (protégé PIN) + émission dans la room
 app.post('/save-song', (req, res) => {
   const { fileName, content, pin, sessionId } = req.body;
 
@@ -77,14 +76,11 @@ app.post('/save-song', (req, res) => {
 io.on('connection', (socket) => {
   console.log('📱 connecté', socket.id);
 
-  // room courante (par défaut)
   socket.data.room = 'default';
 
   socket.on('join-session', ({ sessionId }) => {
     const room = cleanSessionId(sessionId);
-    // quitter ancienne room
     socket.leave(socket.data.room);
-    // rejoindre nouvelle
     socket.join(room);
     socket.data.room = room;
 
@@ -101,18 +97,20 @@ io.on('connection', (socket) => {
     return true;
   }
 
+  // Changement de morceau (dans la room)
   socket.on('change-song', (payload, cb) => {
     if (!requirePin(payload, cb)) return;
     io.to(socket.data.room).emit('load-song', payload.fileName);
     if (typeof cb === 'function') cb({ ok: true });
   });
 
+  // Option A : synchro par position uniquement (throttle)
   let lastScrollAt = 0;
   socket.on('scroll-sync', (payload, cb) => {
     if (!requirePin(payload, cb)) return;
 
     const now = Date.now();
-    if (now - lastScrollAt < 80) return;
+    if (now - lastScrollAt < 60) return; // un peu plus fluide
     lastScrollAt = now;
 
     const pos = Math.max(0, Math.min(1, Number(payload.pos) || 0));
@@ -120,21 +118,10 @@ io.on('connection', (socket) => {
     if (typeof cb === 'function') cb({ ok: true });
   });
 
-  socket.on('sync-font', (payload, cb) => {
-    if (!requirePin(payload, cb)) return;
-    socket.to(socket.data.room).emit('apply-font', payload.fontSize);
-    if (typeof cb === 'function') cb({ ok: true });
-  });
-
-  socket.on('sync-transpose', (payload, cb) => {
-    if (!requirePin(payload, cb)) return;
-    socket.to(socket.data.room).emit('apply-transpose', payload.transposeValue);
-    if (typeof cb === 'function') cb({ ok: true });
-  });
-
+  // Etat play/pause du leader (Option A: les followers ne scrolleront pas seuls)
   socket.on('sync-autoscroll', (payload, cb) => {
     if (!requirePin(payload, cb)) return;
-    socket.to(socket.data.room).emit('apply-autoscroll', { active: !!payload.active, speed: payload.speed });
+    socket.to(socket.data.room).emit('apply-autoscroll', { active: !!payload.active });
     if (typeof cb === 'function') cb({ ok: true });
   });
 });
