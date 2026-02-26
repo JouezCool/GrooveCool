@@ -482,6 +482,17 @@
       </header>
 
       <div style="padding:14px 16px; display:grid; gap:10px;">
+        <div id="versionIndicator" style="
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.06);
+  font-weight:900;
+  font-size:12px;
+  color:var(--text);
+">
+  Version : —
+</div>
         <button class="btn" onclick="openUserFromSettings()">👤 Utilisateur</button>
 
         <button class="btn" id="settingsLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
@@ -601,6 +612,19 @@
       }
     }
 
+    function updateVersionIndicator() {
+  const el = document.getElementById('versionIndicator');
+  if (!el) return;
+
+  if (!currentFileName) {
+    el.textContent = "Version : — (aucune chanson ouverte)";
+    return;
+  }
+
+  const hasPersonal = !!getPersonalSong(currentFileName);
+  el.textContent = hasPersonal ? "Version : Personnelle (active)" : "Version : Officielle";
+}
+
     function revertToOfficial() {
   if (!currentFileName) {
     showToast("Aucune chanson ouverte");
@@ -619,6 +643,7 @@
   // recharge la version officielle
   stopAutoScroll();
   loadSong(currentFileName);
+  updateVersionIndicator();
 
   showToast("Version officielle restaurée ✅");
 }
@@ -631,9 +656,10 @@
     }
 
     function openSettings() {
-      syncSettingsUI();
-      settingsBackdrop.style.display = 'flex';
-    }
+  syncSettingsUI();
+  updateVersionIndicator();   // ✅ ajoute ça
+  settingsBackdrop.style.display = 'flex';
+}
     function openUserFromSettings() {
   closeSettings();                 // ✅ ferme la fenêtre réglages
   setTimeout(() => openUserPicker(true), 50); // ✅ ouvre ensuite le choix utilisateur
@@ -758,6 +784,7 @@
       if (isLeader) socket.emit('change-song', currentFileName);
 
       loadSong(currentFileName);
+      setTimeout(updateVersionIndicator, 50);
       setTimeout(loadNotes, 10);
     }
 
@@ -1168,6 +1195,7 @@
       if (!currentFileName) return;
 
       if (editMode === "personal") {
+        updateVersionIndicator();
         setPersonalSong(currentFileName, newContent);
         currentRaw = newContent;
         renderChordPro();
