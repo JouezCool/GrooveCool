@@ -16,7 +16,7 @@ app.use((req, res, next) => {
 app.use(express.static('public', { etag: false, maxAge: 0 }));
 
 const PARTITIONS_DIR = path.join(__dirname, 'public', 'partitions');
-const LEADER_PIN = String(process.env.LEADER_PIN || '1991'); // <-- ton code
+const LEADER_PIN = String(process.env.LEADER_PIN || '1991'); // ton PIN
 
 function isValidSongName(name) {
   if (typeof name !== 'string') return false;
@@ -45,7 +45,7 @@ app.get('/list-songs', (req, res) => {
   }
 });
 
-// Sauvegarder (protégé PIN) + broadcast update
+// Sauvegarder (PIN requis) + broadcast update
 app.post('/save-song', (req, res) => {
   const { fileName, content, pin } = req.body;
 
@@ -60,6 +60,7 @@ app.post('/save-song', (req, res) => {
   fs.writeFile(filePath, String(content ?? ""), 'utf8', (err) => {
     if (err) return res.status(500).send("Erreur");
 
+    // Prévenir tous les appareils qu’une nouvelle version existe
     io.emit('song-updated', { fileName, at: Date.now() });
     res.send("OK");
   });
@@ -68,43 +69,28 @@ app.post('/save-song', (req, res) => {
 io.on('connection', (socket) => {
   console.log('📱 connecté', socket.id);
 
-  function requirePin(payload, cb) {
-    const ok = pinOk(payload && payload.pin);
-    if (!ok) {
-      if (typeof cb === 'function') cb({ ok: false, error: 'PIN invalide' });
-      return false;
-    }
-    return true;
-  }
-
-  socket.on('change-song', (payload, cb) => {
-    if (!requirePin(payload, cb)) return;
-    io.emit('load-song', payload.fileName);
-    if (typeof cb === 'function') cb({ ok: true });
+  // ✅ plus de PIN sur la synchro
+  socket.on('change-song', (fileName) => {
+    io.emit('load-song', fileName);
   });
 
   let lastScrollAt = 0;
-  socket.on('scroll-sync', (payload, cb) => {
-    if (!requirePin(payload, cb)) return;
-
+  socket.on('scroll-sync', (pos) => {
     const now = Date.now();
     if (now - lastScrollAt < 60) return;
     lastScrollAt = now;
 
-    const pos = Math.max(0, Math.min(1, Number(payload.pos) || 0));
-    socket.broadcast.emit('apply-scroll', pos);
-    if (typeof cb === 'function') cb({ ok: true });
+    const p = Math.max(0, Math.min(1, Number(pos) || 0));
+    socket.broadcast.emit('apply-scroll', p);
   });
 
-  socket.on('sync-autoscroll', (payload, cb) => {
-    if (!requirePin(payload, cb)) return;
-    socket.broadcast.emit('apply-autoscroll', { active: !!payload.active, speed: payload.speed });
-    if (typeof cb === 'function') cb({ ok: true });
+  socket.on('sync-autoscroll', (d) => {
+    socket.broadcast.emit('apply-autoscroll', { active: !!d.active, speed: d.speed });
   });
 });
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, '0.0.0.0', () => {
   console.log("✅ Serveur en ligne sur le port " + PORT);
-  console.log("🔐 PIN leader:", LEADER_PIN);
+  console.log("🔐 PIN global:", LEADER_PIN);
 });
