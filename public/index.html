@@ -36,9 +36,10 @@
       font-family: 'Courier New', Courier, monospace;
       -webkit-overflow-scrolling: touch;
       scroll-behavior: auto !important;
+      touch-action: pan-y; /* on favorise le scroll vertical */
     }
 
-    /* Nouveau rendu ChordPro */
+    /* Rendu ChordPro (aligné) */
     .block { margin-bottom: 26px; }
     .chordline, .lyricline {
       white-space: pre;
@@ -111,11 +112,17 @@
 
     let isLeader = false, allSongs = [], currentIndex = -1;
     let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
-    let isScrolling = false, scrollInterval;
+
     let isRemoteScrolling = false;
+
+    // Auto-scroll (RAF)
+    let isScrolling = false;
+    let rafId = null;
+    let lastRafTime = 0;
 
     const viewerElement = document.getElementById('viewer');
     const songContentEl = document.getElementById('songContent');
+    const speedInput = document.getElementById('scrollSpeed');
 
     // Connexion témoin
     socket.on('connect', () => { document.getElementById('navLeaderBtn').style.borderColor = "#4CAF50"; });
@@ -187,27 +194,84 @@
       }
     });
 
-    function toggleAutoScroll(emitSync) {
-      isScrolling = !isScrolling;
-      const btn = document.getElementById('playBtn');
-      btn.innerText = isScrolling ? "⏸" : "▶";
-      btn.classList.toggle('active-btn', isScrolling);
+    // --- AUTO-SCROLL (requestAnimationFrame) ---
+    function sliderToPxPerSecond(value) {
+      // On garde "le feeling" de ton ancien setInterval:
+      // delay = (105 - value) ms pour +1px -> px/s = 1000 / delay
+      const v = Number(value) || 50;
+      const delayMs = Math.max(10, 105 - v);
+      return 1000 / delayMs;
+    }
 
-      if (isScrolling) {
-        scrollInterval = setInterval(() => {
-          viewerElement.scrollTop += 1;
-        }, 105 - document.getElementById('scrollSpeed').value);
-      } else {
-        clearInterval(scrollInterval);
-      }
+    function autoScrollLoop(t) {
+      if (!isScrolling) return;
+
+      if (!lastRafTime) lastRafTime = t;
+      const dt = t - lastRafTime;
+      lastRafTime = t;
+
+      const pxPerSec = sliderToPxPerSecond(speedInput.value);
+      const deltaPx = (dt / 1000) * pxPerSec;
+
+      viewerElement.scrollTop += deltaPx;
+
+      rafId = requestAnimationFrame(autoScrollLoop);
+    }
+
+    function startAutoScroll() {
+      if (isScrolling) return;
+      isScrolling = true;
+      document.getElementById('playBtn').innerText = "⏸";
+      document.getElementById('playBtn').classList.add('active-btn');
+      lastRafTime = 0;
+      rafId = requestAnimationFrame(autoScrollLoop);
+    }
+
+    function stopAutoScroll() {
+      if (!isScrolling) return;
+      isScrolling = false;
+      document.getElementById('playBtn').innerText = "▶";
+      document.getElementById('playBtn').classList.remove('active-btn');
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      lastRafTime = 0;
+    }
+
+    function toggleAutoScroll(emitSync) {
+      if (isScrolling) stopAutoScroll();
+      else startAutoScroll();
 
       if (isLeader && emitSync) {
-        socket.emit('sync-autoscroll', { active: isScrolling, speed: document.getElementById('scrollSpeed').value });
+        socket.emit('sync-autoscroll', { active: isScrolling, speed: speedInput.value });
       }
     }
 
-    // --- GESTION DES GESTES (SWIPE) ---
-    let touchStartX = 0;
+    // Si le leader change la vitesse pendant que ça scroll, on notifie les autres (sans spam)
+    let lastSpeedSyncAt = 0;
+    speedInput.addEventListener('input', () => {
+      if (isLeader) {
+        const now = Date.now();
+        if (now - lastSpeedSyncAt > 120) {
+          lastSpeedSyncAt = now;
+          socket.emit('sync-autoscroll', { active: isScrolling, speed: speedInput.value });
+        }
+      }
+    });
+
+    socket.on('apply-autoscroll', d => {
+      if (!isLeader) {
+        speedInput.value = d.speed;
+
+        const wantActive = !!d.active;
+        if (wantActive && !isScrolling) startAutoScroll();
+        if (!wantActive && isScrolling) stopAutoScroll();
+      }
+    });
+
+    // --- SWIPE INTELLIGENT (pas pendant scroll vertical) ---
+    let touchStartX = 0, touchStartY = 0;
+    const SWIPE_MIN_X = 110;   // seuil
+    const SWIPE_RATIO = 1.4;   // dx doit dominer dy
 
     function isEditorOpen() {
       return document.getElementById('editor-container').style.display === 'block';
@@ -216,19 +280,26 @@
       return document.getElementById('viewer-container').style.display === 'block';
     }
 
-    document.addEventListener('touchstart', e => {
-      touchStartX = e.changedTouches[0].screenX;
-    }, false);
+    viewerElement.addEventListener('touchstart', (e) => {
+      if (!isViewerOpen() || isEditorOpen()) return;
+      const t = e.changedTouches[0];
+      touchStartX = t.screenX;
+      touchStartY = t.screenY;
+    }, { passive: true });
 
-    document.addEventListener('touchend', e => {
+    viewerElement.addEventListener('touchend', (e) => {
       if (!isViewerOpen() || isEditorOpen()) return;
 
-      const touchEndX = e.changedTouches[0].screenX;
-      const swipeDistance = touchEndX - touchStartX;
+      const t = e.changedTouches[0];
+      const dx = t.screenX - touchStartX;
+      const dy = t.screenY - touchStartY;
 
-      if (swipeDistance > 100 && currentIndex > 0) openSong(currentIndex - 1);
-      else if (swipeDistance < -100 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
-    }, false);
+      if (Math.abs(dx) < SWIPE_MIN_X) return;
+      if (Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return; // c'était surtout un scroll vertical
+
+      if (dx > 0 && currentIndex > 0) openSong(currentIndex - 1);
+      else if (dx < 0 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
+    }, { passive: true });
 
     // --- RENDU / POLICES / TRANSPOSITION ---
     function updateFontSize(delta) {
@@ -248,7 +319,6 @@
     const scaleLat = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
 
     function normalizeNote(note) {
-      // convertit b -> équivalent #
       return note
         .replace('Bb','A#')
         .replace('Db','C#')
@@ -268,7 +338,6 @@
       });
     }
 
-    // Parse une ligne ChordPro en deux lignes alignées (accords au-dessus, paroles dessous)
     function parseChordProLine(line) {
       let chordLine = '';
       let lyricLine = '';
@@ -283,14 +352,10 @@
             const chordRaw = line.slice(i + 1, end);
             const chord = transChord(chordRaw, transposeValue);
 
-            // place l'accord au-dessus de la prochaine position de lyricLine
-            // on "écrit" le chord dans chordLine à la position actuelle
             const pos = lyricLine.length;
 
-            // s'assure que chordLine a au moins pos espaces
             if (chordLine.length < pos) chordLine += ' '.repeat(pos - chordLine.length);
 
-            // écrit le chord, en écrasant au besoin (simple et efficace)
             chordLine = chordLine.slice(0, pos) + chord + chordLine.slice(pos + chord.length);
 
             i = end + 1;
@@ -298,13 +363,11 @@
           }
         }
 
-        // caractère normal = avance sur les deux lignes
         lyricLine += ch;
         chordLine += (ch === '\t') ? '\t' : ' ';
         i++;
       }
 
-      // égalise longueur pour éviter les “coupures”
       if (chordLine.length < lyricLine.length) chordLine += ' '.repeat(lyricLine.length - chordLine.length);
 
       return { chordLine, lyricLine };
@@ -335,7 +398,6 @@
       preLyric.className = 'lyricline';
       preLyric.textContent = lyricLine;
 
-      // Si pas d'accords visibles, on peut éviter d'afficher la ligne d'accords (optionnel)
       if (chordLine.trim().length > 0) block.appendChild(preChord);
       block.appendChild(preLyric);
 
@@ -353,7 +415,6 @@
         const st = line.match(/\{st:(.*?)\}/);
         if (st) { addCenteredTitle(st[1], 2); continue; }
 
-        // ligne normale
         const { chordLine, lyricLine } = parseChordProLine(line);
         addChordBlock(chordLine, lyricLine);
       }
@@ -382,19 +443,13 @@
       }
     });
 
-    socket.on('apply-autoscroll', d => {
-      if (!isLeader) {
-        document.getElementById('scrollSpeed').value = d.speed;
-        if (d.active !== isScrolling) toggleAutoScroll(false);
-      }
-    });
-
     // --- INTERFACE ---
     function openEditor() {
-      if (isScrolling) toggleAutoScroll(false);
+      stopAutoScroll();
       document.getElementById('editor-textarea').value = currentRaw;
       document.getElementById('editor-container').style.display = 'block';
     }
+
     function closeEditor() {
       document.getElementById('editor-container').style.display = 'none';
     }
@@ -418,7 +473,7 @@
     }
 
     function closeViewer() {
-      if (isScrolling) toggleAutoScroll(false);
+      stopAutoScroll();
       document.getElementById('library').style.display = 'block';
       document.getElementById('viewer-container').style.display = 'none';
     }
