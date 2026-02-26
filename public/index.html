@@ -140,6 +140,14 @@
   <script>
     const socket = io();
 
+    socket.onAny((event, ...args) => {
+  // DEBUG minimal : tu peux commenter après
+  if (event === 'song-updated') {
+    alert('song-updated reçu: ' + JSON.stringify(args[0]));
+  }
+});
+
+
     let isLeader = false, allSongs = [], currentIndex = -1;
     let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
 

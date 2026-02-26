@@ -5,7 +5,13 @@ const io = require('socket.io')(http);
 const fs = require('fs');
 const path = require('path');
 
-app.use(express.static('public'));
+app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
+  
+
+app.use(express.static('public', { etag: false, maxAge: 0 }));
 app.use(express.json());
 
 const PARTITIONS_DIR = path.join(__dirname, 'public', 'partitions');
@@ -54,31 +60,37 @@ app.post('/save-song', (req, res) => {
 
     // 🔥 Notifie tout le monde qu'une chanson a changé
     io.emit('song-updated', { fileName, at: Date.now() });
+    console.log('📝 song-updated émis pour', fileName, '| clients:', io.engine.clientsCount);
 
     res.send("OK");
   });
 });
 
 io.on('connection', (socket) => {
-  console.log('📱 Appareil connecté');
-
-  socket.on('change-song', (f) => io.emit('load-song', f));
-
-  // Throttle serveur scroll
-  let lastScrollAt = 0;
-  socket.on('scroll-sync', (p) => {
-    const now = Date.now();
-    if (now - lastScrollAt < 80) return;
-    lastScrollAt = now;
-
-    const pos = Math.max(0, Math.min(1, Number(p) || 0));
-    socket.broadcast.emit('apply-scroll', pos);
+    console.log('📱 Appareil connecté', socket.id);
+    console.log('👥 Clients connectés:', io.engine.clientsCount);
+  
+    socket.on('disconnect', () => {
+      console.log('📴 Appareil déconnecté', socket.id);
+      console.log('👥 Clients connectés:', io.engine.clientsCount);
+    });
+  
+    socket.on('change-song', (f) => io.emit('load-song', f));
+  
+    let lastScrollAt = 0;
+    socket.on('scroll-sync', (p) => {
+      const now = Date.now();
+      if (now - lastScrollAt < 80) return;
+      lastScrollAt = now;
+      const pos = Math.max(0, Math.min(1, Number(p) || 0));
+      socket.broadcast.emit('apply-scroll', pos);
+    });
+  
+    socket.on('sync-font', (s) => socket.broadcast.emit('apply-font', s));
+    socket.on('sync-transpose', (v) => socket.broadcast.emit('apply-transpose', v));
+    socket.on('sync-autoscroll', (d) => socket.broadcast.emit('apply-autoscroll', d));
   });
-
-  socket.on('sync-font', (s) => socket.broadcast.emit('apply-font', s));
-  socket.on('sync-transpose', (v) => socket.broadcast.emit('apply-transpose', v));
-  socket.on('sync-autoscroll', (d) => socket.broadcast.emit('apply-autoscroll', d));
-});
+  
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, '0.0.0.0', () => {
