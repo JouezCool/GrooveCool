@@ -207,22 +207,19 @@
     }
 
     .version-badge{
-  margin-left:auto;          /* ✅ pousse le badge à droite du bandeau */
   font-weight:900;
   font-size:12px;
   padding:8px 10px;
   border-radius:999px;
   border:1px solid rgba(255,255,255,0.18);
   background:rgba(255,255,255,0.08);
-  color:var(--nav-text);
+  color:var(--text);
   white-space:nowrap;
 }
-
 .version-badge.perso{
   border-color: rgba(59,130,246,0.55);
   background: rgba(59,130,246,0.18);
 }
-
 .version-badge.off{
   border-color: rgba(255,152,0,0.55);
   background: rgba(255,152,0,0.18);
@@ -395,6 +392,7 @@
 
 <body>
     <div id="settingsFixedWrap">
+        <span id="topVersionBadge" class="version-badge">—</span>
         <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
         <span id="settingsUserLabel"></span>
       </div>
@@ -505,17 +503,7 @@
       </header>
 
       <div style="padding:14px 16px; display:grid; gap:10px;">
-        <div id="versionIndicator" style="
-  padding:10px 12px;
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,0.15);
-  background:rgba(255,255,255,0.06);
-  font-weight:900;
-  font-size:12px;
-  color:var(--text);
-">
-  Version : —
-</div>
+
         <button class="btn" onclick="openUserFromSettings()">👤 Utilisateur</button>
 
         <button class="btn" id="settingsLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
@@ -636,34 +624,25 @@
     }
 
     function updateVersionIndicator() {
+  const badge = document.getElementById('topVersionBadge');
+  if (!badge) return;
+
   const hasSong = !!currentFileName;
   const hasPersonal = hasSong && !!getPersonalSong(currentFileName);
 
-  // --- indicateur dans les réglages
-  const el = document.getElementById('versionIndicator');
-  if (el) {
-    if (!hasSong) el.textContent = "Version : — (ouvre une chanson)";
-    else el.textContent = hasPersonal ? "Version : Personnelle (active)" : "Version : Officielle";
-  }
-
-  // --- badge dans le bandeau haut (nav)
-  const badge = document.getElementById('topVersionBadge');
-  if (badge) {
-    if (!hasSong) {
-      badge.textContent = "—";
-      badge.classList.remove('perso','off');
-    } else if (hasPersonal) {
-      badge.textContent = "PERSO";
-      badge.classList.add('perso');
-      badge.classList.remove('off');
-    } else {
-      badge.textContent = "OFFICIELLE";
-      badge.classList.add('off');
-      badge.classList.remove('perso');
-    }
+  if (!hasSong) {
+    badge.textContent = "—";
+    badge.classList.remove('perso','off');
+  } else if (hasPersonal) {
+    badge.textContent = "PERSO";
+    badge.classList.add('perso');
+    badge.classList.remove('off');
+  } else {
+    badge.textContent = "OFFICIELLE";
+    badge.classList.add('off');
+    badge.classList.remove('perso');
   }
 }
-
     function revertToOfficial() {
   if (!currentFileName) {
     showToast("Aucune chanson ouverte");
@@ -696,7 +675,6 @@
 
     function openSettings() {
   syncSettingsUI();
-  updateVersionIndicator();   // ✅ ajoute ça
   settingsBackdrop.style.display = 'flex';
 }
     function openUserFromSettings() {
