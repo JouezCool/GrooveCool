@@ -218,18 +218,27 @@
     }
 
     // --- SONG UPDATED (nouveau) ---
-    socket.on('song-updated', ({ fileName }) => {
-      // Si je suis dans l'éditeur, on ne force rien (bandeau suffit)
-      if (!fileName || !currentFileName) return;
+    function normName(s) {
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
 
-      if (fileName === currentFileName) {
-        pendingUpdateForCurrent = true;
-        // on n'affiche le bandeau que si le viewer est ouvert
-        if (document.getElementById('viewer-container').style.display === 'block') {
-          updateBanner.style.display = 'flex';
-        }
-      }
-    });
+socket.on('song-updated', ({ fileName }) => {
+  const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
+  if (!viewerOpen) return;
+
+  const sameSong = normName(fileName) === normName(currentFileName);
+
+  console.log('song-updated', { fileName, currentFileName, sameSong });
+
+  if (sameSong) {
+    pendingUpdateForCurrent = true;
+    updateBanner.style.display = 'flex';
+  }
+});
+
 
     function dismissUpdate() {
       updateBanner.style.display = 'none';
