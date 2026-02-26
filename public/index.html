@@ -38,11 +38,17 @@
     }
 
     /* --- Bouton réglages FIXE (visible partout) --- */
-    #settingsBtnFixed{
+    #settingsFixedWrap{
   position:fixed;
   top:10px;
-  right:10px;      /* ✅ tout à droite */
+  right:10px;
   z-index:6000;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+#settingsBtnFixed{
   border:2px solid var(--accent);
   border-radius:10px;
   background:rgba(0,0,0,0.25);
@@ -51,6 +57,20 @@
   padding:10px 12px;
   cursor:pointer;
   backdrop-filter: blur(6px);
+}
+
+#settingsUserLabel{
+  font-weight:900;
+  font-size:12px;
+  color:var(--text);
+  background:rgba(0,0,0,0.25);
+  border:1px solid rgba(255,255,255,0.15);
+  padding:8px 10px;
+  border-radius:10px;
+  max-width:38vw;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 
     /* Toast */
@@ -352,8 +372,10 @@
 </head>
 
 <body>
-  <!-- Bouton réglages FIXE -->
-  <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
+    <div id="settingsFixedWrap">
+        <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
+        <span id="settingsUserLabel"></span>
+      </div>
 
   <!-- Toast -->
   <div id="toast"></div>
@@ -638,6 +660,8 @@
       currentUser = String(name || "").trim();
       if (!currentUser) return;
       localStorage.setItem('bandapp_currentUser', currentUser);
+      const lab = document.getElementById('settingsUserLabel');
+      if (lab) lab.textContent = currentUser;
 
       if (currentFileName) loadNotes();
 
@@ -715,14 +739,19 @@
     }
 
     async function loadSong(f) {
-      const res = await fetch('/partitions/' + f);
-      currentRaw = await res.text();
-      transposeValue = 0;
-      document.getElementById('transposeVal').innerText = "0";
-      renderChordPro();
-      viewerElement.scrollTop = 0;
-      updateBanner.style.display = 'none';
-    }
+  const res = await fetch('/partitions/' + f);
+  const base = await res.text();
+
+  // ✅ si une version perso existe, on l’utilise
+  const personal = getPersonalSong(f);
+  currentRaw = personal ? personal : base;
+
+  transposeValue = 0;
+  document.getElementById('transposeVal').innerText = "0";
+  renderChordPro();
+  viewerElement.scrollTop = 0;
+  updateBanner.style.display = 'none';
+}
 
     // --- SONG UPDATED ---
     function normName(s) {
