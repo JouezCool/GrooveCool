@@ -460,7 +460,7 @@
       </header>
 
       <div style="padding:14px 16px; display:grid; gap:10px;">
-        <button class="btn" onclick="openUserPicker(true)">👤 Utilisateur</button>
+        <button class="btn" onclick="openUserFromSettings()">👤 Utilisateur</button>
 
         <button class="btn" id="settingsLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
 
@@ -586,6 +586,10 @@
       syncSettingsUI();
       settingsBackdrop.style.display = 'flex';
     }
+    function openUserFromSettings() {
+  closeSettings();                 // ✅ ferme la fenêtre réglages
+  setTimeout(() => openUserPicker(true), 50); // ✅ ouvre ensuite le choix utilisateur
+}
     function closeSettings() {
       settingsBackdrop.style.display = 'none';
     }
