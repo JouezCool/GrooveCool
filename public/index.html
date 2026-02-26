@@ -26,7 +26,6 @@
     /* Lecteur */
     #viewer-container { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 10; }
     nav { display: flex; background: #1a1a1a; min-height: 60px; align-items: center; padding: 0 10px; gap: 8px; border-bottom: 1px solid #333; flex-wrap: wrap; }
-
     .controls-group { display:flex; align-items:center; gap:5px; background:#222; padding:5px; border-radius:8px; }
 
     /* Bandeau update */
@@ -50,6 +49,25 @@
       font-size: 12px;
     }
 
+    /* Panneau notes */
+    #notesPanel {
+      display: none;
+      background: #111;
+      border-bottom: 1px solid #333;
+      padding: 12px;
+    }
+    #notesTextarea {
+      width: 100%;
+      min-height: 120px;
+      background: #000;
+      color: #0f0;
+      border: 1px solid #333;
+      padding: 10px;
+      font-family: monospace;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+
     #viewer {
       height: calc(100vh - 65px);
       overflow-y: scroll;
@@ -63,7 +81,9 @@
     /* Rendu ChordPro (aligné) */
     .block { margin-bottom: 26px; }
     .chordline, .lyricline {
-      white-space: pre;
+      white-space: pre-wrap;      /* ✅ reste dans l’écran */
+      word-break: break-word;     /* ✅ casse si mot trop long */
+      overflow-wrap: anywhere;    /* ✅ évite débordement */
       line-height: 1.6;
       margin: 0;
     }
@@ -165,6 +185,7 @@
         <button class="btn" onclick="updateTranspose(1)">+</button>
       </div>
 
+      <button class="btn" onclick="toggleNotes()">NOTES</button>
       <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
       <button class="btn" id="navLeaderBtn" onclick="toggleLeader()">Solo</button>
     </nav>
@@ -175,6 +196,11 @@
         <button class="btn btn-small" onclick="dismissUpdate()">PLUS TARD</button>
         <button class="btn btn-blue btn-small" onclick="reloadCurrentSong()">RECHARGER</button>
       </div>
+    </div>
+
+    <!-- ✅ Notes personnelles -->
+    <div id="notesPanel">
+      <textarea id="notesTextarea" placeholder="Tes annotations personnelles..."></textarea>
     </div>
 
     <div id="viewer">
@@ -212,6 +238,10 @@
     // Update banner
     const updateBanner = document.getElementById('updateBanner');
 
+    // Notes
+    const notesPanel = document.getElementById('notesPanel');
+    const notesTextarea = document.getElementById('notesTextarea');
+
     // ---- EDIT MODE + PIN CACHE ----
     let editMode = null;        // 'personal' | 'global'
     let globalPinCache = "";    // PIN saisi au moment du choix global
@@ -245,6 +275,7 @@
       currentFileName = allSongs[idx];
 
       updateBanner.style.display = 'none';
+      notesPanel.style.display = 'none'; // on ferme les notes en changeant de morceau
 
       document.getElementById('library').style.display = 'none';
       document.getElementById('viewer-container').style.display = 'block';
@@ -252,6 +283,8 @@
       if (isLeader) socket.emit('change-song', currentFileName);
 
       loadSong(currentFileName);
+      // charger notes (légère tempo pour être sûr que currentFileName est ok)
+      setTimeout(loadNotes, 10);
     }
 
     async function loadSong(f) {
@@ -280,6 +313,28 @@
       stopAutoScroll();
       loadSong(currentFileName);
     }
+
+    // --- NOTES PERSONNELLES ---
+    function notesKey(fileName) { return "notes:" + fileName; }
+
+    function loadNotes() {
+      if (!currentFileName) return;
+      const val = localStorage.getItem(notesKey(currentFileName)) || "";
+      notesTextarea.value = val;
+    }
+
+    function saveNotes() {
+      if (!currentFileName) return;
+      localStorage.setItem(notesKey(currentFileName), notesTextarea.value || "");
+    }
+
+    function toggleNotes() {
+      const visible = notesPanel.style.display === "block";
+      notesPanel.style.display = visible ? "none" : "block";
+      if (!visible) loadNotes();
+    }
+
+    notesTextarea.addEventListener('input', saveNotes);
 
     // --- SYNCHRO SCROLL ---
     let lastEmitAt = 0;
@@ -510,7 +565,7 @@
     function getPersonalSong(fileName) { return localStorage.getItem(personalSongKey(fileName)) || ""; }
     function setPersonalSong(fileName, content) { localStorage.setItem(personalSongKey(fileName), content || ""); }
 
-    // ✅ ICI : PIN demandé au moment du choix "global"
+    // ✅ PIN demandé au moment du choix "global"
     async function chooseEditMode(mode) {
       editMode = mode;
       closeEditChoice();
@@ -597,6 +652,7 @@
 
     function closeViewer() {
       stopAutoScroll();
+      notesPanel.style.display = 'none';
       document.getElementById('library').style.display = 'block';
       document.getElementById('viewer-container').style.display = 'none';
     }
