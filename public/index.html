@@ -18,6 +18,27 @@
       overscroll-behavior-x: none;
     }
 
+    /* Commentaires {c:...} */
+.commentline {
+  background: #1b1b1b;
+  border-left: 4px solid #ffd54f;
+  padding: 10px 12px;
+  margin: 10px 0;
+  border-radius: 8px;
+  font-family: sans-serif;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Chorus {soc:} ... {eoc:} */
+.chorus {
+  background: #111827;           /* léger bleu sombre */
+  border-left: 4px solid #60a5fa; /* bleu */
+  padding: 8px 10px;
+  border-radius: 10px;
+  margin: 14px 0;
+}
+
     /* ==== USER PICKER ==== */
     #userOverlay {
       position: fixed;
@@ -276,6 +297,10 @@
         <button class="btn" onclick="updateTranspose(1)">+</button>
       </div>
 
+      <div class="controls-group">
+        <button class="btn" id="chordStyleBtn" onclick="toggleChordStyle()">Accords: Do</button>
+      </div>
+
       <button class="btn" onclick="toggleNotes()">NOTES</button>
       <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
       <button class="btn" id="navLeaderBtn" onclick="toggleLeader()">Solo</button>
@@ -313,6 +338,25 @@
 
     let isLeader = false, allSongs = [], currentIndex = -1;
     let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
+
+// --- CHORD STYLE (latin/américain) ---
+let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin'; // 'latin' | 'american'
+
+// --- CHORUS state ---
+let inChorus = false;
+
+function updateChordStyleButton() {
+  const btn = document.getElementById('chordStyleBtn');
+  if (!btn) return;
+  btn.innerText = chordStyle === 'latin' ? "Accords: Do" : "Accords: C";
+}
+
+function toggleChordStyle() {
+  chordStyle = (chordStyle === 'latin') ? 'american' : 'latin';
+  localStorage.setItem('bandapp_chordStyle', chordStyle);
+  updateChordStyleButton();
+  renderChordPro();
+}
 
     let isRemoteScrolling = false;
 
@@ -675,7 +719,7 @@
         if (idx === -1) return match;
         let newIdx = (idx + steps) % 12;
         if (newIdx < 0) newIdx += 12;
-        return scaleLat[newIdx];
+        return (chordStyle === 'latin' ? scaleLat[newIdx] : scale[newIdx]);
       });
     }
 
@@ -722,40 +766,70 @@
       songContentEl.appendChild(el);
     }
 
-    function addChordBlock(chordLine, lyricLine) {
-      const block = document.createElement('div');
-      block.className = 'block';
-      block.style.fontSize = fontSize + 'px';
+    function addCommentLine(text, chorusMode) {
+  const div = document.createElement('div');
+  div.className = 'commentline' + (chorusMode ? ' chorus' : '');
+  div.textContent = text;
+  songContentEl.appendChild(div);
+}
 
-      const preChord = document.createElement('pre');
-      preChord.className = 'chordline';
-      preChord.textContent = chordLine;
+function addChordBlock(chordLine, lyricLine, chorusMode = false) {
+  const block = document.createElement('div');
+  block.className = 'block' + (chorusMode ? ' chorus' : '');
+  block.style.fontSize = fontSize + 'px';
 
-      const preLyric = document.createElement('pre');
-      preLyric.className = 'lyricline';
-      preLyric.textContent = lyricLine;
+  const preChord = document.createElement('pre');
+  preChord.className = 'chordline';
+  preChord.textContent = chordLine;
 
-      if (chordLine.trim().length > 0) block.appendChild(preChord);
-      block.appendChild(preLyric);
+  const preLyric = document.createElement('pre');
+  preLyric.className = 'lyricline';
+  preLyric.textContent = lyricLine;
 
-      songContentEl.appendChild(block);
-    }
+  if (chordLine.trim().length > 0) block.appendChild(preChord);
+  block.appendChild(preLyric);
+
+  songContentEl.appendChild(block);
+}
 
     function renderChordPro() {
-      clearSongContent();
+  clearSongContent();
+  inChorus = false;
 
-      const lines = currentRaw.split('\n');
-      for (const line of lines) {
-        const t = line.match(/\{t:(.*?)\}/);
-        if (t) { addCenteredTitle(t[1], 1); continue; }
+  const lines = currentRaw.split('\n');
 
-        const st = line.match(/\{st:(.*?)\}/);
-        if (st) { addCenteredTitle(st[1], 2); continue; }
+  for (const line of lines) {
+    // ---- TITRE / SOUS-TITRE (supporte t/title et st/subtitle) ----
+    const title = line.match(/\{(?:t|title)\s*:\s*(.*?)\}/i);
+    if (title) { addCenteredTitle(title[1], 1); continue; }
 
-        const { chordLine, lyricLine } = parseChordProLine(line);
-        addChordBlock(chordLine, lyricLine);
-      }
+    const subtitle = line.match(/\{(?:st|subtitle)\s*:\s*(.*?)\}/i);
+    if (subtitle) { addCenteredTitle(subtitle[1], 2); continue; }
+
+    // ---- START / END OF CHORUS ----
+    if (/\{soc\s*:\s*\}/i.test(line) || /\{soc\s*\}/i.test(line)) {
+      inChorus = true;
+      continue;
     }
+    if (/\{eoc\s*:\s*\}/i.test(line) || /\{eoc\s*\}/i.test(line)) {
+      inChorus = false;
+      continue;
+    }
+
+    // ---- COMMENTAIRES {c:...} ----
+    const comment = line.match(/\{c\s*:\s*(.*?)\}/i);
+    if (comment) {
+      addCommentLine(comment[1], inChorus);
+      continue;
+    }
+
+    // ---- LIGNE NORMALE (accords + paroles) ----
+    const { chordLine, lyricLine } = parseChordProLine(line);
+
+    // Ajoute un bloc, et si on est dans le chorus => on “surligne” le bloc
+    addChordBlock(chordLine, lyricLine, inChorus);
+  }
+}
 
     // --- SOCKETS ---
     socket.on('load-song', f => {
@@ -879,6 +953,7 @@
     // INIT
     initUsers();
     fetchSongs();
+    updateChordStyleButton();
   </script>
 </body>
 </html>
