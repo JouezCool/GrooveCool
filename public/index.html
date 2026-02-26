@@ -12,8 +12,11 @@
     body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow: hidden; overscroll-behavior-x: none; }
 
     #library { height: 100vh; overflow-y: auto; display: block; -webkit-overflow-scrolling: touch; }
-    .lib-header { padding: 20px; background: #1a1a1a; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; z-index: 5; }
+    .lib-header { padding: 20px; background: #1a1a1a; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; z-index: 5; gap: 10px; }
     .song-item { padding: 20px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; font-size: 1.1em; cursor: pointer; }
+    .user-chip { display:flex; align-items:center; gap:8px; background:#222; border:1px solid #333; padding:8px 10px; border-radius:999px; font-size:12px; }
+    .user-chip b { font-size: 12px; color: #fff; }
+    .user-chip button { padding:6px 10px; border-radius:999px; font-size:12px; }
 
     #viewer-container { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 10; }
     nav { display: flex; background: #1a1a1a; min-height: 60px; align-items: center; padding: 0 10px; gap: 8px; border-bottom: 1px solid #333; flex-wrap: wrap; }
@@ -62,14 +65,120 @@
     .leader-mode { background: var(--accent) !important; color: #000 !important; }
     .active-btn { background: #444; color: #fff; }
     .disabled { opacity: 0.5; pointer-events: none; }
+
+    /* -------- Modals -------- */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 18px;
+    }
+    .modal {
+      width: min(520px, 100%);
+      background: #121212;
+      border: 1px solid #2a2a2a;
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      overflow: hidden;
+    }
+    .modal header {
+      padding: 14px 16px;
+      border-bottom: 1px solid #2a2a2a;
+      display:flex; justify-content:space-between; align-items:center;
+      background:#161616;
+    }
+    .modal header h3 { margin:0; font-size: 14px; color:#fff; }
+    .modal .content { padding: 14px 16px; }
+    .modal .row { display:flex; gap:10px; flex-wrap: wrap; align-items:center; }
+    .modal input, .modal select {
+      width: 100%;
+      background: #000;
+      color: #eee;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    .modal .actions { padding: 14px 16px; border-top: 1px solid #2a2a2a; display:flex; gap:10px; justify-content:flex-end; }
+    .pill {
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 10px 12px; border-radius: 12px;
+      border: 1px solid #333; background:#0b0b0b;
+      cursor: pointer;
+      user-select: none;
+    }
+    .pill:hover { background:#101010; }
+    .pill b { color:#fff; font-size: 14px; }
+    .small { color:#aaa; font-size: 12px; }
   </style>
 </head>
 
 <body>
+
+  <!-- USER MODAL -->
+  <div id="userModalBackdrop" class="modal-backdrop">
+    <div class="modal">
+      <header>
+        <h3>Choisir un utilisateur</h3>
+      </header>
+      <div class="content">
+        <div class="small" style="margin-bottom:10px;">
+          Les notes et réglages (taille, transpo) seront liés à cet utilisateur sur cet appareil.
+        </div>
+
+        <div id="userList" style="display:flex; flex-direction:column; gap:10px;"></div>
+
+        <div style="margin-top:14px; border-top:1px solid #2a2a2a; padding-top:14px;">
+          <div class="small" style="margin-bottom:8px;">Ajouter un utilisateur</div>
+          <div class="row">
+            <input id="newUserInput" placeholder="Nom (ex: Julien)" />
+            <button class="btn btn-blue" onclick="addUser()">AJOUTER</button>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="closeUserModal()" style="border-color:#777;color:#777;">PLUS TARD</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIN MODAL -->
+  <div id="pinModalBackdrop" class="modal-backdrop">
+    <div class="modal">
+      <header>
+        <h3 id="pinTitle">Code requis</h3>
+      </header>
+      <div class="content">
+        <div class="small" id="pinHint" style="margin-bottom:10px;">Entrez le code pour continuer.</div>
+        <input id="pinInput" type="password" inputmode="numeric" placeholder="PIN" />
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="cancelPin()" style="border-color:#777;color:#777;">ANNULER</button>
+        <button class="btn btn-blue" onclick="confirmPin()">OK</button>
+      </div>
+    </div>
+  </div>
+
   <div id="library">
     <div class="lib-header">
-      <h2 style="margin:0;">Répertoire</h2>
-      <button class="btn" id="libLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <h2 style="margin:0;">Répertoire</h2>
+        <div class="small">Synchro: défilement leader (Option A) + réglages/notes perso</div>
+      </div>
+
+      <div style="display:flex; gap:10px; align-items:center;">
+        <div class="user-chip" title="Utilisateur courant">
+          <span>👤</span>
+          <b id="currentUserLabel">—</b>
+          <button class="btn" style="padding:6px 10px;" onclick="openUserModal()">Changer</button>
+        </div>
+
+        <button class="btn" id="libLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
+      </div>
     </div>
     <div id="songList"></div>
   </div>
@@ -113,7 +222,7 @@
         <button class="btn btn-small" onclick="clearNotes()" style="border-color:#ff5252;color:#ff5252;">EFFACER</button>
       </div>
       <textarea id="notesTextarea" placeholder="Ex: Refrain 2: attention au break / Entrée basse après 2 temps / etc."></textarea>
-      <div class="note-hint">Sauvegarde auto sur cet appareil.</div>
+      <div class="note-hint">Sauvegarde auto pour l’utilisateur sélectionné.</div>
     </div>
 
     <div id="viewer">
@@ -133,32 +242,133 @@
   <script>
     const socket = io();
 
-    // Device id (notes perso par appareil)
-    const deviceIdKey = 'deviceId';
-    let deviceId = localStorage.getItem(deviceIdKey);
-    if (!deviceId) {
-      deviceId = (crypto?.randomUUID?.() || ('dev_' + Math.random().toString(16).slice(2) + Date.now()));
-      localStorage.setItem(deviceIdKey, deviceId);
+    // ------------------ USERS ------------------
+    const defaultUsers = ["Julien", "Alex", "Nicolas", "Sébastien", "Camille"]; // <-- adapte ta liste
+    const USERS_KEY = "bandapp_users";
+    const CURRENT_USER_KEY = "bandapp_current_user";
+
+    function loadUsers() {
+      const raw = localStorage.getItem(USERS_KEY);
+      if (raw) {
+        try {
+          const arr = JSON.parse(raw);
+          if (Array.isArray(arr) && arr.length) return arr;
+        } catch {}
+      }
+      localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
+      return [...defaultUsers];
     }
 
-    // PIN
+    function saveUsers(list) {
+      localStorage.setItem(USERS_KEY, JSON.stringify(list));
+    }
+
+    function getCurrentUser() {
+      return localStorage.getItem(CURRENT_USER_KEY) || "";
+    }
+
+    function setCurrentUser(name) {
+      localStorage.setItem(CURRENT_USER_KEY, name);
+      document.getElementById("currentUserLabel").textContent = name || "—";
+      // recharger prefs + notes pour cet user
+      loadUserPrefs();
+      loadNotesForSong(currentFileName);
+    }
+
+    function openUserModal() {
+      renderUserList();
+      document.getElementById("userModalBackdrop").style.display = "flex";
+    }
+
+    function closeUserModal() {
+      document.getElementById("userModalBackdrop").style.display = "none";
+    }
+
+    function renderUserList() {
+      const users = loadUsers();
+      const container = document.getElementById("userList");
+      container.replaceChildren();
+
+      users.forEach(u => {
+        const pill = document.createElement("div");
+        pill.className = "pill";
+        pill.innerHTML = `<b>${escapeHtml(u)}</b><span class="small">Sélectionner</span>`;
+        pill.onclick = () => {
+          setCurrentUser(u);
+          closeUserModal();
+        };
+        container.appendChild(pill);
+      });
+    }
+
+    function addUser() {
+      const input = document.getElementById("newUserInput");
+      const name = (input.value || "").trim();
+      if (!name) return;
+
+      const users = loadUsers();
+      if (!users.includes(name)) {
+        users.push(name);
+        users.sort((a,b) => a.localeCompare(b));
+        saveUsers(users);
+      }
+      input.value = "";
+      renderUserList();
+    }
+
+    // ------------------ PIN MODAL ------------------
     let leaderPin = localStorage.getItem('leaderPin') || '';
-    function requirePin(forcePrompt = false) {
-      if (!forcePrompt && leaderPin && leaderPin.length > 0) return leaderPin;
-      const p = prompt("PIN édition / leader ?");
-      if (p === null) return '';
-      leaderPin = String(p).trim();
-      localStorage.setItem('leaderPin', leaderPin);
+    let pinResolve = null;
+    let pinReject = null;
+
+    function openPinModal(title, hint) {
+      document.getElementById("pinTitle").textContent = title || "Code requis";
+      document.getElementById("pinHint").textContent = hint || "Entrez le code pour continuer.";
+      const inp = document.getElementById("pinInput");
+      inp.value = "";
+      document.getElementById("pinModalBackdrop").style.display = "flex";
+      setTimeout(() => inp.focus(), 50);
+
+      return new Promise((resolve, reject) => {
+        pinResolve = resolve;
+        pinReject = reject;
+      });
+    }
+
+    function cancelPin() {
+      document.getElementById("pinModalBackdrop").style.display = "none";
+      if (pinReject) pinReject(new Error("cancel"));
+      pinResolve = null; pinReject = null;
+    }
+
+    function confirmPin() {
+      const v = (document.getElementById("pinInput").value || "").trim();
+      document.getElementById("pinModalBackdrop").style.display = "none";
+      if (pinResolve) pinResolve(v);
+      pinResolve = null; pinReject = null;
+    }
+
+    async function requirePinUI(title, hint) {
+      if (leaderPin && leaderPin.length > 0) return leaderPin;
+      const p = await openPinModal(title, hint).catch(() => "");
+      if (!p) return "";
+      leaderPin = p;
+      localStorage.setItem("leaderPin", leaderPin);
       return leaderPin;
     }
 
-    // State
+    function clearStoredPin() {
+      leaderPin = "";
+      localStorage.removeItem("leaderPin");
+    }
+
+    // ------------------ STATE ------------------
     let isLeader = false, allSongs = [], currentIndex = -1;
     let currentRaw = "", currentFileName = "";
 
-    // Réglages perso (locaux)
-    let fontSize = Number(localStorage.getItem('pref_fontSize') || 26);
-    let transposeValue = Number(localStorage.getItem('pref_transpose') || 0);
+    // prefs per-user
+    let fontSize = 26;
+    let transposeValue = 0;
 
     let isRemoteScrolling = false;
 
@@ -168,7 +378,7 @@
     let lastRafTime = 0;
     let scrollCarry = 0;
 
-    // Follower: leader play ?
+    // follower: leader play ?
     let leaderIsPlaying = false;
 
     const viewerElement = document.getElementById('viewer');
@@ -188,32 +398,67 @@
     function isEditorOpen() { return document.getElementById('editor-container').style.display === 'block'; }
     function isViewerOpen() { return document.getElementById('viewer-container').style.display === 'block'; }
 
-    // Notes
-    function notesKeyForSong(fileName) { return `notes:${deviceId}:${fileName}`; }
+    // ------------------ PREFS / NOTES (per user) ------------------
+    function prefsKey() {
+      const u = getCurrentUser() || "anonymous";
+      return `prefs:${u}`;
+    }
+
+    function loadUserPrefs() {
+      const raw = localStorage.getItem(prefsKey());
+      if (raw) {
+        try {
+          const p = JSON.parse(raw);
+          fontSize = Number(p.fontSize ?? 26) || 26;
+          transposeValue = Number(p.transpose ?? 0) || 0;
+        } catch {
+          fontSize = 26; transposeValue = 0;
+        }
+      } else {
+        fontSize = 26; transposeValue = 0;
+      }
+      document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
+      if (currentRaw) renderChordPro();
+    }
+
+    function saveUserPrefs() {
+      const u = getCurrentUser() || "anonymous";
+      localStorage.setItem(`prefs:${u}`, JSON.stringify({ fontSize, transpose: transposeValue }));
+    }
+
+    function notesKeyForSong(fileName) {
+      const u = getCurrentUser() || "anonymous";
+      return `notes:${u}:${fileName}`;
+    }
+
     function loadNotesForSong(fileName) {
       if (!fileName) return;
       notesTextarea.value = localStorage.getItem(notesKeyForSong(fileName)) || '';
       updateNotesBtn();
     }
+
     function saveNotesForSong(fileName) {
       if (!fileName) return;
       localStorage.setItem(notesKeyForSong(fileName), notesTextarea.value || '');
       updateNotesBtn();
     }
+
     function updateNotesBtn() {
       const has = (notesTextarea.value || '').trim().length > 0;
       notesBtn.classList.toggle('active-btn', has);
     }
+
     let notesTimer = null;
     notesTextarea.addEventListener('input', () => {
       updateNotesBtn();
       clearTimeout(notesTimer);
       notesTimer = setTimeout(() => saveNotesForSong(currentFileName), 250);
     });
+
     function toggleNotes() { notesPanel.style.display = (notesPanel.style.display === 'block') ? 'none' : 'block'; }
     function clearNotes() { notesTextarea.value = ''; saveNotesForSong(currentFileName); }
 
-    // Library
+    // ------------------ Library ------------------
     async function fetchSongs() {
       const res = await fetch('/list-songs');
       allSongs = (await res.json()).sort();
@@ -229,13 +474,12 @@
       playBtn.classList.toggle('disabled', lock);
     }
 
-    function toggleLeader() {
+    async function toggleLeader() {
       const next = !isLeader;
 
-      // si on active leader => demander PIN tout de suite (pour que synchro marche)
       if (next) {
-        const pin = requirePin(false);
-        if (!pin) return; // annule si pas de PIN
+        const pin = await requirePinUI("PIN Leader", "Entrez le PIN pour activer le mode Leader.");
+        if (!pin) return; // annulé
       } else {
         stopAutoScroll();
       }
@@ -250,26 +494,24 @@
       refreshControlsLock();
     }
 
-    function openSong(idx) {
+    async function openSong(idx) {
       if (idx < 0 || idx >= allSongs.length) return;
       currentIndex = idx;
       currentFileName = allSongs[idx];
 
       updateBanner.style.display = 'none';
-
       document.getElementById('library').style.display = 'none';
       document.getElementById('viewer-container').style.display = 'block';
 
       loadNotesForSong(currentFileName);
-      document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
 
       if (isLeader) {
-        const pin = requirePin(false);
+        const pin = await requirePinUI("PIN Leader", "PIN requis pour synchroniser les autres appareils.");
         if (!pin) return;
         socket.emit('change-song', { fileName: currentFileName, pin });
       }
 
-      loadSong(currentFileName);
+      await loadSong(currentFileName);
     }
 
     async function loadSong(f) {
@@ -280,7 +522,7 @@
       updateBanner.style.display = 'none';
     }
 
-    // Update banner
+    // ------------------ Update banner ------------------
     socket.on('song-updated', ({ fileName }) => {
       if (!isViewerOpen()) return;
       if (normName(fileName) === normName(currentFileName)) {
@@ -290,9 +532,9 @@
     function dismissUpdate() { updateBanner.style.display = 'none'; }
     function reloadCurrentSong() { stopAutoScroll(); loadSong(currentFileName); }
 
-    // Option A: sync scroll position
+    // ------------------ Option A: sync scroll position ------------------
     let lastEmitAt = 0, lastEmitPos = -1;
-    viewerElement.addEventListener('scroll', () => {
+    viewerElement.addEventListener('scroll', async () => {
       if (!isLeader || isRemoteScrolling) return;
 
       const max = viewerElement.scrollHeight - viewerElement.clientHeight;
@@ -304,7 +546,7 @@
       lastEmitAt = now;
       lastEmitPos = pos;
 
-      const pin = requirePin(false);
+      const pin = await requirePinUI("PIN Leader", "PIN requis pour synchroniser le défilement.");
       if (!pin) return;
       socket.emit('scroll-sync', { pos, pin });
     });
@@ -317,12 +559,13 @@
       setTimeout(() => { isRemoteScrolling = false; }, 40);
     });
 
-    // Leader autoscroll local
+    // ------------------ Leader autoscroll local ------------------
     function sliderToPxPerSecond(value) {
       const v = Number(value) || 50;
       const delayMs = Math.max(10, 105 - v);
       return 1000 / delayMs;
     }
+
     function autoScrollLoop(t) {
       if (!isScrolling) return;
       if (!lastRafTime) lastRafTime = t;
@@ -340,6 +583,7 @@
       }
       rafId = requestAnimationFrame(autoScrollLoop);
     }
+
     function startAutoScroll() {
       if (isScrolling) return;
       isScrolling = true;
@@ -348,6 +592,7 @@
       lastRafTime = 0; scrollCarry = 0;
       rafId = requestAnimationFrame(autoScrollLoop);
     }
+
     function stopAutoScroll() {
       if (!isScrolling) return;
       isScrolling = false;
@@ -357,14 +602,14 @@
       rafId = null; lastRafTime = 0; scrollCarry = 0;
     }
 
-    function toggleAutoScroll(emitSync) {
+    async function toggleAutoScroll(emitSync) {
       if (!isLeader && leaderIsPlaying) return;
 
       if (isScrolling) stopAutoScroll();
       else startAutoScroll();
 
       if (isLeader && emitSync) {
-        const pin = requirePin(false);
+        const pin = await requirePinUI("PIN Leader", "PIN requis pour annoncer Play/Pause.");
         if (!pin) return;
         socket.emit('sync-autoscroll', { active: isScrolling, pin });
       }
@@ -377,14 +622,16 @@
       refreshControlsLock();
     });
 
-    // Swipe
+    // ------------------ Swipe ------------------
     let touchStartX = 0, touchStartY = 0;
     const SWIPE_MIN_X = 110, SWIPE_RATIO = 1.4;
+
     viewerElement.addEventListener('touchstart', (e) => {
       if (!isViewerOpen() || isEditorOpen()) return;
       const t = e.changedTouches[0];
       touchStartX = t.screenX; touchStartY = t.screenY;
     }, { passive: true });
+
     viewerElement.addEventListener('touchend', (e) => {
       if (!isViewerOpen() || isEditorOpen()) return;
       const t = e.changedTouches[0];
@@ -396,20 +643,21 @@
       else if (dx < 0 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
     }, { passive: true });
 
-    // Réglages perso (non sync)
+    // ------------------ Personal prefs ------------------
     function updateFontSize(delta) {
       fontSize += delta;
-      localStorage.setItem('pref_fontSize', String(fontSize));
+      saveUserPrefs();
       renderChordPro();
     }
+
     function updateTranspose(dir) {
       transposeValue += dir;
-      localStorage.setItem('pref_transpose', String(transposeValue));
+      saveUserPrefs();
       document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
       renderChordPro();
     }
 
-    // ChordPro rendering
+    // ------------------ ChordPro rendering ------------------
     const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
     const scaleLat = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
 
@@ -426,6 +674,7 @@
         return scaleLat[newIdx];
       });
     }
+
     function parseChordProLine(line) {
       let chordLine = '', lyricLine = '';
       let i = 0;
@@ -450,6 +699,7 @@
       if (chordLine.length < lyricLine.length) chordLine += ' '.repeat(lyricLine.length - chordLine.length);
       return { chordLine, lyricLine };
     }
+
     function clearSongContent() { songContentEl.replaceChildren(); }
     function addCenteredTitle(text, level) {
       const el = document.createElement(level === 1 ? 'h1' : 'h2');
@@ -485,7 +735,7 @@
       }
     }
 
-    // Sockets: load-song
+    // ------------------ sockets: load-song ------------------
     socket.on('load-song', (f) => {
       if (!isLeader) {
         const idx = allSongs.indexOf(f);
@@ -493,21 +743,22 @@
       }
     });
 
-    // Editor: demander PIN AU CLIC “ÉDITER”
-    function openEditor() {
-      const pin = requirePin(false);
-      if (!pin) return;              // <- PIN demandé ici
+    // ------------------ Editor (global) ------------------
+    async function openEditor() {
+      const pin = await requirePinUI("PIN édition", "Entrez le PIN pour modifier la partition globale.");
+      if (!pin) return;
+
       stopAutoScroll();
       document.getElementById('editor-textarea').value = currentRaw;
       document.getElementById('editor-container').style.display = 'block';
     }
+
     function closeEditor() { document.getElementById('editor-container').style.display = 'none'; }
 
     async function saveEditor() {
       const newContent = document.getElementById('editor-textarea').value;
 
-      // On redemande pas si déjà en cache
-      const pin = requirePin(false);
+      const pin = await requirePinUI("PIN édition", "PIN requis pour enregistrer.");
       if (!pin) return;
 
       const res = await fetch('/save-song', {
@@ -520,12 +771,10 @@
         currentRaw = newContent;
         renderChordPro();
         closeEditor();
-        // optionnel : si leader, on renvoie “load-song” (pas obligatoire, mais ok)
         if (isLeader) socket.emit('change-song', { fileName: currentFileName, pin });
       } else if (res.status === 403) {
         alert("PIN invalide");
-        leaderPin = '';
-        localStorage.removeItem('leaderPin');
+        clearStoredPin();
       } else {
         alert("Erreur d'enregistrement");
       }
@@ -537,8 +786,24 @@
       document.getElementById('viewer-container').style.display = 'none';
     }
 
-    document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
+    // ------------------ utils ------------------
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+    }
+
+    // ------------------ init ------------------
     fetchSongs();
+
+    // user init
+    const cu = getCurrentUser();
+    if (cu) {
+      document.getElementById("currentUserLabel").textContent = cu;
+      loadUserPrefs();
+    } else {
+      document.getElementById("currentUserLabel").textContent = "—";
+      openUserModal();
+      // prefs seront chargés dès sélection
+    }
   </script>
 </body>
 </html>
