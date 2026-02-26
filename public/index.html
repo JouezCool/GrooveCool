@@ -140,6 +140,18 @@
   <script>
     const socket = io();
 
+    let leaderPin = localStorage.getItem('leaderPin') || '';
+
+function requirePin() {
+  if (leaderPin && leaderPin.length > 0) return leaderPin;
+  const p = prompt("PIN Leader ?");
+  if (p === null) return ''; // annulé
+  leaderPin = String(p).trim();
+  localStorage.setItem('leaderPin', leaderPin);
+  return leaderPin;
+}
+
+
     socket.onAny((event, ...args) => {
   // DEBUG minimal : tu peux commenter après
   if (event === 'song-updated') {
@@ -200,7 +212,12 @@
       document.getElementById('library').style.display = 'none';
       document.getElementById('viewer-container').style.display = 'block';
 
-      if (isLeader) socket.emit('change-song', currentFileName);
+      if (isLeader) {
+  const pin = requirePin();
+  if (!pin) return;
+  socket.emit('change-song', { fileName: currentFileName, pin });
+}
+
       loadSong(currentFileName);
     }
 
@@ -269,7 +286,9 @@ socket.on('song-updated', ({ fileName }) => {
 
       lastEmitAt = now;
       lastEmitPos = pos;
-      socket.emit('scroll-sync', pos);
+      const pin = requirePin();
+if (!pin) return;
+socket.emit('scroll-sync', { pos, pin });
     });
 
     socket.on('apply-scroll', p => {
@@ -335,7 +354,10 @@ socket.on('song-updated', ({ fileName }) => {
       else startAutoScroll();
 
       if (isLeader && emitSync) {
-        socket.emit('sync-autoscroll', { active: isScrolling, speed: speedInput.value });
+        const pin = requirePin();
+if (!pin) return;
+socket.emit('sync-autoscroll', { active: isScrolling, speed: speedInput.value, pin });
+
       }
     }
 
@@ -346,7 +368,10 @@ socket.on('song-updated', ({ fileName }) => {
         const now = Date.now();
         if (now - lastSpeedSyncAt > 120) {
           lastSpeedSyncAt = now;
-          socket.emit('sync-autoscroll', { active: isScrolling, speed: speedInput.value });
+          const pin = requirePin();
+if (!pin) return;
+socket.emit('sync-autoscroll', { active: isScrolling, speed: speedInput.value, pin });
+
         }
       }
     });
@@ -398,14 +423,24 @@ socket.on('song-updated', ({ fileName }) => {
     function updateFontSize(delta) {
       fontSize += delta;
       renderChordPro();
-      if (isLeader) socket.emit('sync-font', fontSize);
+      if (isLeader) {
+  const pin = requirePin();
+  if (!pin) return;
+  socket.emit('sync-font', { fontSize, pin });
+}
+
     }
 
     function updateTranspose(dir) {
       transposeValue += dir;
       document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
       renderChordPro();
-      if (isLeader) socket.emit('sync-transpose', transposeValue);
+      if (isLeader) {
+  const pin = requirePin();
+  if (!pin) return;
+  socket.emit('sync-transpose', { transposeValue, pin });
+}
+
     }
 
     const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -546,22 +581,35 @@ socket.on('song-updated', ({ fileName }) => {
     }
 
     async function saveEditor() {
-      const newContent = document.getElementById('editor-textarea').value;
-      const res = await fetch('/save-song', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: currentFileName, content: newContent })
-      });
+  const newContent = document.getElementById('editor-textarea').value;
 
-      if (res.ok) {
-        currentRaw = newContent;
-        renderChordPro();
-        closeEditor();
-        if (isLeader) socket.emit('change-song', currentFileName);
-      } else {
-        alert("Erreur d'enregistrement");
-      }
+  const pin = requirePin();
+  if (!pin) return;
+
+  const res = await fetch('/save-song', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileName: currentFileName, content: newContent, pin })
+  });
+
+  if (res.ok) {
+    currentRaw = newContent;
+    renderChordPro();
+    closeEditor();
+
+    // Si leader, on renvoie la chanson aux autres (protégé par PIN)
+    if (isLeader) {
+      socket.emit('change-song', { fileName: currentFileName, pin });
     }
+  } else if (res.status === 403) {
+    alert("PIN invalide");
+    leaderPin = '';
+    localStorage.removeItem('leaderPin');
+  } else {
+    alert("Erreur d'enregistrement");
+  }
+}
+
 
     function closeViewer() {
       stopAutoScroll();
