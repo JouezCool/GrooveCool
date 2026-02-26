@@ -1,269 +1,429 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BandApp Pro - Live Sync</title>
-    
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>BandApp Pro - Live Sync</title>
 
-    <style>
-        :root { --bg: #000; --text: #eee; --accent: #ff9800; --edit: #2196F3; }
-        body { 
-            font-family: sans-serif; 
-            background: var(--bg); 
-            color: var(--text); 
-            margin: 0; 
-            overflow: hidden; 
-            /* Empêche le "glisser pour revenir en arrière" de Safari sur iPad */
-            overscroll-behavior-x: none; 
-        }
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
-        /* Bibliothèque */
-        #library { height: 100vh; overflow-y: auto; display: block; -webkit-overflow-scrolling: touch; }
-        .lib-header { padding: 20px; background: #1a1a1a; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; z-index: 5; }
-        .song-item { padding: 20px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; font-size: 1.1em; cursor: pointer; }
+  <style>
+    :root { --bg: #000; --text: #eee; --accent: #ff9800; --edit: #2196F3; }
+    body {
+      font-family: sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      overflow: hidden;
+      overscroll-behavior-x: none;
+    }
 
-        /* Lecteur */
-        #viewer-container { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 10; }
-        nav { display: flex; background: #1a1a1a; min-height: 60px; align-items: center; padding: 0 10px; gap: 8px; border-bottom: 1px solid #333; flex-wrap: wrap; }
-        
-        .controls-group { display:flex; align-items:center; gap:5px; background:#222; padding:5px; border-radius:8px; }
-        
-        #viewer { height: calc(100vh - 65px); overflow-y: scroll; padding: 25px; font-family: 'Courier New', Courier, monospace; -webkit-overflow-scrolling: touch; scroll-behavior: auto !important; }
-        
-        .line { margin-bottom: 30px; position: relative; line-height: 2; white-space: pre-wrap; transition: font-size 0.2s; }
-        .chord { position: absolute; top: -1.1em; color: var(--accent); font-weight: bold; background: transparent; pointer-events: none; font-size: 0.9em; }
-        
-        /* Éditeur */
-        #editor-container { display: none; position: fixed; top: 60px; left: 0; width: 100vw; height: calc(100vh - 60px); background: #111; z-index: 20; }
-        #editor-textarea { width: 100%; height: 80%; background: #000; color: #2196F3; border: none; font-family: monospace; font-size: 16px; padding: 20px; box-sizing: border-box; }
-        .editor-footer { height: 20%; display: flex; justify-content: center; align-items: center; gap: 20px; background: #1a1a1a; }
+    /* Bibliothèque */
+    #library { height: 100vh; overflow-y: auto; display: block; -webkit-overflow-scrolling: touch; }
+    .lib-header { padding: 20px; background: #1a1a1a; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; z-index: 5; }
+    .song-item { padding: 20px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; font-size: 1.1em; cursor: pointer; }
 
-        .btn { cursor: pointer; padding: 10px 14px; border: 2px solid var(--accent); border-radius: 6px; color: var(--accent); background: none; font-size: 13px; font-weight: bold; }
-        .btn-blue { border-color: var(--edit); color: var(--edit); }
-        .leader-mode { background: var(--accent) !important; color: #000 !important; }
-        .active-btn { background: #444; color: #fff; }
-    </style>
+    /* Lecteur */
+    #viewer-container { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 10; }
+    nav { display: flex; background: #1a1a1a; min-height: 60px; align-items: center; padding: 0 10px; gap: 8px; border-bottom: 1px solid #333; flex-wrap: wrap; }
+
+    .controls-group { display:flex; align-items:center; gap:5px; background:#222; padding:5px; border-radius:8px; }
+
+    #viewer {
+      height: calc(100vh - 65px);
+      overflow-y: scroll;
+      padding: 25px;
+      font-family: 'Courier New', Courier, monospace;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: auto !important;
+    }
+
+    /* Nouveau rendu ChordPro */
+    .block { margin-bottom: 26px; }
+    .chordline, .lyricline {
+      white-space: pre;
+      line-height: 1.6;
+      margin: 0;
+    }
+    .chordline { color: var(--accent); font-weight: bold; }
+
+    /* Éditeur */
+    #editor-container { display: none; position: fixed; top: 60px; left: 0; width: 100vw; height: calc(100vh - 60px); background: #111; z-index: 20; }
+    #editor-textarea { width: 100%; height: 80%; background: #000; color: #2196F3; border: none; font-family: monospace; font-size: 16px; padding: 20px; box-sizing: border-box; }
+    .editor-footer { height: 20%; display: flex; justify-content: center; align-items: center; gap: 20px; background: #1a1a1a; }
+
+    .btn { cursor: pointer; padding: 10px 14px; border: 2px solid var(--accent); border-radius: 6px; color: var(--accent); background: none; font-size: 13px; font-weight: bold; }
+    .btn-blue { border-color: var(--edit); color: var(--edit); }
+    .leader-mode { background: var(--accent) !important; color: #000 !important; }
+    .active-btn { background: #444; color: #fff; }
+  </style>
 </head>
-<body>
 
-<div id="library">
+<body>
+  <div id="library">
     <div class="lib-header">
-        <h2 style="margin:0;">Répertoire</h2>
-        <button class="btn" id="libLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
+      <h2 style="margin:0;">Répertoire</h2>
+      <button class="btn" id="libLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
     </div>
     <div id="songList"></div>
-</div>
+  </div>
 
-<div id="viewer-container">
+  <div id="viewer-container">
     <nav>
-        <button class="btn" onclick="closeViewer()">⬅</button>
-        <div class="controls-group">
-            <button class="btn" id="playBtn" onclick="toggleAutoScroll(true)">▶</button>
-            <input type="range" id="scrollSpeed" min="1" max="95" value="50">
-        </div>
-        <div class="controls-group">
-            <button class="btn" onclick="updateFontSize(-2)">A-</button>
-            <button class="btn" onclick="updateFontSize(2)">A+</button>
-        </div>
-        <div class="controls-group">
-            <button class="btn" onclick="updateTranspose(-1)">-</button>
-            <span id="transposeVal" style="min-width:20px; text-align:center">0</span>
-            <button class="btn" onclick="updateTranspose(1)">+</button>
-        </div>
-        <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
-        <button class="btn" id="navLeaderBtn" onclick="toggleLeader()">Solo</button>
-    </nav>
-    <div id="viewer">
-        <div id="songContent"></div>
-        <div style="height: 85vh;"></div>
-    </div>
-</div>
+      <button class="btn" onclick="closeViewer()">⬅</button>
 
-<div id="editor-container">
+      <div class="controls-group">
+        <button class="btn" id="playBtn" onclick="toggleAutoScroll(true)">▶</button>
+        <input type="range" id="scrollSpeed" min="1" max="95" value="50">
+      </div>
+
+      <div class="controls-group">
+        <button class="btn" onclick="updateFontSize(-2)">A-</button>
+        <button class="btn" onclick="updateFontSize(2)">A+</button>
+      </div>
+
+      <div class="controls-group">
+        <button class="btn" onclick="updateTranspose(-1)">-</button>
+        <span id="transposeVal" style="min-width:20px; text-align:center">0</span>
+        <button class="btn" onclick="updateTranspose(1)">+</button>
+      </div>
+
+      <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
+      <button class="btn" id="navLeaderBtn" onclick="toggleLeader()">Solo</button>
+    </nav>
+
+    <div id="viewer">
+      <div id="songContent"></div>
+      <div style="height: 85vh;"></div>
+    </div>
+  </div>
+
+  <div id="editor-container">
     <textarea id="editor-textarea" spellcheck="false"></textarea>
     <div class="editor-footer">
-        <button class="btn" onclick="closeEditor()" style="border-color: #ff5252; color: #ff5252;">ANNULER</button>
-        <button class="btn btn-blue" onclick="saveEditor()">ENREGISTRER</button>
+      <button class="btn" onclick="closeEditor()" style="border-color: #ff5252; color: #ff5252;">ANNULER</button>
+      <button class="btn btn-blue" onclick="saveEditor()">ENREGISTRER</button>
     </div>
-</div>
+  </div>
 
-<script>
+  <script>
     const socket = io();
+
     let isLeader = false, allSongs = [], currentIndex = -1;
     let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
     let isScrolling = false, scrollInterval;
     let isRemoteScrolling = false;
 
     const viewerElement = document.getElementById('viewer');
+    const songContentEl = document.getElementById('songContent');
 
     // Connexion témoin
     socket.on('connect', () => { document.getElementById('navLeaderBtn').style.borderColor = "#4CAF50"; });
     socket.on('disconnect', () => { document.getElementById('navLeaderBtn').style.borderColor = "#f44336"; });
 
     async function fetchSongs() {
-        const res = await fetch('/list-songs');
-        allSongs = (await res.json()).sort();
-        document.getElementById('songList').innerHTML = allSongs.map((s, idx) => `
-            <div class="song-item" onclick="openSong(${idx})">
-                <b>${s.replace('.pro','').replace('.cho','')}</b><span>❯</span>
-            </div>`).join('');
+      const res = await fetch('/list-songs');
+      allSongs = (await res.json()).sort();
+      document.getElementById('songList').innerHTML = allSongs.map((s, idx) => `
+        <div class="song-item" onclick="openSong(${idx})">
+          <b>${s.replace('.pro','').replace('.cho','')}</b><span>❯</span>
+        </div>`).join('');
     }
 
     function toggleLeader() {
-        isLeader = !isLeader;
-        const btns = [document.getElementById('libLeaderBtn'), document.getElementById('navLeaderBtn')];
-        btns.forEach(btn => {
-            btn.classList.toggle('leader-mode', isLeader);
-            btn.innerText = isLeader ? "Mode Leader" : "Mode Solo";
-        });
+      isLeader = !isLeader;
+      const btns = [document.getElementById('libLeaderBtn'), document.getElementById('navLeaderBtn')];
+      btns.forEach(btn => {
+        btn.classList.toggle('leader-mode', isLeader);
+        btn.innerText = isLeader ? "Mode Leader" : "Mode Solo";
+      });
     }
 
     function openSong(idx) {
-        if (idx < 0 || idx >= allSongs.length) return;
-        currentIndex = idx;
-        currentFileName = allSongs[idx];
-        document.getElementById('library').style.display = 'none';
-        document.getElementById('viewer-container').style.display = 'block';
-        if(isLeader) socket.emit('change-song', currentFileName);
-        loadSong(currentFileName);
+      if (idx < 0 || idx >= allSongs.length) return;
+      currentIndex = idx;
+      currentFileName = allSongs[idx];
+
+      document.getElementById('library').style.display = 'none';
+      document.getElementById('viewer-container').style.display = 'block';
+
+      if (isLeader) socket.emit('change-song', currentFileName);
+      loadSong(currentFileName);
     }
 
     async function loadSong(f) {
-        const res = await fetch('/partitions/' + f);
-        currentRaw = await res.text();
-        transposeValue = 0;
-        document.getElementById('transposeVal').innerText = "0";
-        renderChordPro();
-        viewerElement.scrollTop = 0;
+      const res = await fetch('/partitions/' + f);
+      currentRaw = await res.text();
+      transposeValue = 0;
+      document.getElementById('transposeVal').innerText = "0";
+      renderChordPro();
+      viewerElement.scrollTop = 0;
     }
 
-    // --- SYNCHRO SCROLL ---
+    // --- SYNCHRO SCROLL (THROTTLE CLIENT) ---
+    let lastEmitAt = 0;
+    let lastEmitPos = -1;
+
     viewerElement.addEventListener('scroll', () => {
-        if (isLeader && !isRemoteScrolling) {
-            const pos = viewerElement.scrollTop / (viewerElement.scrollHeight - viewerElement.clientHeight);
-            socket.emit('scroll-sync', pos);
-        }
+      if (!isLeader || isRemoteScrolling) return;
+
+      const max = viewerElement.scrollHeight - viewerElement.clientHeight;
+      const pos = max > 0 ? (viewerElement.scrollTop / max) : 0;
+
+      const now = Date.now();
+      if (now - lastEmitAt < 80 && Math.abs(pos - lastEmitPos) < 0.003) return;
+
+      lastEmitAt = now;
+      lastEmitPos = pos;
+      socket.emit('scroll-sync', pos);
     });
 
     socket.on('apply-scroll', p => {
-        if (!isLeader) {
-            isRemoteScrolling = true;
-            viewerElement.scrollTop = p * (viewerElement.scrollHeight - viewerElement.clientHeight);
-            setTimeout(() => { isRemoteScrolling = false; }, 50);
-        }
+      if (!isLeader) {
+        isRemoteScrolling = true;
+        const max = viewerElement.scrollHeight - viewerElement.clientHeight;
+        viewerElement.scrollTop = (Number(p) || 0) * (max > 0 ? max : 0);
+        setTimeout(() => { isRemoteScrolling = false; }, 50);
+      }
     });
 
     function toggleAutoScroll(emitSync) {
-        isScrolling = !isScrolling;
-        const btn = document.getElementById('playBtn');
-        btn.innerText = isScrolling ? "⏸" : "▶";
-        btn.classList.toggle('active-btn', isScrolling);
-        
-        if(isScrolling) {
-            scrollInterval = setInterval(() => {
-                viewerElement.scrollTop += 1;
-            }, 105 - document.getElementById('scrollSpeed').value);
-        } else { clearInterval(scrollInterval); }
-        
-        if(isLeader && emitSync) {
-            socket.emit('sync-autoscroll', {active: isScrolling, speed: document.getElementById('scrollSpeed').value});
-        }
+      isScrolling = !isScrolling;
+      const btn = document.getElementById('playBtn');
+      btn.innerText = isScrolling ? "⏸" : "▶";
+      btn.classList.toggle('active-btn', isScrolling);
+
+      if (isScrolling) {
+        scrollInterval = setInterval(() => {
+          viewerElement.scrollTop += 1;
+        }, 105 - document.getElementById('scrollSpeed').value);
+      } else {
+        clearInterval(scrollInterval);
+      }
+
+      if (isLeader && emitSync) {
+        socket.emit('sync-autoscroll', { active: isScrolling, speed: document.getElementById('scrollSpeed').value });
+      }
     }
 
     // --- GESTION DES GESTES (SWIPE) ---
     let touchStartX = 0;
-    let touchEndX = 0;
 
-    document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, false);
-    document.addEventListener('touchend', e => {
-        touchEndX = e.changedTouches[0].screenX;
-        const swipeDistance = touchEndX - touchStartX;
-        if (swipeDistance > 100 && currentIndex > 0) openSong(currentIndex - 1); // Vers la droite -> Précédent
-        else if (swipeDistance < -100 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1); // Vers la gauche -> Suivant
+    function isEditorOpen() {
+      return document.getElementById('editor-container').style.display === 'block';
+    }
+    function isViewerOpen() {
+      return document.getElementById('viewer-container').style.display === 'block';
+    }
+
+    document.addEventListener('touchstart', e => {
+      touchStartX = e.changedTouches[0].screenX;
     }, false);
 
-    // --- RENDU ET ACCORDS ---
+    document.addEventListener('touchend', e => {
+      if (!isViewerOpen() || isEditorOpen()) return;
+
+      const touchEndX = e.changedTouches[0].screenX;
+      const swipeDistance = touchEndX - touchStartX;
+
+      if (swipeDistance > 100 && currentIndex > 0) openSong(currentIndex - 1);
+      else if (swipeDistance < -100 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
+    }, false);
+
+    // --- RENDU / POLICES / TRANSPOSITION ---
     function updateFontSize(delta) {
-        fontSize += delta;
-        renderChordPro();
-        if(isLeader) socket.emit('sync-font', fontSize);
+      fontSize += delta;
+      renderChordPro();
+      if (isLeader) socket.emit('sync-font', fontSize);
     }
 
     function updateTranspose(dir) {
-        transposeValue += dir;
-        document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
-        renderChordPro();
-        if(isLeader) socket.emit('sync-transpose', transposeValue);
+      transposeValue += dir;
+      document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
+      renderChordPro();
+      if (isLeader) socket.emit('sync-transpose', transposeValue);
     }
 
     const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
     const scaleLat = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
-    
+
+    function normalizeNote(note) {
+      // convertit b -> équivalent #
+      return note
+        .replace('Bb','A#')
+        .replace('Db','C#')
+        .replace('Eb','D#')
+        .replace('Gb','F#')
+        .replace('Ab','G#');
+    }
+
     function transChord(chord, steps) {
-        return chord.replace(/([A-G][#b]?)/g, (match) => {
-            let note = match.replace('Bb','A#').replace('Db','C#').replace('Eb','D#').replace('Gb','F#').replace('Ab','G#');
-            let idx = scale.indexOf(note);
-            if(idx === -1) return match;
-            let newIdx = (idx + steps) % 12;
-            if(newIdx < 0) newIdx += 12;
-            return scaleLat[newIdx];
-        });
+      return chord.replace(/([A-G][#b]?)/g, (match) => {
+        const n = normalizeNote(match);
+        const idx = scale.indexOf(n);
+        if (idx === -1) return match;
+        let newIdx = (idx + steps) % 12;
+        if (newIdx < 0) newIdx += 12;
+        return scaleLat[newIdx];
+      });
+    }
+
+    // Parse une ligne ChordPro en deux lignes alignées (accords au-dessus, paroles dessous)
+    function parseChordProLine(line) {
+      let chordLine = '';
+      let lyricLine = '';
+
+      let i = 0;
+      while (i < line.length) {
+        const ch = line[i];
+
+        if (ch === '[') {
+          const end = line.indexOf(']', i);
+          if (end !== -1) {
+            const chordRaw = line.slice(i + 1, end);
+            const chord = transChord(chordRaw, transposeValue);
+
+            // place l'accord au-dessus de la prochaine position de lyricLine
+            // on "écrit" le chord dans chordLine à la position actuelle
+            const pos = lyricLine.length;
+
+            // s'assure que chordLine a au moins pos espaces
+            if (chordLine.length < pos) chordLine += ' '.repeat(pos - chordLine.length);
+
+            // écrit le chord, en écrasant au besoin (simple et efficace)
+            chordLine = chordLine.slice(0, pos) + chord + chordLine.slice(pos + chord.length);
+
+            i = end + 1;
+            continue;
+          }
+        }
+
+        // caractère normal = avance sur les deux lignes
+        lyricLine += ch;
+        chordLine += (ch === '\t') ? '\t' : ' ';
+        i++;
+      }
+
+      // égalise longueur pour éviter les “coupures”
+      if (chordLine.length < lyricLine.length) chordLine += ' '.repeat(lyricLine.length - chordLine.length);
+
+      return { chordLine, lyricLine };
+    }
+
+    function clearSongContent() {
+      songContentEl.replaceChildren();
+    }
+
+    function addCenteredTitle(text, level) {
+      const el = document.createElement(level === 1 ? 'h1' : 'h2');
+      el.style.textAlign = 'center';
+      if (level === 2) el.style.color = '#888';
+      el.textContent = text;
+      songContentEl.appendChild(el);
+    }
+
+    function addChordBlock(chordLine, lyricLine) {
+      const block = document.createElement('div');
+      block.className = 'block';
+      block.style.fontSize = fontSize + 'px';
+
+      const preChord = document.createElement('pre');
+      preChord.className = 'chordline';
+      preChord.textContent = chordLine;
+
+      const preLyric = document.createElement('pre');
+      preLyric.className = 'lyricline';
+      preLyric.textContent = lyricLine;
+
+      // Si pas d'accords visibles, on peut éviter d'afficher la ligne d'accords (optionnel)
+      if (chordLine.trim().length > 0) block.appendChild(preChord);
+      block.appendChild(preLyric);
+
+      songContentEl.appendChild(block);
     }
 
     function renderChordPro() {
-        let html = "";
-        currentRaw.split('\n').forEach(line => {
-            if (line.includes('{t:')) html += `<h1 style="text-align:center">${line.match(/\{t:(.*?)\}/)[1]}</h1>`;
-            else if (line.includes('{st:')) html += `<h2 style="text-align:center; color:#888;">${line.match(/\{st:(.*?)\}/)[1]}</h2>`;
-            else {
-                let proc = line.replace(/\[(.*?)\]/g, (m, c) => `<span class="chord">${transChord(c, transposeValue)}</span>`);
-                html += `<div class="line" style="font-size:${fontSize}px">${proc}</div>`;
-            }
-        });
-        document.getElementById('songContent').innerHTML = html;
+      clearSongContent();
+
+      const lines = currentRaw.split('\n');
+      for (const line of lines) {
+        const t = line.match(/\{t:(.*?)\}/);
+        if (t) { addCenteredTitle(t[1], 1); continue; }
+
+        const st = line.match(/\{st:(.*?)\}/);
+        if (st) { addCenteredTitle(st[1], 2); continue; }
+
+        // ligne normale
+        const { chordLine, lyricLine } = parseChordProLine(line);
+        addChordBlock(chordLine, lyricLine);
+      }
     }
 
     // --- RÉCEPTION SOCKETS ---
-    socket.on('load-song', f => { if(!isLeader) openSong(allSongs.indexOf(f)); });
-    socket.on('apply-font', s => { if(!isLeader) { fontSize = s; renderChordPro(); } });
-    socket.on('apply-transpose', v => { if(!isLeader) { transposeValue = v; renderChordPro(); } });
-    socket.on('apply-autoscroll', d => { 
-        if(!isLeader) { 
-            document.getElementById('scrollSpeed').value = d.speed; 
-            if(d.active !== isScrolling) toggleAutoScroll(false); 
-        } 
+    socket.on('load-song', f => {
+      if (!isLeader) {
+        const idx = allSongs.indexOf(f);
+        if (idx !== -1) openSong(idx);
+      }
+    });
+
+    socket.on('apply-font', s => {
+      if (!isLeader) {
+        fontSize = Number(s) || fontSize;
+        renderChordPro();
+      }
+    });
+
+    socket.on('apply-transpose', v => {
+      if (!isLeader) {
+        transposeValue = Number(v) || 0;
+        document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
+        renderChordPro();
+      }
+    });
+
+    socket.on('apply-autoscroll', d => {
+      if (!isLeader) {
+        document.getElementById('scrollSpeed').value = d.speed;
+        if (d.active !== isScrolling) toggleAutoScroll(false);
+      }
     });
 
     // --- INTERFACE ---
     function openEditor() {
-        if(isScrolling) toggleAutoScroll(false);
-        document.getElementById('editor-textarea').value = currentRaw;
-        document.getElementById('editor-container').style.display = 'block';
+      if (isScrolling) toggleAutoScroll(false);
+      document.getElementById('editor-textarea').value = currentRaw;
+      document.getElementById('editor-container').style.display = 'block';
     }
-    function closeEditor() { document.getElementById('editor-container').style.display = 'none'; }
+    function closeEditor() {
+      document.getElementById('editor-container').style.display = 'none';
+    }
+
     async function saveEditor() {
-        const newContent = document.getElementById('editor-textarea').value;
-        const res = await fetch('/save-song', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ fileName: currentFileName, content: newContent })
-        });
-        if(res.ok) {
-            currentRaw = newContent;
-            renderChordPro();
-            closeEditor();
-            if(isLeader) socket.emit('change-song', currentFileName);
-        }
+      const newContent = document.getElementById('editor-textarea').value;
+      const res = await fetch('/save-song', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: currentFileName, content: newContent })
+      });
+
+      if (res.ok) {
+        currentRaw = newContent;
+        renderChordPro();
+        closeEditor();
+        if (isLeader) socket.emit('change-song', currentFileName);
+      } else {
+        alert("Erreur d'enregistrement");
+      }
     }
+
     function closeViewer() {
-        if(isScrolling) toggleAutoScroll(false);
-        document.getElementById('library').style.display = 'block';
-        document.getElementById('viewer-container').style.display = 'none';
+      if (isScrolling) toggleAutoScroll(false);
+      document.getElementById('library').style.display = 'block';
+      document.getElementById('viewer-container').style.display = 'none';
     }
 
     fetchSongs();
-</script>
+  </script>
 </body>
 </html>
