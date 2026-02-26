@@ -232,6 +232,11 @@
     let scrollCarry = 0;
 
     const viewerElement = document.getElementById('viewer');
+    // --- SWIPE (précédent/suivant) ---
+let touchStartX = 0, touchStartY = 0;
+const SWIPE_MIN_X = 110;     // distance mini en px
+const SWIPE_RATIO = 1.4;     // dx doit être bien > dy
+
     const songContentEl = document.getElementById('songContent');
     const speedInput = document.getElementById('scrollSpeed');
 
@@ -353,6 +358,44 @@
       lastEmitPos = pos;
       socket.emit('scroll-sync', pos);
     });
+
+    function isEditorOpen() {
+  return document.getElementById('editor-container').style.display === 'block';
+}
+function isViewerOpen() {
+  return document.getElementById('viewer-container').style.display === 'block';
+}
+
+
+    viewerElement.addEventListener('touchstart', (e) => {
+  if (!isViewerOpen() || isEditorOpen()) return;
+
+  // si on commence le geste dans la zone notes (textarea), on ne swipe pas
+  if (e.target && e.target.id === 'notesTextarea') return;
+
+  const t = e.changedTouches[0];
+  touchStartX = t.screenX;
+  touchStartY = t.screenY;
+}, { passive: true });
+
+viewerElement.addEventListener('touchend', (e) => {
+  if (!isViewerOpen() || isEditorOpen()) return;
+  if (e.target && e.target.id === 'notesTextarea') return;
+
+  const t = e.changedTouches[0];
+  const dx = t.screenX - touchStartX;
+  const dy = t.screenY - touchStartY;
+
+  // pas assez horizontal / pas assez long => on ignore
+  if (Math.abs(dx) < SWIPE_MIN_X) return;
+  if (Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return;
+
+  // dx > 0 = swipe vers la droite => morceau précédent
+  if (dx > 0 && currentIndex > 0) openSong(currentIndex - 1);
+  // dx < 0 = swipe vers la gauche => morceau suivant
+  else if (dx < 0 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
+}, { passive: true });
+
 
     socket.on('apply-scroll', p => {
       if (!isLeader) {
