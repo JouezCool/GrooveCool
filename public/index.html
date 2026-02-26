@@ -491,6 +491,7 @@
         <button class="btn" id="settingsThemeBtn" onclick="toggleTheme()">Thème: Sombre</button>
         <button class="btn" onclick="exportBackup()">⬇️ Exporter sauvegarde</button>
 <button class="btn" onclick="triggerImport()">⬆️ Importer sauvegarde</button>
+<button class="btn" onclick="revertToOfficial()">↩︎ Revenir à la version officielle</button>
 <input id="importFile" type="file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
       </div>
 
@@ -599,6 +600,28 @@
         settingsBtnFixed.style.background = 'rgba(0,0,0,0.25)';
       }
     }
+
+    function revertToOfficial() {
+  if (!currentFileName) {
+    showToast("Aucune chanson ouverte");
+    return;
+  }
+
+  const ok = confirm(
+    "Revenir à la version officielle ?\n\n" +
+    "Cela supprimera ta version personnelle pour ce morceau (uniquement pour toi)."
+  );
+  if (!ok) return;
+
+  // efface la version perso de cet utilisateur pour ce morceau
+  localStorage.removeItem(personalSongKey(currentFileName));
+
+  // recharge la version officielle
+  stopAutoScroll();
+  loadSong(currentFileName);
+
+  showToast("Version officielle restaurée ✅");
+}
 
     function toggleTheme() {
       themeMode = (themeMode === 'dark') ? 'light' : 'dark';
