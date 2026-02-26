@@ -29,6 +29,27 @@
 
     .controls-group { display:flex; align-items:center; gap:5px; background:#222; padding:5px; border-radius:8px; }
 
+    /* Bandeau update */
+    #updateBanner {
+      position: sticky;
+      top: 0;
+      z-index: 999;
+      display: none;
+      background: #222;
+      border-bottom: 1px solid #444;
+      padding: 10px 12px;
+      font-size: 14px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    #updateBanner .msg { color: #ddd; }
+    #updateBanner .btn-small {
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
     #viewer {
       height: calc(100vh - 65px);
       overflow-y: scroll;
@@ -36,7 +57,7 @@
       font-family: 'Courier New', Courier, monospace;
       -webkit-overflow-scrolling: touch;
       scroll-behavior: auto !important;
-      touch-action: pan-y; /* on favorise le scroll vertical */
+      touch-action: pan-y;
     }
 
     /* Rendu ChordPro (aligné) */
@@ -93,6 +114,15 @@
       <button class="btn" id="navLeaderBtn" onclick="toggleLeader()">Solo</button>
     </nav>
 
+    <!-- Bandeau update (dans le viewer) -->
+    <div id="updateBanner">
+      <div class="msg">Une mise à jour de cette chanson est disponible.</div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-small" onclick="dismissUpdate()">PLUS TARD</button>
+        <button class="btn btn-blue btn-small" onclick="reloadCurrentSong()">RECHARGER</button>
+      </div>
+    </div>
+
     <div id="viewer">
       <div id="songContent"></div>
       <div style="height: 85vh;"></div>
@@ -115,16 +145,19 @@
 
     let isRemoteScrolling = false;
 
-    // Auto-scroll (RAF)
+    // Auto-scroll (RAF + carry)
     let isScrolling = false;
-let rafId = null;
-let lastRafTime = 0;
-let scrollCarry = 0; // accumule les fractions (important iPad)
-
+    let rafId = null;
+    let lastRafTime = 0;
+    let scrollCarry = 0;
 
     const viewerElement = document.getElementById('viewer');
     const songContentEl = document.getElementById('songContent');
     const speedInput = document.getElementById('scrollSpeed');
+
+    // Update banner
+    const updateBanner = document.getElementById('updateBanner');
+    let pendingUpdateForCurrent = false;
 
     // Connexion témoin
     socket.on('connect', () => { document.getElementById('navLeaderBtn').style.borderColor = "#4CAF50"; });
@@ -153,6 +186,9 @@ let scrollCarry = 0; // accumule les fractions (important iPad)
       currentIndex = idx;
       currentFileName = allSongs[idx];
 
+      pendingUpdateForCurrent = false;
+      updateBanner.style.display = 'none';
+
       document.getElementById('library').style.display = 'none';
       document.getElementById('viewer-container').style.display = 'block';
 
@@ -167,6 +203,38 @@ let scrollCarry = 0; // accumule les fractions (important iPad)
       document.getElementById('transposeVal').innerText = "0";
       renderChordPro();
       viewerElement.scrollTop = 0;
+
+      // si on recharge, on enlève la notif
+      pendingUpdateForCurrent = false;
+      updateBanner.style.display = 'none';
+    }
+
+    // --- SONG UPDATED (nouveau) ---
+    socket.on('song-updated', ({ fileName }) => {
+      // Si je suis dans l'éditeur, on ne force rien (bandeau suffit)
+      if (!fileName || !currentFileName) return;
+
+      if (fileName === currentFileName) {
+        pendingUpdateForCurrent = true;
+        // on n'affiche le bandeau que si le viewer est ouvert
+        if (document.getElementById('viewer-container').style.display === 'block') {
+          updateBanner.style.display = 'flex';
+        }
+      }
+    });
+
+    function dismissUpdate() {
+      updateBanner.style.display = 'none';
+      // on garde pendingUpdateForCurrent = true, comme ça si tu reviens plus tard tu peux le faire manuellement
+    }
+
+    function reloadCurrentSong() {
+      if (!currentFileName) return;
+
+      // option: on stop l'autoscroll pour éviter un effet “jump”
+      stopAutoScroll();
+
+      loadSong(currentFileName);
     }
 
     // --- SYNCHRO SCROLL (THROTTLE CLIENT) ---
@@ -196,10 +264,8 @@ let scrollCarry = 0; // accumule les fractions (important iPad)
       }
     });
 
-    // --- AUTO-SCROLL (requestAnimationFrame) ---
+    // --- AUTO-SCROLL (requestAnimationFrame + carry) ---
     function sliderToPxPerSecond(value) {
-      // On garde "le feeling" de ton ancien setInterval:
-      // delay = (105 - value) ms pour +1px -> px/s = 1000 / delay
       const v = Number(value) || 50;
       const delayMs = Math.max(10, 105 - v);
       return 1000 / delayMs;
@@ -215,41 +281,37 @@ let scrollCarry = 0; // accumule les fractions (important iPad)
       const pxPerSec = sliderToPxPerSecond(speedInput.value);
       const deltaPx = (dt / 1000) * pxPerSec;
 
-// iPad: scrollTop peut ignorer les fractions -> on accumule
-scrollCarry += deltaPx;
-const step = Math.floor(scrollCarry);
+      scrollCarry += deltaPx;
+      const step = Math.floor(scrollCarry);
 
-if (step >= 1) {
-  viewerElement.scrollTop += step;
-  scrollCarry -= step;
-}
+      if (step >= 1) {
+        viewerElement.scrollTop += step;
+        scrollCarry -= step;
+      }
 
-rafId = requestAnimationFrame(autoScrollLoop);
-
+      rafId = requestAnimationFrame(autoScrollLoop);
     }
 
     function startAutoScroll() {
-  if (isScrolling) return;
-  isScrolling = true;
-  document.getElementById('playBtn').innerText = "⏸";
-  document.getElementById('playBtn').classList.add('active-btn');
-  lastRafTime = 0;
-  scrollCarry = 0; // <-- AJOUT
-  rafId = requestAnimationFrame(autoScrollLoop);
-}
+      if (isScrolling) return;
+      isScrolling = true;
+      document.getElementById('playBtn').innerText = "⏸";
+      document.getElementById('playBtn').classList.add('active-btn');
+      lastRafTime = 0;
+      scrollCarry = 0;
+      rafId = requestAnimationFrame(autoScrollLoop);
+    }
 
-
-function stopAutoScroll() {
-  if (!isScrolling) return;
-  isScrolling = false;
-  document.getElementById('playBtn').innerText = "▶";
-  document.getElementById('playBtn').classList.remove('active-btn');
-  if (rafId) cancelAnimationFrame(rafId);
-  rafId = null;
-  lastRafTime = 0;
-  scrollCarry = 0; // <-- AJOUT
-}
-
+    function stopAutoScroll() {
+      if (!isScrolling) return;
+      isScrolling = false;
+      document.getElementById('playBtn').innerText = "▶";
+      document.getElementById('playBtn').classList.remove('active-btn');
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      lastRafTime = 0;
+      scrollCarry = 0;
+    }
 
     function toggleAutoScroll(emitSync) {
       if (isScrolling) stopAutoScroll();
@@ -260,7 +322,7 @@ function stopAutoScroll() {
       }
     }
 
-    // Si le leader change la vitesse pendant que ça scroll, on notifie les autres (sans spam)
+    // Sync vitesse (anti-spam)
     let lastSpeedSyncAt = 0;
     speedInput.addEventListener('input', () => {
       if (isLeader) {
@@ -282,10 +344,10 @@ function stopAutoScroll() {
       }
     });
 
-    // --- SWIPE INTELLIGENT (pas pendant scroll vertical) ---
+    // --- SWIPE INTELLIGENT ---
     let touchStartX = 0, touchStartY = 0;
-    const SWIPE_MIN_X = 110;   // seuil
-    const SWIPE_RATIO = 1.4;   // dx doit dominer dy
+    const SWIPE_MIN_X = 110;
+    const SWIPE_RATIO = 1.4;
 
     function isEditorOpen() {
       return document.getElementById('editor-container').style.display === 'block';
@@ -309,7 +371,7 @@ function stopAutoScroll() {
       const dy = t.screenY - touchStartY;
 
       if (Math.abs(dx) < SWIPE_MIN_X) return;
-      if (Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return; // c'était surtout un scroll vertical
+      if (Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return;
 
       if (dx > 0 && currentIndex > 0) openSong(currentIndex - 1);
       else if (dx < 0 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
@@ -367,7 +429,6 @@ function stopAutoScroll() {
             const chord = transChord(chordRaw, transposeValue);
 
             const pos = lyricLine.length;
-
             if (chordLine.length < pos) chordLine += ' '.repeat(pos - chordLine.length);
 
             chordLine = chordLine.slice(0, pos) + chord + chordLine.slice(pos + chord.length);
@@ -383,7 +444,6 @@ function stopAutoScroll() {
       }
 
       if (chordLine.length < lyricLine.length) chordLine += ' '.repeat(lyricLine.length - chordLine.length);
-
       return { chordLine, lyricLine };
     }
 
@@ -434,7 +494,7 @@ function stopAutoScroll() {
       }
     }
 
-    // --- RÉCEPTION SOCKETS ---
+    // --- SOCKETS ---
     socket.on('load-song', f => {
       if (!isLeader) {
         const idx = allSongs.indexOf(f);

@@ -15,13 +15,8 @@ function isValidSongName(name) {
   if (typeof name !== 'string') return false;
   const lower = name.toLowerCase();
 
-  // extensions autorisées
   if (!(lower.endsWith('.pro') || lower.endsWith('.cho'))) return false;
-
-  // bloque tout chemin / traversal
   if (name.includes('..') || name.includes('/') || name.includes('\\')) return false;
-
-  // optionnel : limite la longueur
   if (name.length > 120) return false;
 
   return true;
@@ -50,14 +45,16 @@ app.post('/save-song', (req, res) => {
   }
 
   const filePath = path.join(PARTITIONS_DIR, fileName);
-
-  // sécurité supplémentaire : garantit que filePath reste bien dans PARTITIONS_DIR
   if (!filePath.startsWith(PARTITIONS_DIR + path.sep)) {
     return res.status(400).send("Chemin invalide");
   }
 
   fs.writeFile(filePath, String(content ?? ""), 'utf8', (err) => {
     if (err) return res.status(500).send("Erreur");
+
+    // 🔥 Notifie tout le monde qu'une chanson a changé
+    io.emit('song-updated', { fileName, at: Date.now() });
+
     res.send("OK");
   });
 });
@@ -67,11 +64,11 @@ io.on('connection', (socket) => {
 
   socket.on('change-song', (f) => io.emit('load-song', f));
 
-  // Throttle serveur pour éviter le spam réseau
+  // Throttle serveur scroll
   let lastScrollAt = 0;
   socket.on('scroll-sync', (p) => {
     const now = Date.now();
-    if (now - lastScrollAt < 80) return; // ~12.5/s max
+    if (now - lastScrollAt < 80) return;
     lastScrollAt = now;
 
     const pos = Math.max(0, Math.min(1, Number(p) || 0));
