@@ -7,6 +7,34 @@
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
+  /* ===== Bloc perso utilisateur {pu:Nom} ===== */
+
+.pu-block{
+  margin:14px 0;
+  border-left:4px solid rgba(255,255,255,0.18);
+  padding:10px 12px;
+  border-radius:12px;
+  background: rgba(255,255,255,0.04);
+}
+
+.pu-label{
+  font-family:sans-serif;
+  font-weight:900;
+  font-size:12px;
+  opacity:.65;
+  margin-bottom:8px;
+}
+
+.pu-pre{
+  margin:0;
+  white-space:pre;
+  overflow-x:auto;
+
+  /* IMPORTANT : hauteur stable */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-size:14px;      /* FIXE */
+  line-height:1.25;    /* FIXE */
+}
   <style>
     :root{
       --bg:#000;
@@ -424,35 +452,6 @@
     }
   </style>
 </head>
-
-/* ===== Bloc perso utilisateur {pu:Nom} ===== */
-
-.pu-block{
-  margin:14px 0;
-  border-left:4px solid rgba(255,255,255,0.18);
-  padding:10px 12px;
-  border-radius:12px;
-  background: rgba(255,255,255,0.04);
-}
-
-.pu-label{
-  font-family:sans-serif;
-  font-weight:900;
-  font-size:12px;
-  opacity:.65;
-  margin-bottom:8px;
-}
-
-.pu-pre{
-  margin:0;
-  white-space:pre;
-  overflow-x:auto;
-
-  /* IMPORTANT : hauteur stable */
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
-  font-size:14px;      /* FIXE */
-  line-height:1.25;    /* FIXE */
-}
 
 <body>
   <div id="settingsFixedWrap">
@@ -1232,10 +1231,13 @@ function renderPUBlock(targetEl, showContent, label, text){
   const wrap = document.createElement('div');
   wrap.className = 'pu-block';
 
-  const lab = document.createElement('div');
-  lab.className = 'pu-label';
-  lab.textContent = label;
-  wrap.appendChild(lab);
+  // ✅ label uniquement pour le bon utilisateur
+  if (showContent) {
+    const lab = document.createElement('div');
+    lab.className = 'pu-label';
+    lab.textContent = label;
+    wrap.appendChild(lab);
+  }
 
   const pre = document.createElement('pre');
   pre.className = 'pu-pre';
@@ -1243,7 +1245,6 @@ function renderPUBlock(targetEl, showContent, label, text){
   if (showContent) {
     pre.textContent = text || "";
   } else {
-    // même nombre de lignes, mais vides
     const lines = text.split('\n').length;
     pre.textContent = Array.from({length:lines}, () => " ").join("\n");
   }
