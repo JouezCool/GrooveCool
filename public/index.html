@@ -1422,25 +1422,31 @@ if (!inPU) {
     }
 
     async function startEditorWithMode(mode) {
-      if (mode === "personal") {
-        const personal = getPersonalSong(currentFileName);
-        document.getElementById('editor-textarea').value = personal || currentRaw;
-        setTimeout(() => {
-  renderChordBankFromEditor();
-  document.getElementById('editor-textarea')
-    .addEventListener('input', renderChordBankFromEditor);
-}, 0);
-      } else {
-        const res = await fetch('/partitions/' + currentFileName);
-        document.getElementById('editor-textarea').value = await res.text();
-      }
+  const ta = document.getElementById('editor-textarea');
 
-      document.getElementById('editor-container').style.display = 'block';
-    }
+  if (mode === "personal") {
+    const personal = getPersonalSong(currentFileName);
+    ta.value = personal || currentRaw;
+  } else {
+    const res = await fetch('/partitions/' + currentFileName);
+    ta.value = await res.text();
+  }
 
-    function closeEditor() {
-      document.getElementById('editor-container').style.display = 'none';
-    }
+  document.getElementById('editor-container').style.display = 'block';
+
+  // ✅ Toujours activer la banque d'accords
+  setTimeout(() => {
+    renderChordBankFromEditor();
+    ta.addEventListener('input', renderChordBankFromEditor);
+  }, 0);
+}
+
+function closeEditor() {
+  const ta = document.getElementById('editor-textarea');
+  if (ta) ta.removeEventListener('input', renderChordBankFromEditor);
+
+  document.getElementById('editor-container').style.display = 'none';
+}
 
     async function saveEditor() {
       const newContent = document.getElementById('editor-textarea').value;
