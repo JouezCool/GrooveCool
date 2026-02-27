@@ -425,6 +425,35 @@
   </style>
 </head>
 
+/* ===== Bloc perso utilisateur {pu:Nom} ===== */
+
+.pu-block{
+  margin:14px 0;
+  border-left:4px solid rgba(255,255,255,0.18);
+  padding:10px 12px;
+  border-radius:12px;
+  background: rgba(255,255,255,0.04);
+}
+
+.pu-label{
+  font-family:sans-serif;
+  font-weight:900;
+  font-size:12px;
+  opacity:.65;
+  margin-bottom:8px;
+}
+
+.pu-pre{
+  margin:0;
+  white-space:pre;
+  overflow-x:auto;
+
+  /* IMPORTANT : hauteur stable */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-size:14px;      /* FIXE */
+  line-height:1.25;    /* FIXE */
+}
+
 <body>
   <div id="settingsFixedWrap">
     <span id="topVersionBadge" class="version-badge">—</span>
@@ -1189,6 +1218,40 @@
       return (h >>> 0).toString(16);
     }
 
+    function parsePUStart(line){
+  // détecte {pu:Nemo}
+  const m = line.match(/^\{pu\s*:\s*([^}]+)\}$/i);
+  if (!m) return null;
+
+  return {
+    user: m[1].trim()
+  };
+}
+
+function renderPUBlock(targetEl, showContent, label, text){
+  const wrap = document.createElement('div');
+  wrap.className = 'pu-block';
+
+  const lab = document.createElement('div');
+  lab.className = 'pu-label';
+  lab.textContent = label;
+  wrap.appendChild(lab);
+
+  const pre = document.createElement('pre');
+  pre.className = 'pu-pre';
+
+  if (showContent) {
+    pre.textContent = text || "";
+  } else {
+    // même nombre de lignes, mais vides
+    const lines = text.split('\n').length;
+    pre.textContent = Array.from({length:lines}, () => " ").join("\n");
+  }
+
+  wrap.appendChild(pre);
+  targetEl.appendChild(wrap);
+}
+
     function renderChordPro() {
       clearSongContent();
       renderChordPro._occ = {};
@@ -1200,11 +1263,41 @@
 
       let inChorus = false;
       let chorusContainer = null;
+      let inPU = false;
+let puUser = "";
+let puBuffer = [];
 
       const lines = currentRaw.split('\n');
 
       for (const line of lines) {
         const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
+        // ===== Bloc personnel START =====
+if (!inPU) {
+  const start = parsePUStart(line.trim());
+  if (start) {
+    inPU = true;
+    puUser = start.user;
+    puBuffer = [];
+    continue;
+  }
+} else {
+  // ===== Bloc personnel END =====
+  if (/^\{\/pu\s*\}$/i.test(line.trim())) {
+
+    const show = (currentUser || "").toLowerCase() === puUser.toLowerCase();
+    const txt = puBuffer.join("\n");
+
+    renderPUBlock(target, show, puUser, txt);
+
+    inPU = false;
+    puUser = "";
+    puBuffer = [];
+    continue;
+  }
+
+  puBuffer.push(line);
+  continue;
+}
 
         const title = line.match(/\{(?:t|title)\s*:\s*(.*?)\}/i);
         if (title) { addCenteredTitle(title[1], 1); continue; }
