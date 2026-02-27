@@ -13,6 +13,9 @@
       --text:#eee;
       --accent:#ff9800;
       --edit:#2196F3;
+      --pu-bg: rgba(168, 85, 247, 0.16);
+--pu-border: rgba(168, 85, 247, 0.55);
+--pu-text: var(--text);
 
       /* thèmes */
       --nav-bg:#1a1a1a;
@@ -30,12 +33,13 @@
 
       /* ===== Bloc perso utilisateur {pu:Nom} ===== */
 
-.pu-block{
+      .pu-block{
   margin:14px 0;
-  border-left:4px solid rgba(255,255,255,0.18);
+  border-left:4px solid var(--pu-border);
   padding:10px 12px;
   border-radius:12px;
-  background: rgba(255,255,255,0.04);
+  background: var(--pu-bg);
+  color: var(--pu-text);
 }
 
 .pu-label{
@@ -550,6 +554,33 @@
   </div>
 
   <div id="editor-container">
+
+    <!-- ICI on colle -->
+    <div id="editor-toolbar" style="
+      padding:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      border-bottom:1px solid #2a2a2a;
+      background:rgba(255,255,255,0.03);
+    ">
+      <button class="btn" onclick="insertTemplatePU()">+ {pu}</button>
+      <button class="btn" onclick="insertAtCursor('{soc}\n')">+ {soc}</button>
+      <button class="btn" onclick="insertAtCursor('\n{eoc}\n')">+ {eoc}</button>
+      <button class="btn" onclick="insertTemplateComment()">+ {c:}</button>
+      <button class="btn" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
+  
+      <div style="flex:1"></div>
+  
+      <div id="chordBank" style="
+        display:flex;
+        flex-wrap:wrap;
+        gap:6px;
+        align-items:center;
+      "></div>
+    </div>
+  
+    <!-- textarea déjà existant -->
     <textarea id="editor-textarea" spellcheck="false"></textarea>
     <div class="editor-footer">
       <button class="btn" onclick="closeEditor()" style="border-color: #ff5252; color: #ff5252;">ANNULER</button>
@@ -1394,6 +1425,11 @@ if (!inPU) {
       if (mode === "personal") {
         const personal = getPersonalSong(currentFileName);
         document.getElementById('editor-textarea').value = personal || currentRaw;
+        setTimeout(() => {
+  renderChordBankFromEditor();
+  document.getElementById('editor-textarea')
+    .addEventListener('input', renderChordBankFromEditor);
+}, 0);
       } else {
         const res = await fetch('/partitions/' + currentFileName);
         document.getElementById('editor-textarea').value = await res.text();
@@ -1614,6 +1650,60 @@ if (!inPU) {
       };
       reader.readAsText(file);
     }
+
+    function insertAtCursor(text){
+  const ta = document.getElementById('editor-textarea');
+  if (!ta) return;
+
+  const start = ta.selectionStart || 0;
+  const end = ta.selectionEnd || 0;
+
+  ta.value =
+    ta.value.substring(0, start) +
+    text +
+    ta.value.substring(end);
+
+  ta.selectionStart = ta.selectionEnd = start + text.length;
+  ta.focus();
+}
+
+function insertTemplatePU(){
+  const u = currentUser || "Nom";
+  insertAtCursor(`{pu:${u}}\n\n{/pu}\n`);
+}
+
+function insertTemplateComment(){
+  insertAtCursor(`{c: }\n`);
+}
+
+function extractChordsFromText(text){
+  const set = new Set();
+  const re = /\[([^\]]+)\]/g;
+  let m;
+  while ((m = re.exec(text)) !== null){
+    set.add(m[1].trim());
+  }
+  return Array.from(set);
+}
+
+function renderChordBankFromEditor(){
+  const bank = document.getElementById('chordBank');
+  const ta = document.getElementById('editor-textarea');
+  if (!bank || !ta) return;
+
+  const chords = extractChordsFromText(ta.value);
+
+  if (!chords.length){
+    bank.innerHTML = "";
+    return;
+  }
+
+  bank.innerHTML =
+    "<span style='opacity:.5;font-size:12px;'>Accords:</span>" +
+    chords.map(c =>
+      `<button class="btn" style="padding:6px 10px;font-size:12px;" onclick="insertAtCursor('[${c}]')">${c}</button>`
+    ).join('');
+}
 
     // --- INIT ---
     applyTheme();
