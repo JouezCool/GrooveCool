@@ -7,7 +7,28 @@
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
-  /* ===== Bloc perso utilisateur {pu:Nom} ===== */
+  <style>
+    :root{
+      --bg:#000;
+      --text:#eee;
+      --accent:#ff9800;
+      --edit:#2196F3;
+
+      /* thèmes */
+      --nav-bg:#1a1a1a;
+      --nav-text:#eee;
+      --panel-bg:#111;
+      --panel-border:#333;
+
+      --chorus-bg:#111827;
+      --chorus-border:#60a5fa;
+      --chorus-text: var(--text);
+
+      --comment-bg:#ffd54f;
+      --comment-text:#000;
+    }
+
+      /* ===== Bloc perso utilisateur {pu:Nom} ===== */
 
 .pu-block{
   margin:14px 0;
@@ -35,26 +56,6 @@
   font-size:14px;      /* FIXE */
   line-height:1.25;    /* FIXE */
 }
-  <style>
-    :root{
-      --bg:#000;
-      --text:#eee;
-      --accent:#ff9800;
-      --edit:#2196F3;
-
-      /* thèmes */
-      --nav-bg:#1a1a1a;
-      --nav-text:#eee;
-      --panel-bg:#111;
-      --panel-border:#333;
-
-      --chorus-bg:#111827;
-      --chorus-border:#60a5fa;
-      --chorus-text: var(--text);
-
-      --comment-bg:#ffd54f;
-      --comment-text:#000;
-    }
 
     body{
       font-family:sans-serif;
@@ -1231,12 +1232,22 @@ function renderPUBlock(targetEl, showContent, label, text){
   const wrap = document.createElement('div');
   wrap.className = 'pu-block';
 
-  // ✅ label uniquement pour le bon utilisateur
+  const linesCount = (String(text || "").split('\n').length);
+
   if (showContent) {
+    // ✅ label seulement pour la personne concernée
     const lab = document.createElement('div');
     lab.className = 'pu-label';
     lab.textContent = label;
     wrap.appendChild(lab);
+  } else {
+    // ✅ pour les autres : si > 10 lignes, afficher un indicateur "SOLO <user>"
+    if (linesCount > 10) {
+      const lab = document.createElement('div');
+      lab.className = 'pu-label';
+      lab.textContent = `SOLO ${label}`;
+      wrap.appendChild(lab);
+    }
   }
 
   const pre = document.createElement('pre');
@@ -1245,8 +1256,8 @@ function renderPUBlock(targetEl, showContent, label, text){
   if (showContent) {
     pre.textContent = text || "";
   } else {
-    const lines = text.split('\n').length;
-    pre.textContent = Array.from({length:lines}, () => " ").join("\n");
+    // même nombre de lignes, mais vides
+    pre.textContent = Array.from({ length: linesCount }, () => " ").join("\n");
   }
 
   wrap.appendChild(pre);
