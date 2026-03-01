@@ -13,9 +13,10 @@
       --text:#eee;
       --accent:#ff9800;
       --edit:#2196F3;
+
       --pu-bg: rgba(168, 85, 247, 0.16);
---pu-border: rgba(168, 85, 247, 0.55);
---pu-text: var(--text);
+      --pu-border: rgba(168, 85, 247, 0.55);
+      --pu-text: var(--text);
 
       /* thèmes */
       --nav-bg:#1a1a1a;
@@ -31,36 +32,35 @@
       --comment-text:#000;
     }
 
-      /* ===== Bloc perso utilisateur {pu:Nom} ===== */
+    /* ===== Bloc perso utilisateur {pu:Nom} ===== */
+    .pu-block{
+      margin:14px 0;
+      border-left:4px solid var(--pu-border);
+      padding:10px 12px;
+      border-radius:12px;
+      background: var(--pu-bg);
+      color: var(--pu-text);
+    }
 
-      .pu-block{
-  margin:14px 0;
-  border-left:4px solid var(--pu-border);
-  padding:10px 12px;
-  border-radius:12px;
-  background: var(--pu-bg);
-  color: var(--pu-text);
-}
+    .pu-label{
+      font-family:sans-serif;
+      font-weight:900;
+      font-size:12px;
+      opacity:.65;
+      margin-bottom:8px;
+    }
 
-.pu-label{
-  font-family:sans-serif;
-  font-weight:900;
-  font-size:12px;
-  opacity:.65;
-  margin-bottom:8px;
-}
+    .pu-pre{
+      margin:0;
+      white-space:pre;
+      overflow-x:auto;
 
-.pu-pre{
-  margin:0;
-  white-space:pre;
-  overflow-x:auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
 
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
-
-  /* ✅ maintenant ça suit le zoom de la chanson */
-  font-size: calc(14px * var(--song-zoom, 1));
-  line-height: calc(17.5px * var(--song-zoom, 1)); /* 14 * 1.25 = 17.5 */
-}
+      /* suit le zoom de la chanson */
+      font-size: calc(14px * var(--song-zoom, 1));
+      line-height: calc(17.5px * var(--song-zoom, 1));
+    }
 
     body{
       font-family:sans-serif;
@@ -199,6 +199,7 @@
       top:0;
       z-index:5;
       color:var(--nav-text);
+      gap:12px;
     }
     .song-item{
       padding:20px;
@@ -321,7 +322,7 @@
     }
     .chordline{ color:var(--accent); font-weight:bold; }
 
-    /* Commentaires {c:...} : surlignage sur le texte uniquement + police plus grande */
+    /* Commentaires {c:...} */
     .commentwrap{ margin:12px 0; }
     .commentline{
       display:inline-block;
@@ -422,17 +423,16 @@
     .choice b{ color:#fff; display:block; margin-bottom:6px; }
     .choice .small{ color:#aaa; font-size:12px; display:block; }
 
-    /* === OVERLAYS (grilles perso sous une ligne, sans impacter la mise en page) === */
-    #songContent { position: relative; } /* important pour les positions absolues */
+    /* === OVERLAYS (grilles perso sous une ligne) === */
+    #songContent { position: relative; }
 
     #overlayLayer{
       position:absolute;
       inset:0;
-      pointer-events:none; /* overlay ne bloque pas le scroll */
+      pointer-events:none;
       z-index:3;
     }
 
-    /* bloc grille */
     .gridOverlay{
       position:absolute;
       left:0;
@@ -442,7 +442,7 @@
     }
 
     .gridOverlay .box{
-      display:inline-block;          /* largeur = contenu */
+      display:inline-block;
       max-width:100%;
       background: rgba(34, 197, 94, 0.18);
       border: 1px solid rgba(34, 197, 94, 0.45);
@@ -466,7 +466,6 @@
     <span id="settingsUserLabel"></span>
   </div>
 
-  <!-- Toast -->
   <div id="toast"></div>
 
   <!-- Overlay choix utilisateur -->
@@ -503,18 +502,24 @@
     </div>
   </div>
 
+  <!-- LIBRARY -->
   <div id="library">
     <div class="lib-header">
-      <h2 style="margin:0;">Répertoire</h2>
-    
+      <h2 style="margin:0; white-space:nowrap;">Répertoire</h2>
+
       <input id="songSearch" type="search" placeholder="Rechercher un morceau..."
         style="flex:1; margin:0 12px; padding:10px 12px; border-radius:10px;
                border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.25);
                color:var(--nav-text); outline:none; max-width:420px;" />
-    
-      <span style="opacity:.8; font-size:12px;" id="songCount"></span>
+
+      <span style="opacity:.8; font-size:12px; white-space:nowrap;" id="songCount"></span>
     </div>
 
+    <!-- ✅ CECI MANQUAIT DANS TON CODE : la liste -->
+    <div id="songList"></div>
+  </div>
+
+  <!-- VIEWER -->
   <div id="viewer-container">
     <nav>
       <button class="btn" onclick="closeViewer()">⬅</button>
@@ -558,9 +563,8 @@
     </div>
   </div>
 
+  <!-- EDITOR -->
   <div id="editor-container">
-
-    <!-- ICI on colle -->
     <div id="editor-toolbar" style="
       padding:10px;
       display:flex;
@@ -574,9 +578,9 @@
       <button class="btn" onclick="insertAtCursor('\n{eoc}\n')">+ {eoc}</button>
       <button class="btn" onclick="insertTemplateComment()">+ {c:}</button>
       <button class="btn" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
-  
+
       <div style="flex:1"></div>
-  
+
       <div id="chordBank" style="
         display:flex;
         flex-wrap:wrap;
@@ -584,8 +588,7 @@
         align-items:center;
       "></div>
     </div>
-  
-    <!-- textarea déjà existant -->
+
     <textarea id="editor-textarea" spellcheck="false"></textarea>
     <div class="editor-footer">
       <button class="btn" onclick="closeEditor()" style="border-color: #ff5252; color: #ff5252;">ANNULER</button>
@@ -593,7 +596,7 @@
     </div>
   </div>
 
-  <!-- Modal Réglages -->
+  <!-- SETTINGS -->
   <div id="settingsBackdrop" style="
     position:fixed; inset:0; display:none; z-index:6500;
     background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:18px;">
@@ -640,8 +643,9 @@
 
     const notesPanel = document.getElementById('notesPanel');
     const notesTextarea = document.getElementById('notesTextarea');
+
     const songSearchInput = document.getElementById('songSearch');
-const songCountEl = document.getElementById('songCount');
+    const songCountEl = document.getElementById('songCount');
 
     // --- SWIPE ---
     let touchStartX = 0, touchStartY = 0;
@@ -871,38 +875,47 @@ const songCountEl = document.getElementById('songCount');
       }
     }
 
-    // Connexion témoin (bordure du bouton fixe)
     socket.on('connect', () => { settingsBtnFixed.style.borderColor = "#4CAF50"; });
     socket.on('disconnect', () => { settingsBtnFixed.style.borderColor = "#f44336"; });
 
-    function cleanSongName(s){
-  return String(s || '').replace('.pro','').replace('.cho','');
-}
+    // ✅ Affichage initial complet + data-name + compteur
+    async function fetchSongs() {
+      const res = await fetch('/list-songs');
+      allSongs = (await res.json()).sort();
 
-function renderSongList(filterText = ""){
-  const q = String(filterText || "").trim().toLowerCase();
+      const listEl = document.getElementById('songList');
+      listEl.innerHTML =
+        allSongs.map((s, idx) => `
+          <div class="song-item" data-name="${s.toLowerCase()}" onclick="openSong(${idx})">
+            <b>${s.replace('.pro','').replace('.cho','')}</b><span>❯</span>
+          </div>`
+        ).join('');
 
-  const filtered = !q
-    ? allSongs
-    : allSongs.filter(s => cleanSongName(s).toLowerCase().includes(q));
+      updateSongCount();
+    }
 
-  const listEl = document.getElementById('songList');
-  listEl.innerHTML = filtered.map(s => {
-    const idx = allSongs.indexOf(s); // index réel
-    return `
-      <div class="song-item" onclick="openSong(${idx})">
-        <b>${cleanSongName(s)}</b><span>❯</span>
-      </div>`;
-  }).join('');
+    // ✅ Filtre visuel (ne change PAS les index)
+    function filterSongList(q) {
+      const query = String(q || "").toLowerCase().trim();
+      const items = document.querySelectorAll('#songList .song-item');
+      let shown = 0;
 
-  if (songCountEl) songCountEl.textContent = `${filtered.length}/${allSongs.length}`;
-}
+      items.forEach(item => {
+        const name = item.dataset.name || "";
+        const ok = (!query || name.includes(query));
+        item.style.display = ok ? "flex" : "none";
+        if (ok) shown++;
+      });
 
-async function fetchSongs() {
-  const res = await fetch('/list-songs');
-  allSongs = (await res.json()).sort();
-  renderSongList("");
-}
+      updateSongCount(shown);
+    }
+
+    function updateSongCount(visibleCount) {
+      if (!songCountEl) return;
+      const total = allSongs.length || 0;
+      const visible = (typeof visibleCount === "number") ? visibleCount : total;
+      songCountEl.textContent = `${visible}/${total}`;
+    }
 
     function toggleLeader() {
       isLeader = !isLeader;
@@ -937,16 +950,16 @@ async function fetchSongs() {
       transposeValue = 0;
       document.getElementById('transposeVal').innerText = "0";
       renderChordPro();
-      renderGrids();          // ✅ overlay grilles
+      renderGrids();
       viewerElement.scrollTop = 0;
       updateBanner.style.display = 'none';
       updateVersionIndicator();
     }
 
-    // --- SONG UPDATED ---
     function normName(s) {
       return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
     }
+
     socket.on('song-updated', ({ fileName }) => {
       const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
       if (!viewerOpen) return;
@@ -981,7 +994,7 @@ async function fetchSongs() {
     }
     notesTextarea.addEventListener('input', saveNotes);
 
-    // --- SYNCHRO SCROLL (anchres) ---
+    // --- SYNCHRO SCROLL ---
     function clamp01(x){ return Math.max(0, Math.min(1, x)); }
 
     function getTopLyricAnchorState() {
@@ -1221,14 +1234,24 @@ async function fetchSongs() {
 
     function clearSongContent() { songContentEl.replaceChildren(); }
 
+    let currentSongZoom = 1;
+
+    function parseZoomIpadDirective(line){
+      const m = String(line || "").trim().match(/^\{zoom-ipad\s*:\s*([0-9]*\.?[0-9]+)\s*\}$/i);
+      if (!m) return null;
+      const v = Number(m[1]);
+      if (!isFinite(v) || v <= 0) return null;
+      return v;
+    }
+
     function addCenteredTitle(text, level) {
-  const el = document.createElement(level === 1 ? 'h1' : 'h2');
-  el.style.textAlign = 'center';
-  el.style.fontSize = ((level === 1 ? 34 : 20) * currentSongZoom) + 'px';
-  if (level === 2) el.style.color = (themeMode === 'light' ? '#555' : '#888');
-  el.textContent = text;
-  songContentEl.appendChild(el);
-}
+      const el = document.createElement(level === 1 ? 'h1' : 'h2');
+      el.style.textAlign = 'center';
+      el.style.fontSize = ((level === 1 ? 34 : 20) * currentSongZoom) + 'px';
+      if (level === 2) el.style.color = (themeMode === 'light' ? '#555' : '#888');
+      el.textContent = text;
+      songContentEl.appendChild(el);
+    }
 
     function addCommentLine(text, targetEl) {
       const wrap = document.createElement('div');
@@ -1278,165 +1301,133 @@ async function fetchSongs() {
     }
 
     function parsePUStart(line){
-  // détecte {pu:Nemo}
-  const m = line.match(/^\{pu\s*:\s*([^}]+)\}$/i);
-  if (!m) return null;
-
-  return {
-    user: m[1].trim()
-  };
-}
-
-function renderPUBlock(targetEl, showContent, label, text){
-  const wrap = document.createElement('div');
-  wrap.className = 'pu-block';
-
-  const linesCount = (String(text || "").split('\n').length);
-
-  if (showContent) {
-    // ✅ label seulement pour la personne concernée
-    const lab = document.createElement('div');
-    lab.className = 'pu-label';
-    lab.textContent = label;
-    wrap.appendChild(lab);
-  } else {
-    // ✅ pour les autres : si > 10 lignes, afficher un indicateur "SOLO <user>"
-    if (linesCount > 10) {
-      const lab = document.createElement('div');
-      lab.className = 'pu-label';
-      lab.textContent = `SOLO ${label}`;
-      wrap.appendChild(lab);
+      const m = line.match(/^\{pu\s*:\s*([^}]+)\}$/i);
+      if (!m) return null;
+      return { user: m[1].trim() };
     }
-  }
 
-  const pre = document.createElement('pre');
-  pre.className = 'pu-pre';
+    function renderPUBlock(targetEl, showContent, label, text){
+      const wrap = document.createElement('div');
+      wrap.className = 'pu-block';
 
-  if (showContent) {
-    pre.textContent = text || "";
-  } else {
-    // même nombre de lignes, mais vides
-    pre.textContent = Array.from({ length: linesCount }, () => " ").join("\n");
-  }
+      const linesCount = (String(text || "").split('\n').length);
 
-  wrap.appendChild(pre);
-  targetEl.appendChild(wrap);
-}
-
-function isIpadLike(){
-  // Simple & robuste : on se base sur la largeur d'écran (tablette)
-  return Math.min(window.innerWidth, window.innerHeight) >= 768;
-}
-
-let currentSongZoom = 1;
-
-function parseZoomIpadDirective(line){
-  // {zoom-ipad: 1.306284} ou {zoom-ipad:1.3}
-  const m = String(line || "").trim().match(/^\{zoom-ipad\s*:\s*([0-9]*\.?[0-9]+)\s*\}$/i);
-  if (!m) return null;
-  const v = Number(m[1]);
-  if (!isFinite(v) || v <= 0) return null;
-  return v;
-}
-
-function renderChordPro() {
-  clearSongContent();
-  renderChordPro._occ = {};
-
-  const lines = currentRaw.split('\n');
-
-  // 1) détecter {zoom-ipad: X}
-  let zoomSong = 1;
-  for (const line of lines) {
-    const z = parseZoomIpadDirective(line);
-    if (z !== null) { zoomSong = z; break; }
-  }
-
-  // 2) appliquer zoom global + CSS var (pour PU)
-  currentSongZoom = zoomSong;
-  songContentEl.style.setProperty('--song-zoom', String(currentSongZoom));
-
-  // overlay grilles
-  const overlayLayer = document.createElement('div');
-  overlayLayer.id = 'overlayLayer';
-  songContentEl.appendChild(overlayLayer);
-
-  let inChorus = false;
-  let chorusContainer = null;
-
-  let inPU = false;
-  let puUser = "";
-  let puBuffer = [];
-
-  for (const lineRaw of lines) {
-    const line = String(lineRaw || "");
-
-    // ne pas afficher la directive zoom
-    if (parseZoomIpadDirective(line) !== null) continue;
-
-    const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
-
-    // ===== PU START =====
-    if (!inPU) {
-      const start = parsePUStart(line.trim());
-      if (start) {
-        inPU = true;
-        puUser = start.user;
-        puBuffer = [];
-        continue;
-      }
-    } else {
-      // ===== PU END =====
-      if (/^\{\/pu\s*\}$/i.test(line.trim())) {
-        const show = (currentUser || "").toLowerCase() === puUser.toLowerCase();
-        const txt = puBuffer.join("\n");
-        renderPUBlock(target, show, puUser, txt);
-
-        inPU = false;
-        puUser = "";
-        puBuffer = [];
-        continue;
+      if (showContent) {
+        const lab = document.createElement('div');
+        lab.className = 'pu-label';
+        lab.textContent = label;
+        wrap.appendChild(lab);
+      } else {
+        if (linesCount > 10) {
+          const lab = document.createElement('div');
+          lab.className = 'pu-label';
+          lab.textContent = `SOLO ${label}`;
+          wrap.appendChild(lab);
+        }
       }
 
-      puBuffer.push(line);
-      continue;
+      const pre = document.createElement('pre');
+      pre.className = 'pu-pre';
+
+      if (showContent) {
+        pre.textContent = text || "";
+      } else {
+        pre.textContent = Array.from({ length: linesCount }, () => " ").join("\n");
+      }
+
+      wrap.appendChild(pre);
+      targetEl.appendChild(wrap);
     }
 
-    // titres
-    const title = line.match(/\{(?:t|title)\s*:\s*(.*?)\}/i);
-    if (title) { addCenteredTitle(title[1], 1); continue; }
+    function renderChordPro() {
+      clearSongContent();
+      renderChordPro._occ = {};
 
-    const subtitle = line.match(/\{(?:st|subtitle)\s*:\s*(.*?)\}/i);
-    if (subtitle) { addCenteredTitle(subtitle[1], 2); continue; }
+      const lines = currentRaw.split('\n');
 
-    // chorus
-    if (/\{soc\s*:\s*\}/i.test(line) || /\{soc\s*\}/i.test(line)) {
-      inChorus = true;
-      chorusContainer = document.createElement('div');
-      chorusContainer.className = 'chorus-block';
-      songContentEl.appendChild(chorusContainer);
-      continue;
+      // zoom-ipad dans la chanson
+      let zoomSong = 1;
+      for (const line of lines) {
+        const z = parseZoomIpadDirective(line);
+        if (z !== null) { zoomSong = z; break; }
+      }
+
+      currentSongZoom = zoomSong;
+      songContentEl.style.setProperty('--song-zoom', String(currentSongZoom));
+
+      const overlayLayer = document.createElement('div');
+      overlayLayer.id = 'overlayLayer';
+      songContentEl.appendChild(overlayLayer);
+
+      let inChorus = false;
+      let chorusContainer = null;
+
+      let inPU = false;
+      let puUser = "";
+      let puBuffer = [];
+
+      for (const lineRaw of lines) {
+        const line = String(lineRaw || "");
+
+        if (parseZoomIpadDirective(line) !== null) continue;
+
+        const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
+
+        if (!inPU) {
+          const start = parsePUStart(line.trim());
+          if (start) {
+            inPU = true;
+            puUser = start.user;
+            puBuffer = [];
+            continue;
+          }
+        } else {
+          if (/^\{\/pu\s*\}$/i.test(line.trim())) {
+            const show = (currentUser || "").toLowerCase() === puUser.toLowerCase();
+            const txt = puBuffer.join("\n");
+            renderPUBlock(target, show, puUser, txt);
+
+            inPU = false;
+            puUser = "";
+            puBuffer = [];
+            continue;
+          }
+
+          puBuffer.push(line);
+          continue;
+        }
+
+        const title = line.match(/\{(?:t|title)\s*:\s*(.*?)\}/i);
+        if (title) { addCenteredTitle(title[1], 1); continue; }
+
+        const subtitle = line.match(/\{(?:st|subtitle)\s*:\s*(.*?)\}/i);
+        if (subtitle) { addCenteredTitle(subtitle[1], 2); continue; }
+
+        if (/\{soc\s*:\s*\}/i.test(line) || /\{soc\s*\}/i.test(line)) {
+          inChorus = true;
+          chorusContainer = document.createElement('div');
+          chorusContainer.className = 'chorus-block';
+          songContentEl.appendChild(chorusContainer);
+          continue;
+        }
+        if (/\{eoc\s*:\s*\}/i.test(line) || /\{eoc\s*\}/i.test(line)) {
+          inChorus = false;
+          chorusContainer = null;
+          continue;
+        }
+
+        const comment = line.match(/\{c\s*:\s*(.*?)\}/i);
+        if (comment) { addCommentLine(comment[1], target); continue; }
+
+        const { chordLine, lyricLine } = parseChordProLine(line);
+
+        const key = normAnchorText(lyricLine);
+        renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
+        const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
+
+        addChordBlock(chordLine, lyricLine, target, anchorId);
+      }
     }
-    if (/\{eoc\s*:\s*\}/i.test(line) || /\{eoc\s*\}/i.test(line)) {
-      inChorus = false;
-      chorusContainer = null;
-      continue;
-    }
-
-    // commentaires
-    const comment = line.match(/\{c\s*:\s*(.*?)\}/i);
-    if (comment) { addCommentLine(comment[1], target); continue; }
-
-    // ligne normale
-    const { chordLine, lyricLine } = parseChordProLine(line);
-
-    const key = normAnchorText(lyricLine);
-    renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
-    const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
-
-    addChordBlock(chordLine, lyricLine, target, anchorId);
-  }
-}
 
     // --- SOCKETS ---
     socket.on('load-song', f => {
@@ -1451,7 +1442,6 @@ function renderChordPro() {
     function closeEditChoice() { document.getElementById('editChoiceBackdrop').style.display = 'none'; }
     function openEditor() { stopAutoScroll(); openEditChoice(); }
 
-    // Perso : partition perso complète, stockée localement (PAR UTILISATEUR)
     function personalSongKey(fileName) {
       const u = currentUser || "unknown";
       return `personalSong:${u}:${fileName}`;
@@ -1483,31 +1473,29 @@ function renderChordPro() {
     }
 
     async function startEditorWithMode(mode) {
-  const ta = document.getElementById('editor-textarea');
+      const ta = document.getElementById('editor-textarea');
 
-  if (mode === "personal") {
-    const personal = getPersonalSong(currentFileName);
-    ta.value = personal || currentRaw;
-  } else {
-    const res = await fetch('/partitions/' + currentFileName);
-    ta.value = await res.text();
-  }
+      if (mode === "personal") {
+        const personal = getPersonalSong(currentFileName);
+        ta.value = personal || currentRaw;
+      } else {
+        const res = await fetch('/partitions/' + currentFileName);
+        ta.value = await res.text();
+      }
 
-  document.getElementById('editor-container').style.display = 'block';
+      document.getElementById('editor-container').style.display = 'block';
 
-  // ✅ Toujours activer la banque d'accords
-  setTimeout(() => {
-    renderChordBankFromEditor();
-    ta.addEventListener('input', renderChordBankFromEditor);
-  }, 0);
-}
+      setTimeout(() => {
+        renderChordBankFromEditor();
+        ta.addEventListener('input', renderChordBankFromEditor);
+      }, 0);
+    }
 
-function closeEditor() {
-  const ta = document.getElementById('editor-textarea');
-  if (ta) ta.removeEventListener('input', renderChordBankFromEditor);
-
-  document.getElementById('editor-container').style.display = 'none';
-}
+    function closeEditor() {
+      const ta = document.getElementById('editor-textarea');
+      if (ta) ta.removeEventListener('input', renderChordBankFromEditor);
+      document.getElementById('editor-container').style.display = 'none';
+    }
 
     async function saveEditor() {
       const newContent = document.getElementById('editor-textarea').value;
@@ -1540,9 +1528,7 @@ function closeEditor() {
         renderChordPro();
         renderGrids();
         closeEditor();
-
         if (isLeader) socket.emit('change-song', currentFileName);
-
       } else if (res.status === 403) {
         alert("PIN invalide");
         globalPinCache = "";
@@ -1557,9 +1543,12 @@ function closeEditor() {
       notesPanel.style.display = 'none';
       document.getElementById('library').style.display = 'block';
       document.getElementById('viewer-container').style.display = 'none';
+
+      // remet le focus et filtre actuel
+      if (songSearchInput) songSearchInput.focus();
     }
 
-    // === GRILLES PERSO "SOUS LA LIGNE" (overlay, par utilisateur + par chanson) ===
+    // === GRILLES PERSO ===
     function gridsKey(fileName){
       const u = currentUser || "unknown";
       return `grids:${u}:${fileName}`;
@@ -1719,69 +1708,68 @@ function closeEditor() {
     }
 
     function insertAtCursor(text){
-  const ta = document.getElementById('editor-textarea');
-  if (!ta) return;
+      const ta = document.getElementById('editor-textarea');
+      if (!ta) return;
 
-  const start = ta.selectionStart || 0;
-  const end = ta.selectionEnd || 0;
+      const start = ta.selectionStart || 0;
+      const end = ta.selectionEnd || 0;
 
-  ta.value =
-    ta.value.substring(0, start) +
-    text +
-    ta.value.substring(end);
+      ta.value = ta.value.substring(0, start) + text + ta.value.substring(end);
+      ta.selectionStart = ta.selectionEnd = start + text.length;
+      ta.focus();
+    }
 
-  ta.selectionStart = ta.selectionEnd = start + text.length;
-  ta.focus();
-}
+    function insertTemplatePU(){
+      const u = currentUser || "Nom";
+      insertAtCursor(`{pu:${u}}\n\n{/pu}\n`);
+    }
 
-function insertTemplatePU(){
-  const u = currentUser || "Nom";
-  insertAtCursor(`{pu:${u}}\n\n{/pu}\n`);
-}
+    function insertTemplateComment(){
+      insertAtCursor(`{c: }\n`);
+    }
 
-function insertTemplateComment(){
-  insertAtCursor(`{c: }\n`);
-}
+    function extractChordsFromText(text){
+      const set = new Set();
+      const re = /\[([^\]]+)\]/g;
+      let m;
+      while ((m = re.exec(text)) !== null){
+        set.add(m[1].trim());
+      }
+      return Array.from(set);
+    }
 
-function extractChordsFromText(text){
-  const set = new Set();
-  const re = /\[([^\]]+)\]/g;
-  let m;
-  while ((m = re.exec(text)) !== null){
-    set.add(m[1].trim());
-  }
-  return Array.from(set);
-}
+    function renderChordBankFromEditor(){
+      const bank = document.getElementById('chordBank');
+      const ta = document.getElementById('editor-textarea');
+      if (!bank || !ta) return;
 
-function renderChordBankFromEditor(){
-  const bank = document.getElementById('chordBank');
-  const ta = document.getElementById('editor-textarea');
-  if (!bank || !ta) return;
+      const chords = extractChordsFromText(ta.value);
 
-  const chords = extractChordsFromText(ta.value);
+      if (!chords.length){
+        bank.innerHTML = "";
+        return;
+      }
 
-  if (!chords.length){
-    bank.innerHTML = "";
-    return;
-  }
-
-  bank.innerHTML =
-    "<span style='opacity:.5;font-size:12px;'>Accords:</span>" +
-    chords.map(c =>
-      `<button class="btn" style="padding:6px 10px;font-size:12px;" onclick="insertAtCursor('[${c}]')">${c}</button>`
-    ).join('');
-}
+      bank.innerHTML =
+        "<span style='opacity:.5;font-size:12px;'>Accords:</span>" +
+        chords.map(c =>
+          `<button class="btn" style="padding:6px 10px;font-size:12px;" onclick="insertAtCursor('[${c}]')">${c}</button>`
+        ).join('');
+    }
 
     // --- INIT ---
     applyTheme();
     initUsers();
     fetchSongs();
-    if (songSearchInput) {
-  songSearchInput.addEventListener('input', () => {
-    renderSongList(songSearchInput.value);
-  });
-}
     syncSettingsUI();
+
+    // ✅ branche la recherche (filtre simple + compteur)
+    if (songSearchInput) {
+      songSearchInput.addEventListener('input', () => filterSongList(songSearchInput.value));
+      songSearchInput.addEventListener('search', () => filterSongList(songSearchInput.value));
+      // affichage compteur au départ
+      filterSongList(songSearchInput.value);
+    }
   </script>
 </body>
 </html>
