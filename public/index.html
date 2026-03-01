@@ -1217,7 +1217,7 @@
     function addChordBlock(chordLine, lyricLine, targetEl, anchorId) {
       const block = document.createElement('div');
       block.className = 'block';
-      block.style.fontSize = fontSize + 'px';
+      block.style.fontSize = (fontSize * (renderChordPro._zoomSong || 1)) + 'px';
 
       block.dataset.kind = 'lyric';
       if (anchorId) block.dataset.anchor = anchorId;
@@ -1295,9 +1295,26 @@ function renderPUBlock(targetEl, showContent, label, text){
   targetEl.appendChild(wrap);
 }
 
+function isIpadLike(){
+  // Simple & robuste : on se base sur la largeur d'écran (tablette)
+  return Math.min(window.innerWidth, window.innerHeight) >= 768;
+}
+
+function parseZoomDirective(line){
+  // {zoom-ipad: 1.306284} ou {zoom-ipad:1.3}
+  const m = String(line || "").trim().match(/^\{zoom-ipad\s*:\s*([0-9]*\.?[0-9]+)\s*\}$/i);
+  if (!m) return null;
+  const v = Number(m[1]);
+  if (!isFinite(v) || v <= 0) return null;
+  return v;
+}
+
     function renderChordPro() {
       clearSongContent();
       renderChordPro._occ = {};
+
+        // ✅ zoom par chanson (ex: zoom-ipad)
+  let zoomSong = 1;
 
       // ✅ layer overlays (grilles perso)
       const overlayLayer = document.createElement('div');
@@ -1313,6 +1330,15 @@ let puBuffer = [];
       const lines = currentRaw.split('\n');
 
       for (const line of lines) {
+
+        const z = parseZoomDirective(line);
+    if (z !== null) {
+      if (isIpadLike()) zoomSong = z;
+      continue;
+    }
+
+    renderChordPro._zoomSong = zoomSong;
+
         const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
         // ===== Bloc personnel START =====
 if (!inPU) {
