@@ -1026,26 +1026,27 @@
     let lastEmitProg = -1;
 
     viewerElement.addEventListener('scroll', () => {
-      if (!isLeader || isRemoteScrolling) return;
+  // ✅ pendant l’auto-scroll, on n’envoie plus de corrections ligne par ligne
+  if (!isLeader || isRemoteScrolling || isScrolling) return;
 
-      const state = getTopLyricAnchorState();
-      if (!state) return;
+  const state = getTopLyricAnchorState();
+  if (!state) return;
 
-      const now = Date.now();
-      if (
-        now - lastEmitAt < 80 &&
-        state.anchor === lastEmitAnchor &&
-        Math.abs(state.progress - lastEmitProg) < 0.03
-      ) {
-        return;
-      }
+  const now = Date.now();
+  if (
+    now - lastEmitAt < 120 &&
+    state.anchor === lastEmitAnchor &&
+    Math.abs(state.progress - lastEmitProg) < 0.05
+  ) {
+    return;
+  }
 
-      lastEmitAt = now;
-      lastEmitAnchor = state.anchor;
-      lastEmitProg = state.progress;
+  lastEmitAt = now;
+  lastEmitAnchor = state.anchor;
+  lastEmitProg = state.progress;
 
-      socket.emit('scroll-sync', state);
-    });
+  socket.emit('scroll-sync', state);
+});
 
     socket.on('apply-scroll', data => {
       if (isLeader) return;
@@ -1167,13 +1168,27 @@
     }
 
     function toggleAutoScroll(emitSync) {
-      if (isScrolling) stopAutoScroll();
-      else startAutoScroll();
+  const wasScrolling = isScrolling;
 
-      if (isLeader && emitSync) {
-        socket.emit('sync-autoscroll', { active: isScrolling, speed: Number(speedInput.value) || 50 });
-      }
+  if (isScrolling) {
+    stopAutoScroll();
+  } else {
+    // ✅ avant de démarrer, on aligne tout le monde une seule fois
+    if (isLeader && emitSync) {
+      const state = getTopLyricAnchorState();
+      if (state) socket.emit('scroll-sync', state);
     }
+
+    startAutoScroll();
+  }
+
+  if (isLeader && emitSync) {
+    socket.emit('sync-autoscroll', {
+      active: isScrolling,
+      speed: Number(speedInput.value) || 50
+    });
+  }
+}
 
     socket.on('apply-autoscroll', d => {
       if (!isLeader) {
