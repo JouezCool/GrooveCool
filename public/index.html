@@ -469,7 +469,7 @@
       </div>
     
       <button class="btn" onclick="toggleNotes()">NOTES</button>
-      <button class="btn btn-blue leader-only" onclick="openEditor()">ÉDITER</button>
+      <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
     </nav>
 
     <div id="updateBanner">
@@ -1395,12 +1395,6 @@ function closeEditor() {
 
   document.getElementById('editor-container').style.display = 'none';
 }
-
-    function closeEditor() {
-      const ta = document.getElementById('editor-textarea');
-      if (ta) ta.removeEventListener('input', renderChordBankFromEditor);
-      document.getElementById('editor-container').style.display = 'none';
-    }
 
     async function saveEditor() {
   const newContent = document.getElementById('editor-textarea').value;
