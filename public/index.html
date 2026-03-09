@@ -1048,37 +1048,41 @@
   socket.emit('scroll-sync', state);
 });
 
-    socket.on('apply-scroll', data => {
-      if (isLeader) return;
+socket.on('apply-scroll', data => {
+  if (isLeader) return;
 
-      const anchor = data?.anchor;
-      const progress = clamp01(Number(data?.progress) || 0);
+  // ✅ si le suiveur est déjà en auto-scroll, on ignore les corrections manuelles
+  if (isScrolling) return;
 
-      const el = anchor
-        ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`)
-        : null;
+  const anchor = data?.anchor;
+  const progress = clamp01(Number(data?.progress) || 0);
 
-      let targetTop;
-      if (el) {
-        const top = el.offsetTop;
-        const h = el.offsetHeight || 1;
-        targetTop = top + progress * h;
-      } else {
-        const max = viewerElement.scrollHeight - viewerElement.clientHeight;
-        targetTop = progress * (max > 0 ? max : 0);
-      }
+  const el = anchor
+    ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`)
+    : null;
 
-      if (Math.abs(viewerElement.scrollTop - targetTop) < 3) return; // ✅ anti micro-vibrations
+  let targetTop;
+  if (el) {
+    const top = el.offsetTop;
+    const h = el.offsetHeight || 1;
+    targetTop = top + progress * h;
+  } else {
+    const max = viewerElement.scrollHeight - viewerElement.clientHeight;
+    targetTop = progress * (max > 0 ? max : 0);
+  }
 
-      pendingRemoteScrollTop = targetTop;
+  // ✅ ignore les micro-différences
+  if (Math.abs(viewerElement.scrollTop - targetTop) < 8) return;
 
-      if (remoteScrollRaf) cancelAnimationFrame(remoteScrollRaf);
-      remoteScrollRaf = requestAnimationFrame(() => {
-        isRemoteScrolling = true;
-        viewerElement.scrollTop = pendingRemoteScrollTop;
-        setTimeout(() => { isRemoteScrolling = false; }, 80);
-      });
-    });
+  pendingRemoteScrollTop = targetTop;
+
+  if (remoteScrollRaf) cancelAnimationFrame(remoteScrollRaf);
+  remoteScrollRaf = requestAnimationFrame(() => {
+    isRemoteScrolling = true;
+    viewerElement.scrollTop = pendingRemoteScrollTop;
+    setTimeout(() => { isRemoteScrolling = false; }, 120);
+  });
+});
 
     socket.on('apply-viewer-settings', data => {
       if (isLeader) return;
