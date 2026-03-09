@@ -7,7 +7,6 @@ const path = require('path');
 
 app.use(express.json());
 
-// Anti-cache simple
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store');
   next();
@@ -16,7 +15,7 @@ app.use((req, res, next) => {
 app.use(express.static('public', { etag: false, maxAge: 0 }));
 
 const PARTITIONS_DIR = path.join(__dirname, 'public', 'partitions');
-const LEADER_PIN = String(process.env.LEADER_PIN || '1991'); // ton PIN
+const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
 
 function isValidSongName(name) {
   if (typeof name !== 'string') return false;
@@ -31,7 +30,6 @@ function pinOk(pin) {
   return String(pin || '') === LEADER_PIN;
 }
 
-// Lister les morceaux
 app.get('/list-songs', (req, res) => {
   try {
     const files = fs.readdirSync(PARTITIONS_DIR);
@@ -45,7 +43,6 @@ app.get('/list-songs', (req, res) => {
   }
 });
 
-// Sauvegarder (PIN requis) + broadcast update
 app.post('/save-song', (req, res) => {
   const { fileName, content, pin } = req.body;
 
@@ -59,8 +56,6 @@ app.post('/save-song', (req, res) => {
 
   fs.writeFile(filePath, String(content ?? ""), 'utf8', (err) => {
     if (err) return res.status(500).send("Erreur");
-
-    // Prévenir tous les appareils qu’une nouvelle version existe
     io.emit('song-updated', { fileName, at: Date.now() });
     res.send("OK");
   });
@@ -69,9 +64,13 @@ app.post('/save-song', (req, res) => {
 io.on('connection', (socket) => {
   console.log('📱 connecté', socket.id);
 
-  // Synchro sans PIN côté socket (comme ton code)
   socket.on('change-song', (fileName) => {
     io.emit('load-song', fileName);
+  });
+
+  socket.on('stop-autoscroll', () => {
+    io.emit('force-stop-autoscroll');
+    io.emit('apply-autoscroll', { active: false, speed: 50 });
   });
 
   let lastScrollAt = 0;
@@ -79,15 +78,26 @@ io.on('connection', (socket) => {
     const now = Date.now();
     if (now - lastScrollAt < 60) return;
     lastScrollAt = now;
-  
+
     const anchor = String(payload?.anchor || "");
     const progress = Math.max(0, Math.min(1, Number(payload?.progress) || 0));
-  
+
     socket.broadcast.emit('apply-scroll', { anchor, progress });
   });
 
   socket.on('sync-autoscroll', (d) => {
-    socket.broadcast.emit('apply-autoscroll', { active: !!d.active, speed: d.speed });
+    socket.broadcast.emit('apply-autoscroll', {
+      active: !!d.active,
+      speed: Number(d.speed) || 50
+    });
+  });
+
+  socket.on('sync-viewer-settings', (d) => {
+    socket.broadcast.emit('apply-viewer-settings', {
+      fontSize: Number(d.fontSize),
+      transposeValue: Number(d.transposeValue),
+      scrollSpeed: Number(d.scrollSpeed)
+    });
   });
 });
 
