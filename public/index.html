@@ -465,7 +465,7 @@
       <div class="controls-group leader-only">
         <button class="btn" onclick="updateTranspose(-1)">-</button>
         <span id="transposeVal" style="min-width:20px; text-align:center">0</span>
-        <button class="btn" onclick="updateTranspose(1)">+</button>x
+        <button class="btn" onclick="updateTranspose(1)">+</button>
       </div>
     
       <button class="btn" onclick="toggleNotes()">NOTES</button>
@@ -518,14 +518,6 @@
         align-items:center;
       "></div>
     </div>
-  
-    <textarea id="editor-textarea" spellcheck="false"></textarea>
-  
-    <div class="editor-footer">
-      <button class="btn" onclick="closeEditor()" style="border-color: #ff5252; color: #ff5252;">ANNULER</button>
-      <button class="btn btn-blue" onclick="saveEditor()">ENREGISTRER</button>
-    </div>
-  </div>
 
     <textarea id="editor-textarea" spellcheck="false"></textarea>
     <div class="editor-footer">
@@ -678,7 +670,15 @@
 
 function applyLeaderUI() {
   document.querySelectorAll('.leader-only').forEach(el => {
-    el.style.display = isLeader ? '' : 'none';
+    if (isLeader) {
+      if (el.classList.contains('controls-group')) {
+        el.style.display = 'flex';
+      } else {
+        el.style.display = '';
+      }
+    } else {
+      el.style.display = 'none';
+    }
   });
 
   const badge = document.getElementById('leaderBadge');
