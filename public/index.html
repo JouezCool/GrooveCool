@@ -180,18 +180,19 @@
       -webkit-overflow-scrolling:touch;
     }
     .lib-header{
-      padding:20px;
-      background:var(--nav-bg);
-      border-bottom:2px solid var(--accent);
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      position:sticky;
-      top:0;
-      z-index:5;
-      color:var(--nav-text);
-      gap:12px;
-    }
+  padding:20px;
+  padding-right:240px; /* laisse la place au bloc fixe à droite */
+  background:var(--nav-bg);
+  border-bottom:2px solid var(--accent);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  position:sticky;
+  top:0;
+  z-index:5;
+  color:var(--nav-text);
+  gap:12px;
+}
     .song-item{
       padding:20px;
       border-bottom:1px solid #222;
@@ -313,44 +314,51 @@
     }
 
     #editor-container{
-      display:none;
-      position:fixed;
-      top:60px;
-      left:0;
-      width:100vw;
-      height:calc(100vh - 60px);
-      background:#111;
-      z-index:20;
-    }
-    #editor-warning{
-      background:rgba(255, 87, 34, 0.14);
-      border-bottom:1px solid rgba(255, 87, 34, 0.4);
-      color:#ffd7c7;
-      padding:12px 14px;
-      font-size:13px;
-      font-weight:800;
-      line-height:1.35;
-      text-transform:uppercase;
-    }
-    #editor-textarea{
-      width:100%;
-      height:calc(80% - 54px);
-      background:#000;
-      color:#2196F3;
-      border:none;
-      font-family:monospace;
-      font-size:16px;
-      padding:20px;
-      box-sizing:border-box;
-    }
-    .editor-footer{
-      height:20%;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      gap:20px;
-      background:var(--nav-bg);
-    }
+  display:none;
+  position:fixed;
+  top:60px;
+  left:0;
+  width:100vw;
+  height:calc(100vh - 60px);
+  background:#111;
+  z-index:20;
+  flex-direction:column;
+}
+
+#editor-warning{
+  flex:0 0 auto;
+  background:rgba(255, 87, 34, 0.14);
+  border-bottom:1px solid rgba(255, 87, 34, 0.4);
+  color:#ffd7c7;
+  padding:12px 14px;
+  font-size:13px;
+  font-weight:800;
+  line-height:1.35;
+  text-transform:uppercase;
+}
+
+#editor-textarea{
+  flex:1 1 auto;
+  min-height:0;
+  width:100%;
+  background:#000;
+  color:#2196F3;
+  border:none;
+  font-family:monospace;
+  font-size:16px;
+  padding:20px;
+  box-sizing:border-box;
+}
+
+.editor-footer{
+  flex:0 0 auto;
+  min-height:74px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:20px;
+  background:var(--nav-bg);
+}
 
     .btn{
       cursor:pointer;
@@ -364,6 +372,10 @@
     }
     .btn-blue{ border-color:var(--edit); color:var(--edit); }
     .active-btn{ background:#444; color:#fff; }
+
+    .leader-only{
+  display:none;
+}
 
     #songContent { position: relative; }
 
@@ -402,6 +414,7 @@
 
 <body>
   <div id="settingsFixedWrap">
+    <span id="leaderBadge" class="version-badge">SUIVEUR</span>
     <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
     <span id="settingsUserLabel"></span>
   </div>
@@ -438,25 +451,25 @@
   <div id="viewer-container">
     <nav>
       <button class="btn" onclick="closeViewer()">⬅</button>
-
-      <div class="controls-group">
+    
+      <div class="controls-group leader-only">
         <button class="btn" id="playBtn" onclick="toggleAutoScroll(true)">▶</button>
         <input type="range" id="scrollSpeed" min="1" max="95" value="50">
       </div>
-
-      <div class="controls-group">
+    
+      <div class="controls-group leader-only">
         <button class="btn" onclick="updateFontSize(-2)">A-</button>
         <button class="btn" onclick="updateFontSize(2)">A+</button>
       </div>
-
-      <div class="controls-group">
+    
+      <div class="controls-group leader-only">
         <button class="btn" onclick="updateTranspose(-1)">-</button>
         <span id="transposeVal" style="min-width:20px; text-align:center">0</span>
-        <button class="btn" onclick="updateTranspose(1)">+</button>
+        <button class="btn" onclick="updateTranspose(1)">+</button>x
       </div>
-
+    
       <button class="btn" onclick="toggleNotes()">NOTES</button>
-      <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
+      <button class="btn btn-blue leader-only" onclick="openEditor()">ÉDITER</button>
     </nav>
 
     <div id="updateBanner">
@@ -481,7 +494,7 @@
     <div id="editor-warning">
       ATTENTION : TOUT CE QUE TU MODIFIES ICI MODIFIE DÉFINITIVEMENT LA VERSION COMMUNE DU MORCEAU POUR TOUT LE MONDE.
     </div>
-
+  
     <div id="editor-toolbar" style="
       padding:10px;
       display:flex;
@@ -495,9 +508,9 @@
       <button class="btn" onclick="insertAtCursor('\n{eoc}\n')">+ {eoc}</button>
       <button class="btn" onclick="insertTemplateComment()">+ {c:}</button>
       <button class="btn" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
-
+  
       <div style="flex:1"></div>
-
+  
       <div id="chordBank" style="
         display:flex;
         flex-wrap:wrap;
@@ -505,6 +518,14 @@
         align-items:center;
       "></div>
     </div>
+  
+    <textarea id="editor-textarea" spellcheck="false"></textarea>
+  
+    <div class="editor-footer">
+      <button class="btn" onclick="closeEditor()" style="border-color: #ff5252; color: #ff5252;">ANNULER</button>
+      <button class="btn btn-blue" onclick="saveEditor()">ENREGISTRER</button>
+    </div>
+  </div>
 
     <textarea id="editor-textarea" spellcheck="false"></textarea>
     <div class="editor-footer">
@@ -645,15 +666,34 @@
     }
 
     function syncSettingsUI() {
-      const lb = document.getElementById('settingsLeaderBtn');
-      if (lb) lb.innerText = isLeader ? "Mode Leader" : "Mode Solo";
+  const lb = document.getElementById('settingsLeaderBtn');
+  if (lb) lb.innerText = isLeader ? "Quitter le mode Leader" : "Devenir leader";
 
-      const cb = document.getElementById('settingsChordBtn');
-      if (cb) cb.innerText = (chordStyle === 'latin') ? "Accords: Do" : "Accords: C";
+  const cb = document.getElementById('settingsChordBtn');
+  if (cb) cb.innerText = (chordStyle === 'latin') ? "Accords: Do" : "Accords: C";
 
-      const tb = document.getElementById('settingsThemeBtn');
-      if (tb) tb.innerText = (themeMode === 'dark') ? "Thème: Sombre" : "Thème: Clair";
-    }
+  const tb = document.getElementById('settingsThemeBtn');
+  if (tb) tb.innerText = (themeMode === 'dark') ? "Thème: Sombre" : "Thème: Clair";
+}
+
+function applyLeaderUI() {
+  document.querySelectorAll('.leader-only').forEach(el => {
+    el.style.display = isLeader ? '' : 'none';
+  });
+
+  const badge = document.getElementById('leaderBadge');
+  if (!badge) return;
+
+  if (isLeader) {
+    badge.textContent = "LEADER";
+    badge.classList.remove('off');
+    badge.classList.add('perso');
+  } else {
+    badge.textContent = "FOLLOW";
+    badge.classList.remove('perso');
+    badge.classList.add('off');
+  }
+}
 
     function loadUsersList() {
       const savedList = localStorage.getItem('bandapp_users');
@@ -682,23 +722,27 @@
     }
 
     function setCurrentUser(name, fromPicker) {
-      currentUser = String(name || "").trim();
-      if (!currentUser) return;
-      localStorage.setItem('bandapp_currentUser', currentUser);
-      const lab = document.getElementById('settingsUserLabel');
-      if (lab) lab.textContent = currentUser;
+  currentUser = String(name || "").trim();
+  if (!currentUser) return;
 
-      if (currentFileName) {
-        stopAutoScroll();
-        loadSong(currentFileName);
-        loadNotes();
-      }
+  localStorage.setItem('bandapp_currentUser', currentUser);
 
-      if (fromPicker) {
-        userOverlay.style.display = 'none';
-        showToast(`Bienvenue ${currentUser}`);
-      }
-    }
+  const lab = document.getElementById('settingsUserLabel');
+  if (lab) lab.textContent = currentUser;
+
+  socket.emit('register-user', currentUser);
+
+  if (currentFileName) {
+    stopAutoScroll();
+    loadSong(currentFileName);
+    loadNotes();
+  }
+
+  if (fromPicker) {
+    userOverlay.style.display = 'none';
+    showToast(`Bienvenue ${currentUser}`);
+  }
+}
 
     function openUserPicker(force) {
       const saved = localStorage.getItem('bandapp_currentUser') || "";
@@ -731,8 +775,30 @@
       }
     }
 
-    socket.on('connect', () => { settingsBtnFixed.style.borderColor = "#4CAF50"; });
-    socket.on('disconnect', () => { settingsBtnFixed.style.borderColor = "#f44336"; });
+    socket.on('connect', () => {
+  settingsBtnFixed.style.borderColor = "#4CAF50";
+  if (currentUser) socket.emit('register-user', currentUser);
+});
+
+socket.on('disconnect', () => {
+  settingsBtnFixed.style.borderColor = "#f44336";
+});
+
+socket.on('leader-state', (data) => {
+  const wasLeader = isLeader;
+  isLeader = data?.leaderSocketId === socket.id;
+
+  if (wasLeader && !isLeader) {
+    stopAutoScroll();
+  }
+
+  applyLeaderUI();
+  syncSettingsUI();
+});
+
+socket.on('leader-denied', (data) => {
+  showToast(`Leader déjà pris par ${data?.leaderUserName || 'un autre appareil'}`);
+});
 
     async function fetchSongs() {
       const res = await fetch('/list-songs');
@@ -772,10 +838,12 @@
     }
 
     function toggleLeader() {
-      isLeader = !isLeader;
-      if (!isLeader) stopAutoScroll();
-      syncSettingsUI();
-    }
+  if (isLeader) {
+    socket.emit('release-leader');
+  } else {
+    socket.emit('request-leader');
+  }
+}
 
     function openSong(idx) {
       if (idx < 0 || idx >= allSongs.length) return;
@@ -1304,22 +1372,29 @@
     });
 
     function openEditor() {
-      stopAutoScroll();
-      startEditor();
-    }
+  stopAutoScroll();
+  startEditor();
+}
 
-    async function startEditor() {
-      const ta = document.getElementById('editor-textarea');
-      const res = await fetch('/partitions/' + currentFileName);
-      ta.value = await res.text();
+async function startEditor() {
+  const ta = document.getElementById('editor-textarea');
+  const res = await fetch('/partitions/' + currentFileName);
+  ta.value = await res.text();
 
-      document.getElementById('editor-container').style.display = 'block';
+  document.getElementById('editor-container').style.display = 'flex';
 
-      setTimeout(() => {
-        renderChordBankFromEditor();
-        ta.addEventListener('input', renderChordBankFromEditor);
-      }, 0);
-    }
+  setTimeout(() => {
+    renderChordBankFromEditor();
+    ta.addEventListener('input', renderChordBankFromEditor);
+  }, 0);
+}
+
+function closeEditor() {
+  const ta = document.getElementById('editor-textarea');
+  if (ta) ta.removeEventListener('input', renderChordBankFromEditor);
+
+  document.getElementById('editor-container').style.display = 'none';
+}
 
     function closeEditor() {
       const ta = document.getElementById('editor-textarea');
@@ -1328,32 +1403,34 @@
     }
 
     async function saveEditor() {
-      const newContent = document.getElementById('editor-textarea').value;
-      if (!currentFileName) return;
+  const newContent = document.getElementById('editor-textarea').value;
+  if (!currentFileName) return;
 
-      const pin = prompt("PIN requis pour enregistrer les modifications") || "";
-      const cleanPin = String(pin).trim();
-      if (!cleanPin) return;
+  const pin = prompt("PIN requis pour enregistrer les modifications") || "";
+  const cleanPin = String(pin).trim();
+  if (!cleanPin) return;
 
-      const res = await fetch('/save-song', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: currentFileName, content: newContent, pin: cleanPin })
-      });
+  const res = await fetch('/save-song', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileName: currentFileName, content: newContent, pin: cleanPin })
+  });
 
-      if (res.ok) {
-        currentRaw = newContent;
-        renderChordPro();
-        renderGrids();
-        closeEditor();
-        if (isLeader) socket.emit('change-song', currentFileName);
-        showToast("Modification enregistrée ✅");
-      } else if (res.status === 403) {
-        alert("PIN invalide");
-      } else {
-        alert("Erreur d'enregistrement");
-      }
-    }
+  if (res.ok) {
+    currentRaw = newContent;
+    renderChordPro();
+    renderGrids();
+    closeEditor();
+
+    if (isLeader) socket.emit('change-song', currentFileName);
+
+    showToast("Modification enregistrée ✅");
+  } else if (res.status === 403) {
+    alert("PIN invalide");
+  } else {
+    alert("Erreur d'enregistrement");
+  }
+}
 
     function closeViewer() {
       stopAutoScroll();
@@ -1549,9 +1626,10 @@
     }
 
     applyTheme();
-    initUsers();
-    fetchSongs();
-    syncSettingsUI();
+initUsers();
+fetchSongs();
+syncSettingsUI();
+applyLeaderUI();
 
     if (songSearchInput) {
       songSearchInput.addEventListener('input', () => filterSongList(songSearchInput.value));

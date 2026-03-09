@@ -17,6 +17,17 @@ app.use(express.static('public', { etag: false, maxAge: 0 }));
 const PARTITIONS_DIR = path.join(__dirname, 'public', 'partitions');
 const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
 
+let leaderSocketId = null;
+let leaderUserName = "";
+
+function broadcastLeaderState() {
+  io.emit('leader-state', {
+    leaderSocketId,
+    leaderUserName,
+    hasLeader: !!leaderSocketId
+  });
+}
+
 function isValidSongName(name) {
   if (typeof name !== 'string') return false;
   const lower = name.toLowerCase();
@@ -56,6 +67,7 @@ app.post('/save-song', (req, res) => {
 
   fs.writeFile(filePath, String(content ?? ""), 'utf8', (err) => {
     if (err) return res.status(500).send("Erreur");
+
     io.emit('song-updated', { fileName, at: Date.now() });
     res.send("OK");
   });
@@ -64,13 +76,38 @@ app.post('/save-song', (req, res) => {
 io.on('connection', (socket) => {
   console.log('📱 connecté', socket.id);
 
-  socket.on('change-song', (fileName) => {
-    io.emit('load-song', fileName);
+  // envoie l’état leader au nouvel arrivant
+  broadcastLeaderState();
+
+  socket.on('register-user', (userName) => {
+    socket.data.userName = String(userName || '').trim();
+
+    if (leaderSocketId === socket.id) {
+      leaderUserName = socket.data.userName || "";
+      broadcastLeaderState();
+    }
   });
 
-  socket.on('stop-autoscroll', () => {
-    io.emit('force-stop-autoscroll');
-    io.emit('apply-autoscroll', { active: false, speed: 50 });
+  socket.on('request-leader', () => {
+    if (!leaderSocketId || leaderSocketId === socket.id) {
+      leaderSocketId = socket.id;
+      leaderUserName = socket.data.userName || "Leader";
+      broadcastLeaderState();
+    } else {
+      socket.emit('leader-denied', { leaderUserName });
+    }
+  });
+
+  socket.on('release-leader', () => {
+    if (leaderSocketId === socket.id) {
+      leaderSocketId = null;
+      leaderUserName = "";
+      broadcastLeaderState();
+    }
+  });
+
+  socket.on('change-song', (fileName) => {
+    io.emit('load-song', fileName);
   });
 
   let lastScrollAt = 0;
@@ -88,16 +125,18 @@ io.on('connection', (socket) => {
   socket.on('sync-autoscroll', (d) => {
     socket.broadcast.emit('apply-autoscroll', {
       active: !!d.active,
-      speed: Number(d.speed) || 50
+      speed: d.speed
     });
   });
 
-  socket.on('sync-viewer-settings', (d) => {
-    socket.broadcast.emit('apply-viewer-settings', {
-      fontSize: Number(d.fontSize),
-      transposeValue: Number(d.transposeValue),
-      scrollSpeed: Number(d.scrollSpeed)
-    });
+  socket.on('disconnect', () => {
+    console.log('❌ déconnecté', socket.id);
+
+    if (leaderSocketId === socket.id) {
+      leaderSocketId = null;
+      leaderUserName = "";
+      broadcastLeaderState();
+    }
   });
 });
 
