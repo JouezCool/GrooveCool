@@ -231,25 +231,6 @@
       border-radius:8px;
     }
 
-    .version-badge{
-      font-weight:900;
-      font-size:12px;
-      padding:8px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,0.18);
-      background:rgba(255,255,255,0.08);
-      color:var(--text);
-      white-space:nowrap;
-    }
-    .version-badge.perso{
-      border-color: rgba(59,130,246,0.55);
-      background: rgba(59,130,246,0.18);
-    }
-    .version-badge.off{
-      border-color: rgba(255,152,0,0.55);
-      background: rgba(255,152,0,0.18);
-    }
-
     #updateBanner{
       position:sticky;
       top:0;
@@ -341,9 +322,19 @@
       background:#111;
       z-index:20;
     }
+    #editor-warning{
+      background:rgba(255, 87, 34, 0.14);
+      border-bottom:1px solid rgba(255, 87, 34, 0.4);
+      color:#ffd7c7;
+      padding:12px 14px;
+      font-size:13px;
+      font-weight:800;
+      line-height:1.35;
+      text-transform:uppercase;
+    }
     #editor-textarea{
       width:100%;
-      height:80%;
+      height:calc(80% - 54px);
       background:#000;
       color:#2196F3;
       border:none;
@@ -373,38 +364,6 @@
     }
     .btn-blue{ border-color:var(--edit); color:var(--edit); }
     .active-btn{ background:#444; color:#fff; }
-
-    #editChoiceBackdrop{
-      position:fixed;
-      inset:0;
-      display:none;
-      z-index:2000;
-      background:rgba(0,0,0,0.75);
-      align-items:center;
-      justify-content:center;
-      padding:18px;
-    }
-    #editChoiceModal{
-      width:min(560px,100%);
-      background:#121212;
-      border:1px solid #2a2a2a;
-      border-radius:14px;
-      overflow:hidden;
-    }
-    #editChoiceModal header{ padding:14px 16px; border-bottom:1px solid #2a2a2a; background:#161616; }
-    #editChoiceModal header h3{ margin:0; font-size:14px; color:#fff; }
-    #editChoiceModal .content{ padding:14px 16px; }
-    #editChoiceModal .actions{ padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end; }
-    .choice{
-      border:1px solid #333;
-      background:#0b0b0b;
-      border-radius:12px;
-      padding:12px;
-      cursor:pointer;
-    }
-    .choice:hover{ background:#101010; }
-    .choice b{ color:#fff; display:block; margin-bottom:6px; }
-    .choice .small{ color:#aaa; font-size:12px; display:block; }
 
     #songContent { position: relative; }
 
@@ -443,7 +402,6 @@
 
 <body>
   <div id="settingsFixedWrap">
-    <span id="topVersionBadge" class="version-badge">—</span>
     <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
     <span id="settingsUserLabel"></span>
   </div>
@@ -458,26 +416,6 @@
       </div>
       <div class="actions">
         <button class="btn" style="border-color:#777;color:#777;" onclick="addUser()">+ Ajouter</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="editChoiceBackdrop">
-    <div id="editChoiceModal">
-      <header><h3>Type de modification</h3></header>
-      <div class="content">
-        <div class="choice" onclick="chooseEditMode('personal')">
-          <b>Modification personnelle</b>
-          <span class="small">Sauvegardée pour <b>cet utilisateur</b> uniquement (ne modifie pas le fichier partagé).</span>
-        </div>
-        <div style="height:10px"></div>
-        <div class="choice" onclick="chooseEditMode('global')">
-          <b>Modification pour tout le monde</b>
-          <span class="small">Modifie le fichier partagé (PIN demandé immédiatement).</span>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn" onclick="closeEditChoice()" style="border-color:#777;color:#777;">ANNULER</button>
       </div>
     </div>
   </div>
@@ -501,17 +439,17 @@
     <nav>
       <button class="btn" onclick="closeViewer()">⬅</button>
 
-      <div class="controls-group leader-only">
+      <div class="controls-group">
         <button class="btn" id="playBtn" onclick="toggleAutoScroll(true)">▶</button>
         <input type="range" id="scrollSpeed" min="1" max="95" value="50">
       </div>
 
-      <div class="controls-group leader-only">
+      <div class="controls-group">
         <button class="btn" onclick="updateFontSize(-2)">A-</button>
         <button class="btn" onclick="updateFontSize(2)">A+</button>
       </div>
 
-      <div class="controls-group leader-only">
+      <div class="controls-group">
         <button class="btn" onclick="updateTranspose(-1)">-</button>
         <span id="transposeVal" style="min-width:20px; text-align:center">0</span>
         <button class="btn" onclick="updateTranspose(1)">+</button>
@@ -540,6 +478,10 @@
   </div>
 
   <div id="editor-container">
+    <div id="editor-warning">
+      ATTENTION : TOUT CE QUE TU MODIFIES ICI MODIFIE DÉFINITIVEMENT LA VERSION COMMUNE DU MORCEAU POUR TOUT LE MONDE.
+    </div>
+
     <div id="editor-toolbar" style="
       padding:10px;
       display:flex;
@@ -586,7 +528,6 @@
         <button class="btn" id="settingsThemeBtn" onclick="toggleTheme()">Thème: Sombre</button>
         <button class="btn" onclick="exportBackup()">⬇️ Exporter sauvegarde</button>
         <button class="btn" onclick="triggerImport()">⬆️ Importer sauvegarde</button>
-        <button class="btn" onclick="revertToOfficial()">↩︎ Revenir à la version officielle</button>
         <input id="importFile" type="file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
       </div>
 
@@ -603,13 +544,13 @@
     let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
 
     let isRemoteScrolling = false;
-    let remoteScrollRaf = null;
-    let pendingRemoteScrollTop = null;
 
     let isScrolling = false;
     let rafId = null;
     let lastRafTime = 0;
     let scrollCarry = 0;
+    let remoteScrollRaf = null;
+    let pendingRemoteScrollTop = 0;
 
     const viewerElement = document.getElementById('viewer');
     const songContentEl = document.getElementById('songContent');
@@ -626,7 +567,6 @@
     const SWIPE_MIN_X = 110;
     const SWIPE_RATIO = 1.4;
 
-    let editMode = null;
     let globalPinCache = "";
 
     const DEFAULT_USERS = ["Nemo","Estelle","Gillou","Bubu","Christian","Christophe"];
@@ -641,16 +581,15 @@
 
     const toastEl = document.getElementById('toast');
     let toastTimer = null;
-
-    let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin';
-    let themeMode = localStorage.getItem('bandapp_theme') || 'dark';
-
     function showToast(msg) {
       if (toastTimer) clearTimeout(toastTimer);
       toastEl.textContent = msg;
       toastEl.style.display = 'block';
       toastTimer = setTimeout(() => { toastEl.style.display = 'none'; }, 1700);
     }
+
+    let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin';
+    let themeMode = localStorage.getItem('bandapp_theme') || 'dark';
 
     function applyTheme() {
       const root = document.documentElement;
@@ -684,46 +623,6 @@
       }
     }
 
-    function updateVersionIndicator() {
-      const badge = document.getElementById('topVersionBadge');
-      if (!badge) return;
-
-      const hasSong = !!currentFileName;
-      const hasPersonal = hasSong && !!getPersonalSong(currentFileName);
-
-      if (!hasSong) {
-        badge.textContent = "—";
-        badge.classList.remove('perso','off');
-      } else if (hasPersonal) {
-        badge.textContent = "PERSO";
-        badge.classList.add('perso');
-        badge.classList.remove('off');
-      } else {
-        badge.textContent = "OFFICIELLE";
-        badge.classList.add('off');
-        badge.classList.remove('perso');
-      }
-    }
-
-    function revertToOfficial() {
-      if (!currentFileName) {
-        showToast("Aucune chanson ouverte");
-        return;
-      }
-
-      const ok = confirm(
-        "Revenir à la version officielle ?\n\n" +
-        "Cela supprimera ta version personnelle pour ce morceau (uniquement pour toi)."
-      );
-      if (!ok) return;
-
-      localStorage.removeItem(personalSongKey(currentFileName));
-      stopAutoScroll();
-      loadSong(currentFileName);
-      updateVersionIndicator();
-      showToast("Version officielle restaurée ✅");
-    }
-
     function toggleTheme() {
       themeMode = (themeMode === 'dark') ? 'light' : 'dark';
       localStorage.setItem('bandapp_theme', themeMode);
@@ -745,12 +644,6 @@
       settingsBackdrop.style.display = 'none';
     }
 
-    function syncLeaderControlsVisibility() {
-      document.querySelectorAll('.leader-only').forEach(el => {
-        el.style.display = isLeader ? 'flex' : 'none';
-      });
-    }
-
     function syncSettingsUI() {
       const lb = document.getElementById('settingsLeaderBtn');
       if (lb) lb.innerText = isLeader ? "Mode Leader" : "Mode Solo";
@@ -760,39 +653,6 @@
 
       const tb = document.getElementById('settingsThemeBtn');
       if (tb) tb.innerText = (themeMode === 'dark') ? "Thème: Sombre" : "Thème: Clair";
-
-      syncLeaderControlsVisibility();
-    }
-
-    function emitViewerSettings() {
-      if (!isLeader) return;
-      socket.emit('sync-viewer-settings', {
-        fontSize,
-        transposeValue,
-        scrollSpeed: Number(speedInput.value) || 50
-      });
-    }
-
-    function applyViewerSettings(data) {
-      if (!data) return;
-
-      if (typeof data.fontSize === 'number' && isFinite(data.fontSize)) {
-        fontSize = data.fontSize;
-      }
-
-      if (typeof data.transposeValue === 'number' && isFinite(data.transposeValue)) {
-        transposeValue = data.transposeValue;
-      }
-
-      if (typeof data.scrollSpeed === 'number' && isFinite(data.scrollSpeed)) {
-        speedInput.value = String(data.scrollSpeed);
-      }
-
-      document.getElementById('transposeVal').innerText =
-        (transposeValue > 0 ? '+' : '') + transposeValue;
-
-      renderChordPro();
-      renderGrids();
     }
 
     function loadUsersList() {
@@ -832,7 +692,6 @@
         stopAutoScroll();
         loadSong(currentFileName);
         loadNotes();
-        renderGrids();
       }
 
       if (fromPicker) {
@@ -884,8 +743,8 @@
         allSongs.map((s, idx) => `
           <div class="song-item" data-name="${s.toLowerCase()}" onclick="openSong(${idx})">
             <b>${s.replace('.pro','').replace('.cho','')}</b><span>❯</span>
-          </div>`
-        ).join('');
+          </div>
+        `).join('');
 
       updateSongCount();
     }
@@ -916,17 +775,10 @@
       isLeader = !isLeader;
       if (!isLeader) stopAutoScroll();
       syncSettingsUI();
-
-      if (isLeader) {
-        emitViewerSettings();
-      }
     }
 
     function openSong(idx) {
       if (idx < 0 || idx >= allSongs.length) return;
-
-      stopAutoScroll(); // ✅ arrêt local systématique au changement de morceau
-
       currentIndex = idx;
       currentFileName = allSongs[idx];
 
@@ -936,11 +788,7 @@
       document.getElementById('library').style.display = 'none';
       document.getElementById('viewer-container').style.display = 'block';
 
-      if (isLeader) {
-        socket.emit('stop-autoscroll'); // ✅ arrêt chez tout le monde
-        socket.emit('change-song', currentFileName);
-        emitViewerSettings(); // ✅ force la même taille / transpo / vitesse pour tous
-      }
+      if (isLeader) socket.emit('change-song', currentFileName);
 
       loadSong(currentFileName);
       setTimeout(loadNotes, 10);
@@ -948,10 +796,7 @@
 
     async function loadSong(f) {
       const res = await fetch('/partitions/' + f);
-      const base = await res.text();
-
-      const personal = getPersonalSong(f);
-      currentRaw = personal ? personal : base;
+      currentRaw = await res.text();
 
       transposeValue = 0;
       document.getElementById('transposeVal').innerText = "0";
@@ -959,9 +804,6 @@
       renderGrids();
       viewerElement.scrollTop = 0;
       updateBanner.style.display = 'none';
-      updateVersionIndicator();
-
-      if (isLeader) emitViewerSettings();
     }
 
     function normName(s) {
@@ -1026,67 +868,58 @@
     let lastEmitProg = -1;
 
     viewerElement.addEventListener('scroll', () => {
-  // ✅ pendant l’auto-scroll, on n’envoie plus de corrections ligne par ligne
-  if (!isLeader || isRemoteScrolling || isScrolling) return;
+      if (!isLeader || isRemoteScrolling || isScrolling) return;
 
-  const state = getTopLyricAnchorState();
-  if (!state) return;
+      const state = getTopLyricAnchorState();
+      if (!state) return;
 
-  const now = Date.now();
-  if (
-    now - lastEmitAt < 120 &&
-    state.anchor === lastEmitAnchor &&
-    Math.abs(state.progress - lastEmitProg) < 0.05
-  ) {
-    return;
-  }
+      const now = Date.now();
+      if (
+        now - lastEmitAt < 120 &&
+        state.anchor === lastEmitAnchor &&
+        Math.abs(state.progress - lastEmitProg) < 0.05
+      ) {
+        return;
+      }
 
-  lastEmitAt = now;
-  lastEmitAnchor = state.anchor;
-  lastEmitProg = state.progress;
+      lastEmitAt = now;
+      lastEmitAnchor = state.anchor;
+      lastEmitProg = state.progress;
 
-  socket.emit('scroll-sync', state);
-});
+      socket.emit('scroll-sync', state);
+    });
 
-socket.on('apply-scroll', data => {
-  if (isLeader) return;
-
-  // ✅ si le suiveur est déjà en auto-scroll, on ignore les corrections manuelles
-  if (isScrolling) return;
-
-  const anchor = data?.anchor;
-  const progress = clamp01(Number(data?.progress) || 0);
-
-  const el = anchor
-    ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`)
-    : null;
-
-  let targetTop;
-  if (el) {
-    const top = el.offsetTop;
-    const h = el.offsetHeight || 1;
-    targetTop = top + progress * h;
-  } else {
-    const max = viewerElement.scrollHeight - viewerElement.clientHeight;
-    targetTop = progress * (max > 0 ? max : 0);
-  }
-
-  // ✅ ignore les micro-différences
-  if (Math.abs(viewerElement.scrollTop - targetTop) < 8) return;
-
-  pendingRemoteScrollTop = targetTop;
-
-  if (remoteScrollRaf) cancelAnimationFrame(remoteScrollRaf);
-  remoteScrollRaf = requestAnimationFrame(() => {
-    isRemoteScrolling = true;
-    viewerElement.scrollTop = pendingRemoteScrollTop;
-    setTimeout(() => { isRemoteScrolling = false; }, 120);
-  });
-});
-
-    socket.on('apply-viewer-settings', data => {
+    socket.on('apply-scroll', data => {
       if (isLeader) return;
-      applyViewerSettings(data);
+      if (isScrolling) return;
+
+      const anchor = data?.anchor;
+      const progress = clamp01(Number(data?.progress) || 0);
+
+      const el = anchor
+        ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`)
+        : null;
+
+      let targetTop;
+      if (el) {
+        const top = el.offsetTop;
+        const h = el.offsetHeight || 1;
+        targetTop = top + progress * h;
+      } else {
+        const max = viewerElement.scrollHeight - viewerElement.clientHeight;
+        targetTop = progress * (max > 0 ? max : 0);
+      }
+
+      if (Math.abs(viewerElement.scrollTop - targetTop) < 8) return;
+
+      pendingRemoteScrollTop = targetTop;
+
+      if (remoteScrollRaf) cancelAnimationFrame(remoteScrollRaf);
+      remoteScrollRaf = requestAnimationFrame(() => {
+        isRemoteScrolling = true;
+        viewerElement.scrollTop = pendingRemoteScrollTop;
+        setTimeout(() => { isRemoteScrolling = false; }, 120);
+      });
     });
 
     function isEditorOpen() {
@@ -1160,11 +993,8 @@ socket.on('apply-scroll', data => {
     function stopAutoScroll() {
       if (!isScrolling) return;
       isScrolling = false;
-      const playBtn = document.getElementById('playBtn');
-      if (playBtn) {
-        playBtn.innerText = "▶";
-        playBtn.classList.remove('active-btn');
-      }
+      document.getElementById('playBtn').innerText = "▶";
+      document.getElementById('playBtn').classList.remove('active-btn');
       if (rafId) cancelAnimationFrame(rafId);
       rafId = null;
       lastRafTime = 0;
@@ -1172,67 +1002,40 @@ socket.on('apply-scroll', data => {
     }
 
     function toggleAutoScroll(emitSync) {
-  const wasScrolling = isScrolling;
+      if (isScrolling) {
+        stopAutoScroll();
+      } else {
+        if (isLeader && emitSync) {
+          const state = getTopLyricAnchorState();
+          if (state) socket.emit('scroll-sync', state);
+        }
+        startAutoScroll();
+      }
 
-  if (isScrolling) {
-    stopAutoScroll();
-  } else {
-    // ✅ avant de démarrer, on aligne tout le monde une seule fois
-    if (isLeader && emitSync) {
-      const state = getTopLyricAnchorState();
-      if (state) socket.emit('scroll-sync', state);
+      if (isLeader && emitSync) {
+        socket.emit('sync-autoscroll', {
+          active: isScrolling,
+          speed: Number(speedInput.value) || 50
+        });
+      }
     }
-
-    startAutoScroll();
-  }
-
-  if (isLeader && emitSync) {
-    socket.emit('sync-autoscroll', {
-      active: isScrolling,
-      speed: Number(speedInput.value) || 50
-    });
-  }
-}
 
     socket.on('apply-autoscroll', d => {
       if (!isLeader) {
-        if (typeof d.speed === 'number') speedInput.value = String(d.speed);
+        speedInput.value = d.speed;
         const wantActive = !!d.active;
         if (wantActive && !isScrolling) startAutoScroll();
         if (!wantActive && isScrolling) stopAutoScroll();
       }
     });
 
-    socket.on('force-stop-autoscroll', () => {
-      stopAutoScroll();
-    });
-
-    function updateFontSize(delta) {
-      fontSize += delta;
-      renderChordPro();
-      renderGrids();
-      emitViewerSettings();
-    }
-
+    function updateFontSize(delta) { fontSize += delta; renderChordPro(); renderGrids(); }
     function updateTranspose(dir) {
       transposeValue += dir;
       document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
       renderChordPro();
       renderGrids();
-      emitViewerSettings();
     }
-
-    speedInput.addEventListener('input', () => {
-      if (!isLeader) return;
-      emitViewerSettings();
-
-      if (isScrolling) {
-        socket.emit('sync-autoscroll', {
-          active: true,
-          speed: Number(speedInput.value) || 50
-        });
-      }
-    });
 
     function toggleChordStyle() {
       chordStyle = (chordStyle === 'latin') ? 'american' : 'latin';
@@ -1426,7 +1229,6 @@ socket.on('apply-scroll', data => {
 
       let inChorus = false;
       let chorusContainer = null;
-
       let inPU = false;
       let puUser = "";
       let puBuffer = [];
@@ -1501,50 +1303,15 @@ socket.on('apply-scroll', data => {
       }
     });
 
-    function openEditChoice() { document.getElementById('editChoiceBackdrop').style.display = 'flex'; }
-    function closeEditChoice() { document.getElementById('editChoiceBackdrop').style.display = 'none'; }
-    function openEditor() { stopAutoScroll(); openEditChoice(); }
-
-    function personalSongKey(fileName) {
-      const u = currentUser || "unknown";
-      return `personalSong:${u}:${fileName}`;
-    }
-    function getPersonalSong(fileName) { return localStorage.getItem(personalSongKey(fileName)) || ""; }
-    function setPersonalSong(fileName, content) { localStorage.setItem(personalSongKey(fileName), content || ""); }
-
-    async function chooseEditMode(mode) {
-      editMode = mode;
-      closeEditChoice();
-
-      if (mode === 'personal') {
-        globalPinCache = "";
-        startEditorWithMode('personal');
-        return;
-      }
-
-      let pin = prompt("PIN requis pour modifier pour tout le monde (ex: 1991)") || "";
-      pin = String(pin).trim();
-
-      if (!pin) {
-        editMode = null;
-        globalPinCache = "";
-        return;
-      }
-
-      globalPinCache = pin;
-      startEditorWithMode('global');
+    function openEditor() {
+      stopAutoScroll();
+      startEditor();
     }
 
-    async function startEditorWithMode(mode) {
+    async function startEditor() {
       const ta = document.getElementById('editor-textarea');
-
-      if (mode === "personal") {
-        const personal = getPersonalSong(currentFileName);
-        ta.value = personal || currentRaw;
-      } else {
-        const res = await fetch('/partitions/' + currentFileName);
-        ta.value = await res.text();
-      }
+      const res = await fetch('/partitions/' + currentFileName);
+      ta.value = await res.text();
 
       document.getElementById('editor-container').style.display = 'block';
 
@@ -1564,26 +1331,14 @@ socket.on('apply-scroll', data => {
       const newContent = document.getElementById('editor-textarea').value;
       if (!currentFileName) return;
 
-      if (editMode === "personal") {
-        setPersonalSong(currentFileName, newContent);
-        currentRaw = newContent;
-        renderChordPro();
-        renderGrids();
-        closeEditor();
-        updateVersionIndicator();
-        return;
-      }
-
-      const pin = String(globalPinCache || "").trim();
-      if (!pin) {
-        alert("PIN manquant. Recommence et choisis 'pour tout le monde'.");
-        return;
-      }
+      const pin = prompt("PIN requis pour enregistrer les modifications") || "";
+      const cleanPin = String(pin).trim();
+      if (!cleanPin) return;
 
       const res = await fetch('/save-song', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: currentFileName, content: newContent, pin })
+        body: JSON.stringify({ fileName: currentFileName, content: newContent, pin: cleanPin })
       });
 
       if (res.ok) {
@@ -1592,10 +1347,9 @@ socket.on('apply-scroll', data => {
         renderGrids();
         closeEditor();
         if (isLeader) socket.emit('change-song', currentFileName);
+        showToast("Modification enregistrée ✅");
       } else if (res.status === 403) {
         alert("PIN invalide");
-        globalPinCache = "";
-        editMode = null;
       } else {
         alert("Erreur d'enregistrement");
       }
@@ -1658,15 +1412,19 @@ socket.on('apply-scroll', data => {
       }
     }
 
+    const BACKUP_PREFIXES = ['bandapp_', 'notes:', 'overlay:', 'grids:'];
+
+    function isBackupKey(k) {
+      return BACKUP_PREFIXES.some(p => k.startsWith(p));
+    }
+
     function exportBackup() {
       try {
         const data = {};
-        const BACKUP_PREFIXES = ['bandapp_', 'personalSong:', 'notes:', 'overlay:', 'grids:'];
-
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (!key) continue;
-          if (!BACKUP_PREFIXES.some(p => key.startsWith(p))) continue;
+          if (!isBackupKey(key)) continue;
           data[key] = localStorage.getItem(key);
         }
 
