@@ -313,18 +313,6 @@
       color:var(--chorus-text);
     }
 
-    #editor-container{
-  display:none;
-  position:fixed;
-  top:60px;
-  left:0;
-  width:100vw;
-  height:calc(100vh - 60px);
-  background:#111;
-  z-index:20;
-  flex-direction:column;
-}
-
 #editor-warning{
   flex:0 0 auto;
   background:rgba(255, 87, 34, 0.14);
@@ -335,29 +323,6 @@
   font-weight:800;
   line-height:1.35;
   text-transform:uppercase;
-}
-
-#editor-textarea{
-  flex:1 1 auto;
-  min-height:0;
-  width:100%;
-  background:#000;
-  color:#2196F3;
-  border:none;
-  font-family:monospace;
-  font-size:16px;
-  padding:20px;
-  box-sizing:border-box;
-}
-
-.editor-footer{
-  flex:0 0 auto;
-  min-height:74px;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  gap:20px;
-  background:var(--nav-bg);
 }
 
     .btn{
@@ -409,11 +374,87 @@
       white-space: pre-wrap;
       overflow-wrap: anywhere;
     }
+    #connectedUsersBox{
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:12px;
+  padding:12px;
+  background:rgba(255,255,255,0.04);
+}
+
+#connectedUsersTitle{
+  font-weight:900;
+  font-size:12px;
+  opacity:.7;
+  margin-bottom:8px;
+}
+
+#connectedUsersList{
+  white-space:pre-line;
+  line-height:1.5;
+  font-size:14px;
+}
+
+#netBadge.off{
+  border-color: rgba(244,67,54,0.55);
+  background: rgba(244,67,54,0.18);
+}
+
+#netBadge.on{
+  border-color: rgba(76,175,80,0.55);
+  background: rgba(76,175,80,0.18);
+}
+
+/* footer éditeur toujours visible */
+#editor-container{
+  display:none;
+  position:fixed;
+  top:60px;
+  left:0;
+  right:0;
+  bottom:0;
+  background:#111;
+  z-index:20;
+  flex-direction:column;
+}
+
+#editor-toolbar{
+  flex:0 0 auto;
+}
+
+#editor-textarea{
+  flex:1 1 auto;
+  min-height:0;
+  width:100%;
+  background:#000;
+  color:#2196F3;
+  border:none;
+  font-family:monospace;
+  font-size:16px;
+  padding:20px;
+  box-sizing:border-box;
+  resize:none;
+}
+
+.editor-footer{
+  position:sticky;
+  bottom:0;
+  z-index:2;
+  flex:0 0 auto;
+  min-height:74px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:20px;
+  background:var(--nav-bg);
+  padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 8px);
+  border-top:1px solid rgba(255,255,255,0.08);
+}
   </style>
 </head>
 
 <body>
   <div id="settingsFixedWrap">
+    <span id="netBadge" class="version-badge">OFFLINE</span>
     <span id="leaderBadge" class="version-badge">SUIVEUR</span>
     <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
     <span id="settingsUserLabel"></span>
@@ -542,6 +583,11 @@
         <button class="btn" onclick="exportBackup()">⬇️ Exporter sauvegarde</button>
         <button class="btn" onclick="triggerImport()">⬆️ Importer sauvegarde</button>
         <input id="importFile" type="file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
+      
+        <div id="connectedUsersBox">
+          <div id="connectedUsersTitle">Connectés</div>
+          <div id="connectedUsersList">—</div>
+        </div>
       </div>
 
       <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end;">
@@ -591,6 +637,8 @@
 
     const settingsBackdrop = document.getElementById('settingsBackdrop');
     const settingsBtnFixed = document.getElementById('settingsBtnFixed');
+    const netBadge = document.getElementById('netBadge');
+const connectedUsersList = document.getElementById('connectedUsersList');
 
     const toastEl = document.getElementById('toast');
     let toastTimer = null;
@@ -680,6 +728,17 @@ function applyLeaderUI() {
       el.style.display = 'none';
     }
   });
+
+  function renderConnectedUsers(usersList) {
+  if (!connectedUsersList) return;
+
+  if (!Array.isArray(usersList) || !usersList.length) {
+    connectedUsersList.textContent = "Aucun utilisateur connecté";
+    return;
+  }
+
+  connectedUsersList.textContent = usersList.join("\n");
+}
 
   const badge = document.getElementById('leaderBadge');
   if (!badge) return;
@@ -777,11 +836,24 @@ function applyLeaderUI() {
 
     socket.on('connect', () => {
   settingsBtnFixed.style.borderColor = "#4CAF50";
+
+  if (netBadge) {
+    netBadge.textContent = "ONLINE";
+    netBadge.classList.remove('off');
+    netBadge.classList.add('on');
+  }
+
   if (currentUser) socket.emit('register-user', currentUser);
 });
 
 socket.on('disconnect', () => {
   settingsBtnFixed.style.borderColor = "#f44336";
+
+  if (netBadge) {
+    netBadge.textContent = "OFFLINE";
+    netBadge.classList.remove('on');
+    netBadge.classList.add('off');
+  }
 });
 
 socket.on('leader-state', (data) => {
@@ -798,6 +870,10 @@ socket.on('leader-state', (data) => {
 
 socket.on('leader-denied', (data) => {
   showToast(`Leader déjà pris par ${data?.leaderUserName || 'un autre appareil'}`);
+});
+
+socket.on('connected-users', (data) => {
+  renderConnectedUsers(data?.users || []);
 });
 
     async function fetchSongs() {
@@ -1008,6 +1084,38 @@ function openSong(idx) {
     function isViewerOpen() {
       return document.getElementById('viewer-container').style.display === 'block';
     }
+
+    function shouldBlockFollowerManualScroll(target) {
+  if (isLeader) return false;
+  if (!isViewerOpen()) return false;
+  if (isEditorOpen()) return false;
+  if (target && target.id === 'notesTextarea') return false;
+  return true;
+}
+
+viewerElement.addEventListener('wheel', (e) => {
+  if (shouldBlockFollowerManualScroll(e.target)) {
+    e.preventDefault();
+  }
+}, { passive:false });
+
+viewerElement.addEventListener('touchmove', (e) => {
+  if (shouldBlockFollowerManualScroll(e.target)) {
+    e.preventDefault();
+  }
+}, { passive:false });
+
+window.addEventListener('keydown', (e) => {
+  if (!shouldBlockFollowerManualScroll(document.activeElement)) return;
+
+  const blockedKeys = [
+    "ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "
+  ];
+
+  if (blockedKeys.includes(e.key)) {
+    e.preventDefault();
+  }
+}, { passive:false });
 
     viewerElement.addEventListener('touchstart', (e) => {
       if (!isViewerOpen() || isEditorOpen()) return;

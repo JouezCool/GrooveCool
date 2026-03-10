@@ -16,9 +16,19 @@ app.use(express.static('public', { etag: false, maxAge: 0 }));
 
 const PARTITIONS_DIR = path.join(__dirname, 'public', 'partitions');
 const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
-
 let leaderSocketId = null;
-let leaderUserName = "";
+let leaderUserName = null;
+const connectedUsers = new Map();
+
+function broadcastConnectedUsers() {
+  const uniqueUsers = [...new Set(
+    [...connectedUsers.values()]
+      .map(v => String(v || "").trim())
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity:'base' }));
+
+  io.emit('connected-users', { users: uniqueUsers });
+}
 
 function broadcastLeaderState() {
   io.emit('leader-state', {
@@ -75,6 +85,38 @@ app.post('/save-song', (req, res) => {
 
 io.on('connection', (socket) => {
   console.log('📱 connecté', socket.id);
+
+  socket.on('register-user', (userName) => {
+    const clean = String(userName || '').trim();
+    if (!clean) return;
+  
+    connectedUsers.set(socket.id, clean);
+    broadcastConnectedUsers();
+  
+    if (leaderSocketId) {
+      io.emit('leader-state', {
+        leaderSocketId,
+        leaderUserName
+      });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    const wasLeader = socket.id === leaderSocketId;
+  
+    connectedUsers.delete(socket.id);
+    broadcastConnectedUsers();
+  
+    if (wasLeader) {
+      leaderSocketId = null;
+      leaderUserName = null;
+      io.emit('leader-state', {
+        leaderSocketId: null,
+        leaderUserName: null
+      });
+      io.emit('apply-autoscroll', { active:false, speed:50 });
+    }
+  });
 
   // envoie l’état leader au nouvel arrivant
   broadcastLeaderState();
