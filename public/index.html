@@ -845,22 +845,34 @@ socket.on('leader-denied', (data) => {
   }
 }
 
-    function openSong(idx) {
-      if (idx < 0 || idx >= allSongs.length) return;
-      currentIndex = idx;
-      currentFileName = allSongs[idx];
+function openSong(idx) {
+  if (idx < 0 || idx >= allSongs.length) return;
 
-      updateBanner.style.display = 'none';
-      notesPanel.style.display = 'none';
+  // ✅ stop local immédiat
+  stopAutoScroll();
 
-      document.getElementById('library').style.display = 'none';
-      document.getElementById('viewer-container').style.display = 'block';
+  currentIndex = idx;
+  currentFileName = allSongs[idx];
 
-      if (isLeader) socket.emit('change-song', currentFileName);
+  updateBanner.style.display = 'none';
+  notesPanel.style.display = 'none';
 
-      loadSong(currentFileName);
-      setTimeout(loadNotes, 10);
-    }
+  document.getElementById('library').style.display = 'none';
+  document.getElementById('viewer-container').style.display = 'block';
+
+  // ✅ si leader, on force aussi l'arrêt chez les autres
+  if (isLeader) {
+    socket.emit('sync-autoscroll', {
+      active: false,
+      speed: Number(speedInput.value) || 50
+    });
+
+    socket.emit('change-song', currentFileName);
+  }
+
+  loadSong(currentFileName);
+  setTimeout(loadNotes, 10);
+}
 
     async function loadSong(f) {
       const res = await fetch('/partitions/' + f);
@@ -1097,13 +1109,51 @@ socket.on('leader-denied', (data) => {
       }
     });
 
-    function updateFontSize(delta) { fontSize += delta; renderChordPro(); renderGrids(); }
-    function updateTranspose(dir) {
-      transposeValue += dir;
-      document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
-      renderChordPro();
-      renderGrids();
-    }
+    socket.on('apply-fontsize', value => {
+  if (isLeader) return;
+
+  const v = Number(value);
+  if (!isFinite(v)) return;
+
+  fontSize = v;
+  renderChordPro();
+  renderGrids();
+});
+
+socket.on('apply-transpose', value => {
+  if (isLeader) return;
+
+  const v = Number(value);
+  if (!isFinite(v)) return;
+
+  transposeValue = v;
+  document.getElementById('transposeVal').innerText =
+    (transposeValue > 0 ? '+' : '') + transposeValue;
+
+  renderChordPro();
+  renderGrids();
+});
+
+    function updateFontSize(delta) {
+  fontSize += delta;
+  renderChordPro();
+  renderGrids();
+
+  if (isLeader) {
+    socket.emit('leader-fontsize', fontSize);
+  }
+}
+
+function updateTranspose(dir) {
+  transposeValue += dir;
+  document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
+  renderChordPro();
+  renderGrids();
+
+  if (isLeader) {
+    socket.emit('leader-transpose', transposeValue);
+  }
+}
 
     function toggleChordStyle() {
       chordStyle = (chordStyle === 'latin') ? 'american' : 'latin';
@@ -1365,11 +1415,12 @@ socket.on('leader-denied', (data) => {
     }
 
     socket.on('load-song', f => {
-      if (!isLeader) {
-        const idx = allSongs.indexOf(f);
-        if (idx !== -1) openSong(idx);
-      }
-    });
+  if (!isLeader) {
+    stopAutoScroll(); // ✅ sécurité supplémentaire
+    const idx = allSongs.indexOf(f);
+    if (idx !== -1) openSong(idx);
+  }
+});
 
     function openEditor() {
   stopAutoScroll();

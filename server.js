@@ -129,6 +129,14 @@ io.on('connection', (socket) => {
     });
   });
 
+  socket.on('leader-fontsize', (value) => {
+    socket.broadcast.emit('apply-fontsize', value);
+  });
+  
+  socket.on('leader-transpose', (value) => {
+    socket.broadcast.emit('apply-transpose', value);
+  });
+
   socket.on('disconnect', () => {
     console.log('❌ déconnecté', socket.id);
 
