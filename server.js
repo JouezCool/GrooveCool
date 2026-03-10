@@ -137,6 +137,10 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('apply-transpose', value);
   });
 
+  socket.on('leader-speed', (value) => {
+    socket.broadcast.emit('apply-speed', value);
+  });
+
   socket.on('disconnect', () => {
     console.log('❌ déconnecté', socket.id);
 

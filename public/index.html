@@ -454,7 +454,7 @@
     
       <div class="controls-group leader-only">
         <button class="btn" id="playBtn" onclick="toggleAutoScroll(true)">▶</button>
-        <input type="range" id="scrollSpeed" min="1" max="95" value="50">
+        <input type="range" id="scrollSpeed" min="1" max="95" value="50" oninput="handleSpeedChange()">
       </div>
     
       <div class="controls-group leader-only">
@@ -1100,6 +1100,19 @@ function openSong(idx) {
       }
     }
 
+    function handleSpeedChange() {
+  if (!isLeader) return;
+
+  socket.emit('leader-speed', Number(speedInput.value) || 50);
+
+  if (isScrolling) {
+    socket.emit('sync-autoscroll', {
+      active: true,
+      speed: Number(speedInput.value) || 50
+    });
+  }
+}
+
     socket.on('apply-autoscroll', d => {
       if (!isLeader) {
         speedInput.value = d.speed;
@@ -1132,6 +1145,15 @@ socket.on('apply-transpose', value => {
 
   renderChordPro();
   renderGrids();
+});
+
+socket.on('apply-speed', value => {
+  if (isLeader) return;
+
+  const v = Number(value);
+  if (!isFinite(v)) return;
+
+  speedInput.value = v;
 });
 
     function updateFontSize(delta) {
