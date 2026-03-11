@@ -31,32 +31,6 @@
       --comment-text:#000;
     }
 
-    .pu-block{
-      margin:14px 0;
-      border-left:4px solid var(--pu-border);
-      padding:10px 12px;
-      border-radius:12px;
-      background: var(--pu-bg);
-      color: var(--pu-text);
-    }
-
-    .pu-label{
-      font-family:sans-serif;
-      font-weight:900;
-      font-size:12px;
-      opacity:.65;
-      margin-bottom:8px;
-    }
-
-    .pu-pre{
-      margin:0;
-      white-space:pre;
-      overflow-x:auto;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
-      font-size: calc(14px * var(--song-zoom, 1));
-      line-height: calc(17.5px * var(--song-zoom, 1));
-    }
-
     body{
       font-family:sans-serif;
       background:var(--bg);
@@ -64,6 +38,37 @@
       margin:0;
       overflow:hidden;
       overscroll-behavior-x:none;
+    }
+
+    .version-badge{
+      font-weight:900;
+      font-size:12px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.18);
+      background:rgba(255,255,255,0.08);
+      color:var(--text);
+      white-space:nowrap;
+    }
+
+    .version-badge.perso{
+      border-color: rgba(59,130,246,0.55);
+      background: rgba(59,130,246,0.18);
+    }
+
+    .version-badge.off{
+      border-color: rgba(255,152,0,0.55);
+      background: rgba(255,152,0,0.18);
+    }
+
+    #netBadge.off{
+      border-color: rgba(244,67,54,0.55);
+      background: rgba(244,67,54,0.18);
+    }
+
+    #netBadge.on{
+      border-color: rgba(76,175,80,0.55);
+      background: rgba(76,175,80,0.18);
     }
 
     #settingsFixedWrap{
@@ -74,6 +79,7 @@
       display:flex;
       align-items:center;
       gap:8px;
+      max-width:calc(100vw - 20px);
     }
 
     #settingsBtnFixed{
@@ -95,7 +101,7 @@
       border:1px solid rgba(255,255,255,0.15);
       padding:8px 10px;
       border-radius:10px;
-      max-width:38vw;
+      max-width:120px;
       overflow:hidden;
       text-overflow:ellipsis;
       white-space:nowrap;
@@ -129,6 +135,7 @@
       justify-content:center;
       padding:18px;
     }
+
     #userModal{
       width:min(560px,100%);
       background:#111;
@@ -136,22 +143,27 @@
       border-radius:14px;
       overflow:hidden;
     }
+
     #userModal header{
       padding:14px 16px;
       border-bottom:1px solid #2a2a2a;
       background:#161616;
     }
+
     #userModal header h3{
       margin:0;
       font-size:14px;
       color:#fff;
     }
+
     #userModal .content{ padding:14px 16px; }
+
     #userModal .grid{
       display:grid;
       grid-template-columns:1fr 1fr;
       gap:10px;
     }
+
     .user-choice{
       border:1px solid #333;
       background:#0b0b0b;
@@ -163,7 +175,9 @@
       color:#fff;
       user-select:none;
     }
+
     .user-choice:hover{ background:#101010; }
+
     #userModal .actions{
       padding:14px 16px;
       border-top:1px solid #2a2a2a;
@@ -179,20 +193,22 @@
       display:block;
       -webkit-overflow-scrolling:touch;
     }
+
     .lib-header{
-  padding:20px;
-  padding-right:240px; /* laisse la place au bloc fixe à droite */
-  background:var(--nav-bg);
-  border-bottom:2px solid var(--accent);
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  position:sticky;
-  top:0;
-  z-index:5;
-  color:var(--nav-text);
-  gap:12px;
-}
+      padding:20px;
+      padding-right:420px;
+      background:var(--nav-bg);
+      border-bottom:2px solid var(--accent);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      position:sticky;
+      top:0;
+      z-index:5;
+      color:var(--nav-text);
+      gap:12px;
+    }
+
     .song-item{
       padding:20px;
       border-bottom:1px solid #222;
@@ -212,6 +228,7 @@
       background:var(--bg);
       z-index:10;
     }
+
     nav{
       display:flex;
       background:var(--nav-bg);
@@ -223,6 +240,7 @@
       border-bottom:1px solid var(--panel-border);
       flex-wrap:wrap;
     }
+
     .controls-group{
       display:flex;
       align-items:center;
@@ -246,7 +264,9 @@
       gap:10px;
       color:var(--text);
     }
+
     #updateBanner .msg{ color:var(--text); }
+
     #updateBanner .btn-small{
       padding:8px 10px;
       border-radius:6px;
@@ -259,6 +279,7 @@
       border-bottom:1px solid var(--panel-border);
       padding:12px;
     }
+
     #notesTextarea{
       width:100%;
       min-height:120px;
@@ -282,6 +303,7 @@
     }
 
     .block{ margin-bottom:26px; }
+
     .chordline,.lyricline{
       white-space:pre-wrap;
       word-break:break-word;
@@ -289,9 +311,11 @@
       line-height:1.6;
       margin:0;
     }
+
     .chordline{ color:var(--accent); font-weight:bold; }
 
     .commentwrap{ margin:12px 0; }
+
     .commentline{
       display:inline-block;
       background:var(--comment-bg);
@@ -313,17 +337,94 @@
       color:var(--chorus-text);
     }
 
-#editor-warning{
-  flex:0 0 auto;
-  background:rgba(255, 87, 34, 0.14);
-  border-bottom:1px solid rgba(255, 87, 34, 0.4);
-  color:#ffd7c7;
-  padding:12px 14px;
-  font-size:13px;
-  font-weight:800;
-  line-height:1.35;
-  text-transform:uppercase;
-}
+    .pu-block{
+      margin:14px 0;
+      border-left:4px solid var(--pu-border);
+      padding:10px 12px;
+      border-radius:12px;
+      background: var(--pu-bg);
+      color: var(--pu-text);
+    }
+
+    .pu-label{
+      font-family:sans-serif;
+      font-weight:900;
+      font-size:12px;
+      opacity:.65;
+      margin-bottom:8px;
+    }
+
+    .pu-pre{
+      margin:0;
+      white-space:pre;
+      overflow-x:auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      font-size: calc(14px * var(--song-zoom, 1));
+      line-height: calc(17.5px * var(--song-zoom, 1));
+    }
+
+    #editor-container{
+      display:none;
+      position:fixed;
+      top:60px;
+      left:0;
+      right:0;
+      bottom:0;
+      background:#111;
+      z-index:20;
+      flex-direction:column;
+    }
+
+    #editor-warning{
+      flex:0 0 auto;
+      background:rgba(255, 87, 34, 0.14);
+      border-bottom:1px solid rgba(255, 87, 34, 0.4);
+      color:#ffd7c7;
+      padding:12px 14px;
+      font-size:13px;
+      font-weight:800;
+      line-height:1.35;
+      text-transform:uppercase;
+    }
+
+    #editor-toolbar{
+      flex:0 0 auto;
+      padding:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      border-bottom:1px solid #2a2a2a;
+      background:rgba(255,255,255,0.03);
+    }
+
+    #editor-textarea{
+      flex:1 1 auto;
+      min-height:0;
+      width:100%;
+      background:#000;
+      color:#2196F3;
+      border:none;
+      font-family:monospace;
+      font-size:16px;
+      padding:20px;
+      box-sizing:border-box;
+      resize:none;
+    }
+
+    .editor-footer{
+      position:sticky;
+      bottom:0;
+      z-index:2;
+      flex:0 0 auto;
+      min-height:74px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:20px;
+      background:var(--nav-bg);
+      padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 8px);
+      border-top:1px solid rgba(255,255,255,0.08);
+    }
 
     .btn{
       cursor:pointer;
@@ -335,12 +436,14 @@
       font-size:13px;
       font-weight:bold;
     }
+
     .btn-blue{ border-color:var(--edit); color:var(--edit); }
+
     .active-btn{ background:#444; color:#fff; }
 
     .leader-only{
-  display:none;
-}
+      display:none;
+    }
 
     #songContent { position: relative; }
 
@@ -374,88 +477,33 @@
       white-space: pre-wrap;
       overflow-wrap: anywhere;
     }
+
     #connectedUsersBox{
-  border:1px solid rgba(255,255,255,0.12);
-  border-radius:12px;
-  padding:12px;
-  background:rgba(255,255,255,0.04);
-}
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:12px;
+      padding:12px;
+      background:rgba(255,255,255,0.04);
+    }
 
-#connectedUsersTitle{
-  font-weight:900;
-  font-size:12px;
-  opacity:.7;
-  margin-bottom:8px;
-}
+    #connectedUsersTitle{
+      font-weight:900;
+      font-size:12px;
+      opacity:.7;
+      margin-bottom:8px;
+    }
 
-#connectedUsersList{
-  white-space:pre-line;
-  line-height:1.5;
-  font-size:14px;
-}
-
-#netBadge.off{
-  border-color: rgba(244,67,54,0.55);
-  background: rgba(244,67,54,0.18);
-}
-
-#netBadge.on{
-  border-color: rgba(76,175,80,0.55);
-  background: rgba(76,175,80,0.18);
-}
-
-/* footer éditeur toujours visible */
-#editor-container{
-  display:none;
-  position:fixed;
-  top:60px;
-  left:0;
-  right:0;
-  bottom:0;
-  background:#111;
-  z-index:20;
-  flex-direction:column;
-}
-
-#editor-toolbar{
-  flex:0 0 auto;
-}
-
-#editor-textarea{
-  flex:1 1 auto;
-  min-height:0;
-  width:100%;
-  background:#000;
-  color:#2196F3;
-  border:none;
-  font-family:monospace;
-  font-size:16px;
-  padding:20px;
-  box-sizing:border-box;
-  resize:none;
-}
-
-.editor-footer{
-  position:sticky;
-  bottom:0;
-  z-index:2;
-  flex:0 0 auto;
-  min-height:74px;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  gap:20px;
-  background:var(--nav-bg);
-  padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 8px);
-  border-top:1px solid rgba(255,255,255,0.08);
-}
+    #connectedUsersList{
+      white-space:pre-line;
+      line-height:1.5;
+      font-size:14px;
+    }
   </style>
 </head>
 
 <body>
   <div id="settingsFixedWrap">
-    <span id="netBadge" class="version-badge">OFFLINE</span>
-    <span id="leaderBadge" class="version-badge">SUIVEUR</span>
+    <span id="netBadge" class="version-badge off">OFFLINE</span>
+    <span id="leaderBadge" class="version-badge off">SUIVEUR</span>
     <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
     <span id="settingsUserLabel"></span>
   </div>
@@ -492,23 +540,23 @@
   <div id="viewer-container">
     <nav>
       <button class="btn" onclick="closeViewer()">⬅</button>
-    
+
       <div class="controls-group leader-only">
         <button class="btn" id="playBtn" onclick="toggleAutoScroll(true)">▶</button>
         <input type="range" id="scrollSpeed" min="1" max="95" value="50" oninput="handleSpeedChange()">
       </div>
-    
+
       <div class="controls-group leader-only">
         <button class="btn" onclick="updateFontSize(-2)">A-</button>
         <button class="btn" onclick="updateFontSize(2)">A+</button>
       </div>
-    
+
       <div class="controls-group leader-only">
         <button class="btn" onclick="updateTranspose(-1)">-</button>
         <span id="transposeVal" style="min-width:20px; text-align:center">0</span>
         <button class="btn" onclick="updateTranspose(1)">+</button>
       </div>
-    
+
       <button class="btn" onclick="toggleNotes()">NOTES</button>
       <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
     </nav>
@@ -535,34 +583,23 @@
     <div id="editor-warning">
       ATTENTION : TOUT CE QUE TU MODIFIES ICI MODIFIE DÉFINITIVEMENT LA VERSION COMMUNE DU MORCEAU POUR TOUT LE MONDE.
     </div>
-  
-    <div id="editor-toolbar" style="
-      padding:10px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      border-bottom:1px solid #2a2a2a;
-      background:rgba(255,255,255,0.03);
-    ">
+
+    <div id="editor-toolbar">
       <button class="btn" onclick="insertTemplatePU()">+ {pu}</button>
       <button class="btn" onclick="insertAtCursor('{soc}\n')">+ {soc}</button>
       <button class="btn" onclick="insertAtCursor('\n{eoc}\n')">+ {eoc}</button>
       <button class="btn" onclick="insertTemplateComment()">+ {c:}</button>
       <button class="btn" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
-  
+
       <div style="flex:1"></div>
-  
-      <div id="chordBank" style="
-        display:flex;
-        flex-wrap:wrap;
-        gap:6px;
-        align-items:center;
-      "></div>
+
+      <div id="chordBank" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;"></div>
     </div>
 
     <textarea id="editor-textarea" spellcheck="false"></textarea>
+
     <div class="editor-footer">
-      <button class="btn" onclick="closeEditor()" style="border-color: #ff5252; color: #ff5252;">ANNULER</button>
+      <button class="btn" onclick="closeEditor()" style="border-color:#ff5252; color:#ff5252;">ANNULER</button>
       <button class="btn btn-blue" onclick="saveEditor()">ENREGISTRER</button>
     </div>
   </div>
@@ -583,7 +620,7 @@
         <button class="btn" onclick="exportBackup()">⬇️ Exporter sauvegarde</button>
         <button class="btn" onclick="triggerImport()">⬆️ Importer sauvegarde</button>
         <input id="importFile" type="file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
-      
+
         <div id="connectedUsersBox">
           <div id="connectedUsersTitle">Connectés</div>
           <div id="connectedUsersList">—</div>
@@ -603,54 +640,47 @@
     let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
 
     let isRemoteScrolling = false;
-
     let isScrolling = false;
     let rafId = null;
     let lastRafTime = 0;
     let scrollCarry = 0;
     let remoteScrollRaf = null;
     let pendingRemoteScrollTop = 0;
+    let currentSongZoom = 1;
 
     const viewerElement = document.getElementById('viewer');
     const songContentEl = document.getElementById('songContent');
     const speedInput = document.getElementById('scrollSpeed');
     const updateBanner = document.getElementById('updateBanner');
-
     const notesPanel = document.getElementById('notesPanel');
     const notesTextarea = document.getElementById('notesTextarea');
-
     const songSearchInput = document.getElementById('songSearch');
     const songCountEl = document.getElementById('songCount');
+    const userOverlay = document.getElementById('userOverlay');
+    const userGrid = document.getElementById('userGrid');
+    const settingsBackdrop = document.getElementById('settingsBackdrop');
+    const settingsBtnFixed = document.getElementById('settingsBtnFixed');
+    const netBadge = document.getElementById('netBadge');
+    const connectedUsersList = document.getElementById('connectedUsersList');
+    const toastEl = document.getElementById('toast');
 
     let touchStartX = 0, touchStartY = 0;
     const SWIPE_MIN_X = 110;
     const SWIPE_RATIO = 1.4;
 
-    let globalPinCache = "";
-
     const DEFAULT_USERS = ["Nemo","Estelle","Gillou","Bubu","Christian","Christophe"];
     let currentUser = "";
     let users = [];
-
-    const userOverlay = document.getElementById('userOverlay');
-    const userGrid = document.getElementById('userGrid');
-
-    const settingsBackdrop = document.getElementById('settingsBackdrop');
-    const settingsBtnFixed = document.getElementById('settingsBtnFixed');
-    const netBadge = document.getElementById('netBadge');
-const connectedUsersList = document.getElementById('connectedUsersList');
-
-    const toastEl = document.getElementById('toast');
     let toastTimer = null;
+    let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin';
+    let themeMode = localStorage.getItem('bandapp_theme') || 'dark';
+
     function showToast(msg) {
       if (toastTimer) clearTimeout(toastTimer);
       toastEl.textContent = msg;
       toastEl.style.display = 'block';
       toastTimer = setTimeout(() => { toastEl.style.display = 'none'; }, 1700);
     }
-
-    let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin';
-    let themeMode = localStorage.getItem('bandapp_theme') || 'dark';
 
     function applyTheme() {
       const root = document.documentElement;
@@ -696,63 +726,63 @@ const connectedUsersList = document.getElementById('connectedUsersList');
       settingsBackdrop.style.display = 'flex';
     }
 
+    function closeSettings() {
+      settingsBackdrop.style.display = 'none';
+    }
+
     function openUserFromSettings() {
       closeSettings();
       setTimeout(() => openUserPicker(true), 50);
     }
 
-    function closeSettings() {
-      settingsBackdrop.style.display = 'none';
-    }
-
     function syncSettingsUI() {
-  const lb = document.getElementById('settingsLeaderBtn');
-  if (lb) lb.innerText = isLeader ? "Quitter le mode Leader" : "Devenir leader";
+      const lb = document.getElementById('settingsLeaderBtn');
+      if (lb) lb.innerText = isLeader ? "Quitter le mode Leader" : "Devenir leader";
 
-  const cb = document.getElementById('settingsChordBtn');
-  if (cb) cb.innerText = (chordStyle === 'latin') ? "Accords: Do" : "Accords: C";
+      const cb = document.getElementById('settingsChordBtn');
+      if (cb) cb.innerText = (chordStyle === 'latin') ? "Accords: Do" : "Accords: C";
 
-  const tb = document.getElementById('settingsThemeBtn');
-  if (tb) tb.innerText = (themeMode === 'dark') ? "Thème: Sombre" : "Thème: Clair";
-}
-
-function applyLeaderUI() {
-  document.querySelectorAll('.leader-only').forEach(el => {
-    if (isLeader) {
-      if (el.classList.contains('controls-group')) {
-        el.style.display = 'flex';
-      } else {
-        el.style.display = '';
-      }
-    } else {
-      el.style.display = 'none';
+      const tb = document.getElementById('settingsThemeBtn');
+      if (tb) tb.innerText = (themeMode === 'dark') ? "Thème: Sombre" : "Thème: Clair";
     }
-  });
 
-  function renderConnectedUsers(usersList) {
-  if (!connectedUsersList) return;
+    function renderConnectedUsers(usersList) {
+      if (!connectedUsersList) return;
 
-  if (!Array.isArray(usersList) || !usersList.length) {
-    connectedUsersList.textContent = "Aucun utilisateur connecté";
-    return;
-  }
+      if (!Array.isArray(usersList) || !usersList.length) {
+        connectedUsersList.textContent = "Aucun utilisateur connecté";
+        return;
+      }
 
-  connectedUsersList.textContent = usersList.join("\n");
-}
+      connectedUsersList.textContent = usersList.join("\n");
+    }
 
-  const badge = document.getElementById('leaderBadge');
-  if (!badge) return;
+    function applyLeaderUI() {
+      document.querySelectorAll('.leader-only').forEach(el => {
+        if (isLeader) {
+          if (el.classList.contains('controls-group')) {
+            el.style.display = 'flex';
+          } else {
+            el.style.display = '';
+          }
+        } else {
+          el.style.display = 'none';
+        }
+      });
 
-  if (isLeader) {
-    badge.textContent = "LEADER";
-    badge.classList.remove('off');
-    badge.classList.add('perso');
-  } else {
-    badge.textContent = "FOLLOW";
-    badge.classList.remove('perso');
-    badge.classList.add('off');
-  }
-}
+      const badge = document.getElementById('leaderBadge');
+      if (!badge) return;
+
+      if (isLeader) {
+        badge.textContent = "LEADER";
+        badge.classList.remove('off');
+        badge.classList.add('perso');
+      } else {
+        badge.textContent = "FOLLOW";
+        badge.classList.remove('perso');
+        badge.classList.add('off');
+      }
+    }
 
     function loadUsersList() {
       const savedList = localStorage.getItem('bandapp_users');
@@ -781,27 +811,27 @@ function applyLeaderUI() {
     }
 
     function setCurrentUser(name, fromPicker) {
-  currentUser = String(name || "").trim();
-  if (!currentUser) return;
+      currentUser = String(name || "").trim();
+      if (!currentUser) return;
 
-  localStorage.setItem('bandapp_currentUser', currentUser);
+      localStorage.setItem('bandapp_currentUser', currentUser);
 
-  const lab = document.getElementById('settingsUserLabel');
-  if (lab) lab.textContent = currentUser;
+      const lab = document.getElementById('settingsUserLabel');
+      if (lab) lab.textContent = currentUser;
 
-  socket.emit('register-user', currentUser);
+      socket.emit('register-user', currentUser);
 
-  if (currentFileName) {
-    stopAutoScroll();
-    loadSong(currentFileName);
-    loadNotes();
-  }
+      if (currentFileName) {
+        stopAutoScroll();
+        loadSong(currentFileName);
+        loadNotes();
+      }
 
-  if (fromPicker) {
-    userOverlay.style.display = 'none';
-    showToast(`Bienvenue ${currentUser}`);
-  }
-}
+      if (fromPicker) {
+        userOverlay.style.display = 'none';
+        showToast(`Bienvenue ${currentUser}`);
+      }
+    }
 
     function openUserPicker(force) {
       const saved = localStorage.getItem('bandapp_currentUser') || "";
@@ -835,46 +865,46 @@ function applyLeaderUI() {
     }
 
     socket.on('connect', () => {
-  settingsBtnFixed.style.borderColor = "#4CAF50";
+      settingsBtnFixed.style.borderColor = "#4CAF50";
 
-  if (netBadge) {
-    netBadge.textContent = "ONLINE";
-    netBadge.classList.remove('off');
-    netBadge.classList.add('on');
-  }
+      if (netBadge) {
+        netBadge.textContent = "ONLINE";
+        netBadge.classList.remove('off');
+        netBadge.classList.add('on');
+      }
 
-  if (currentUser) socket.emit('register-user', currentUser);
-});
+      if (currentUser) socket.emit('register-user', currentUser);
+    });
 
-socket.on('disconnect', () => {
-  settingsBtnFixed.style.borderColor = "#f44336";
+    socket.on('disconnect', () => {
+      settingsBtnFixed.style.borderColor = "#f44336";
 
-  if (netBadge) {
-    netBadge.textContent = "OFFLINE";
-    netBadge.classList.remove('on');
-    netBadge.classList.add('off');
-  }
-});
+      if (netBadge) {
+        netBadge.textContent = "OFFLINE";
+        netBadge.classList.remove('on');
+        netBadge.classList.add('off');
+      }
+    });
 
-socket.on('leader-state', (data) => {
-  const wasLeader = isLeader;
-  isLeader = data?.leaderSocketId === socket.id;
+    socket.on('connected-users', (data) => {
+      renderConnectedUsers(data?.users || []);
+    });
 
-  if (wasLeader && !isLeader) {
-    stopAutoScroll();
-  }
+    socket.on('leader-state', (data) => {
+      const wasLeader = isLeader;
+      isLeader = data?.leaderSocketId === socket.id;
 
-  applyLeaderUI();
-  syncSettingsUI();
-});
+      if (wasLeader && !isLeader) {
+        stopAutoScroll();
+      }
 
-socket.on('leader-denied', (data) => {
-  showToast(`Leader déjà pris par ${data?.leaderUserName || 'un autre appareil'}`);
-});
+      applyLeaderUI();
+      syncSettingsUI();
+    });
 
-socket.on('connected-users', (data) => {
-  renderConnectedUsers(data?.users || []);
-});
+    socket.on('leader-denied', (data) => {
+      showToast(`Leader déjà pris par ${data?.leaderUserName || 'un autre appareil'}`);
+    });
 
     async function fetchSongs() {
       const res = await fetch('/list-songs');
@@ -914,41 +944,39 @@ socket.on('connected-users', (data) => {
     }
 
     function toggleLeader() {
-  if (isLeader) {
-    socket.emit('release-leader');
-  } else {
-    socket.emit('request-leader');
-  }
-}
+      if (isLeader) {
+        socket.emit('release-leader');
+      } else {
+        socket.emit('request-leader');
+      }
+    }
 
-function openSong(idx) {
-  if (idx < 0 || idx >= allSongs.length) return;
+    function openSong(idx) {
+      if (idx < 0 || idx >= allSongs.length) return;
 
-  // ✅ stop local immédiat
-  stopAutoScroll();
+      stopAutoScroll();
 
-  currentIndex = idx;
-  currentFileName = allSongs[idx];
+      currentIndex = idx;
+      currentFileName = allSongs[idx];
 
-  updateBanner.style.display = 'none';
-  notesPanel.style.display = 'none';
+      updateBanner.style.display = 'none';
+      notesPanel.style.display = 'none';
 
-  document.getElementById('library').style.display = 'none';
-  document.getElementById('viewer-container').style.display = 'block';
+      document.getElementById('library').style.display = 'none';
+      document.getElementById('viewer-container').style.display = 'block';
 
-  // ✅ si leader, on force aussi l'arrêt chez les autres
-  if (isLeader) {
-    socket.emit('sync-autoscroll', {
-      active: false,
-      speed: Number(speedInput.value) || 50
-    });
+      if (isLeader) {
+        socket.emit('sync-autoscroll', {
+          active: false,
+          speed: Number(speedInput.value) || 50
+        });
 
-    socket.emit('change-song', currentFileName);
-  }
+        socket.emit('change-song', currentFileName);
+      }
 
-  loadSong(currentFileName);
-  setTimeout(loadNotes, 10);
-}
+      loadSong(currentFileName);
+      setTimeout(loadNotes, 10);
+    }
 
     async function loadSong(f) {
       const res = await fetch('/partitions/' + f);
@@ -962,6 +990,14 @@ function openSong(idx) {
       updateBanner.style.display = 'none';
     }
 
+    socket.on('load-song', f => {
+      if (!isLeader) {
+        stopAutoScroll();
+        const idx = allSongs.indexOf(f);
+        if (idx !== -1) openSong(idx);
+      }
+    });
+
     function normName(s) {
       return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
     }
@@ -973,7 +1009,10 @@ function openSong(idx) {
       if (sameSong) updateBanner.style.display = 'flex';
     });
 
-    function dismissUpdate() { updateBanner.style.display = 'none'; }
+    function dismissUpdate() {
+      updateBanner.style.display = 'none';
+    }
+
     function reloadCurrentSong() {
       stopAutoScroll();
       loadSong(currentFileName);
@@ -983,20 +1022,24 @@ function openSong(idx) {
       const u = currentUser || "unknown";
       return "notes:" + u + ":" + fileName;
     }
+
     function loadNotes() {
       if (!currentFileName) return;
       const val = localStorage.getItem(notesKey(currentFileName)) || "";
       notesTextarea.value = val;
     }
+
     function saveNotes() {
       if (!currentFileName) return;
       localStorage.setItem(notesKey(currentFileName), notesTextarea.value || "");
     }
+
     function toggleNotes() {
       const visible = notesPanel.style.display === "block";
       notesPanel.style.display = visible ? "none" : "block";
       if (!visible) loadNotes();
     }
+
     notesTextarea.addEventListener('input', saveNotes);
 
     function clamp01(x){ return Math.max(0, Math.min(1, x)); }
@@ -1079,43 +1122,35 @@ function openSong(idx) {
     });
 
     function isEditorOpen() {
-      return document.getElementById('editor-container').style.display === 'block';
+      return document.getElementById('editor-container').style.display === 'flex';
     }
+
     function isViewerOpen() {
       return document.getElementById('viewer-container').style.display === 'block';
     }
 
     function shouldBlockFollowerManualScroll(target) {
-  if (isLeader) return false;
-  if (!isViewerOpen()) return false;
-  if (isEditorOpen()) return false;
-  if (target && target.id === 'notesTextarea') return false;
-  return true;
-}
+      if (isLeader) return false;
+      if (!isViewerOpen()) return false;
+      if (isEditorOpen()) return false;
+      if (target && target.id === 'notesTextarea') return false;
+      return true;
+    }
 
-viewerElement.addEventListener('wheel', (e) => {
-  if (shouldBlockFollowerManualScroll(e.target)) {
-    e.preventDefault();
-  }
-}, { passive:false });
+    viewerElement.addEventListener('wheel', (e) => {
+      if (shouldBlockFollowerManualScroll(e.target)) e.preventDefault();
+    }, { passive:false });
 
-viewerElement.addEventListener('touchmove', (e) => {
-  if (shouldBlockFollowerManualScroll(e.target)) {
-    e.preventDefault();
-  }
-}, { passive:false });
+    viewerElement.addEventListener('touchmove', (e) => {
+      if (shouldBlockFollowerManualScroll(e.target)) e.preventDefault();
+    }, { passive:false });
 
-window.addEventListener('keydown', (e) => {
-  if (!shouldBlockFollowerManualScroll(document.activeElement)) return;
+    window.addEventListener('keydown', (e) => {
+      if (!shouldBlockFollowerManualScroll(document.activeElement)) return;
 
-  const blockedKeys = [
-    "ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "
-  ];
-
-  if (blockedKeys.includes(e.key)) {
-    e.preventDefault();
-  }
-}, { passive:false });
+      const blockedKeys = ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "];
+      if (blockedKeys.includes(e.key)) e.preventDefault();
+    }, { passive:false });
 
     viewerElement.addEventListener('touchstart', (e) => {
       if (!isViewerOpen() || isEditorOpen()) return;
@@ -1181,8 +1216,11 @@ window.addEventListener('keydown', (e) => {
     function stopAutoScroll() {
       if (!isScrolling) return;
       isScrolling = false;
-      document.getElementById('playBtn').innerText = "▶";
-      document.getElementById('playBtn').classList.remove('active-btn');
+      const playBtn = document.getElementById('playBtn');
+      if (playBtn) {
+        playBtn.innerText = "▶";
+        playBtn.classList.remove('active-btn');
+      }
       if (rafId) cancelAnimationFrame(rafId);
       rafId = null;
       lastRafTime = 0;
@@ -1209,17 +1247,17 @@ window.addEventListener('keydown', (e) => {
     }
 
     function handleSpeedChange() {
-  if (!isLeader) return;
+      if (!isLeader) return;
 
-  socket.emit('leader-speed', Number(speedInput.value) || 50);
+      socket.emit('leader-speed', Number(speedInput.value) || 50);
 
-  if (isScrolling) {
-    socket.emit('sync-autoscroll', {
-      active: true,
-      speed: Number(speedInput.value) || 50
-    });
-  }
-}
+      if (isScrolling) {
+        socket.emit('sync-autoscroll', {
+          active: true,
+          speed: Number(speedInput.value) || 50
+        });
+      }
+    }
 
     socket.on('apply-autoscroll', d => {
       if (!isLeader) {
@@ -1231,59 +1269,59 @@ window.addEventListener('keydown', (e) => {
     });
 
     socket.on('apply-fontsize', value => {
-  if (isLeader) return;
+      if (isLeader) return;
 
-  const v = Number(value);
-  if (!isFinite(v)) return;
+      const v = Number(value);
+      if (!isFinite(v)) return;
 
-  fontSize = v;
-  renderChordPro();
-  renderGrids();
-});
+      fontSize = v;
+      renderChordPro();
+      renderGrids();
+    });
 
-socket.on('apply-transpose', value => {
-  if (isLeader) return;
+    socket.on('apply-transpose', value => {
+      if (isLeader) return;
 
-  const v = Number(value);
-  if (!isFinite(v)) return;
+      const v = Number(value);
+      if (!isFinite(v)) return;
 
-  transposeValue = v;
-  document.getElementById('transposeVal').innerText =
-    (transposeValue > 0 ? '+' : '') + transposeValue;
+      transposeValue = v;
+      document.getElementById('transposeVal').innerText =
+        (transposeValue > 0 ? '+' : '') + transposeValue;
 
-  renderChordPro();
-  renderGrids();
-});
+      renderChordPro();
+      renderGrids();
+    });
 
-socket.on('apply-speed', value => {
-  if (isLeader) return;
+    socket.on('apply-speed', value => {
+      if (isLeader) return;
 
-  const v = Number(value);
-  if (!isFinite(v)) return;
+      const v = Number(value);
+      if (!isFinite(v)) return;
 
-  speedInput.value = v;
-});
+      speedInput.value = v;
+    });
 
     function updateFontSize(delta) {
-  fontSize += delta;
-  renderChordPro();
-  renderGrids();
+      fontSize += delta;
+      renderChordPro();
+      renderGrids();
 
-  if (isLeader) {
-    socket.emit('leader-fontsize', fontSize);
-  }
-}
+      if (isLeader) {
+        socket.emit('leader-fontsize', fontSize);
+      }
+    }
 
-function updateTranspose(dir) {
-  transposeValue += dir;
-  document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
-  renderChordPro();
-  renderGrids();
+    function updateTranspose(dir) {
+      transposeValue += dir;
+      document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
+      renderChordPro();
+      renderGrids();
 
-  if (isLeader) {
-    socket.emit('leader-transpose', transposeValue);
-  }
-}
+      if (isLeader) {
+        socket.emit('leader-transpose', transposeValue);
+      }
+    }
 
     function toggleChordStyle() {
       chordStyle = (chordStyle === 'latin') ? 'american' : 'latin';
@@ -1332,9 +1370,7 @@ function updateTranspose(dir) {
 
             const pos = lyricLine.length;
             if (chordLine.length < pos) chordLine += ' '.repeat(pos - chordLine.length);
-
             chordLine = chordLine.slice(0, pos) + chord + chordLine.slice(pos + chord.length);
-
             i = end + 1;
             continue;
           }
@@ -1349,9 +1385,9 @@ function updateTranspose(dir) {
       return { chordLine, lyricLine };
     }
 
-    function clearSongContent() { songContentEl.replaceChildren(); }
-
-    let currentSongZoom = 1;
+    function clearSongContent() {
+      songContentEl.replaceChildren();
+    }
 
     function parseZoomIpadDirective(line){
       const m = String(line || "").trim().match(/^\{zoom-ipad\s*:\s*([0-9]*\.?[0-9]+)\s*\}$/i);
@@ -1386,7 +1422,6 @@ function updateTranspose(dir) {
       const block = document.createElement('div');
       block.className = 'block';
       block.style.fontSize = (fontSize * currentSongZoom) + 'px';
-
       block.dataset.kind = 'lyric';
       if (anchorId) block.dataset.anchor = anchorId;
 
@@ -1400,15 +1435,11 @@ function updateTranspose(dir) {
 
       if (chordLine.trim().length > 0) block.appendChild(preChord);
       block.appendChild(preLyric);
-
       targetEl.appendChild(block);
     }
 
     function normAnchorText(s){
-      return String(s || "")
-        .toLowerCase()
-        .replace(/\s+/g, ' ')
-        .trim();
+      return String(s || "").toLowerCase().replace(/\s+/g, ' ').trim();
     }
 
     function hashDJB2(str){
@@ -1434,23 +1465,18 @@ function updateTranspose(dir) {
         lab.className = 'pu-label';
         lab.textContent = label;
         wrap.appendChild(lab);
-      } else {
-        if (linesCount > 10) {
-          const lab = document.createElement('div');
-          lab.className = 'pu-label';
-          lab.textContent = `SOLO ${label}`;
-          wrap.appendChild(lab);
-        }
+      } else if (linesCount > 10) {
+        const lab = document.createElement('div');
+        lab.className = 'pu-label';
+        lab.textContent = `SOLO ${label}`;
+        wrap.appendChild(lab);
       }
 
       const pre = document.createElement('pre');
       pre.className = 'pu-pre';
-
-      if (showContent) {
-        pre.textContent = text || "";
-      } else {
-        pre.textContent = Array.from({ length: linesCount }, () => " ").join("\n");
-      }
+      pre.textContent = showContent
+        ? (text || "")
+        : Array.from({ length: linesCount }, () => " ").join("\n");
 
       wrap.appendChild(pre);
       targetEl.appendChild(wrap);
@@ -1483,7 +1509,6 @@ function updateTranspose(dir) {
 
       for (const lineRaw of lines) {
         const line = String(lineRaw || "");
-
         if (parseZoomIpadDirective(line) !== null) continue;
 
         const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
@@ -1501,7 +1526,6 @@ function updateTranspose(dir) {
             const show = (currentUser || "").toLowerCase() === puUser.toLowerCase();
             const txt = puBuffer.join("\n");
             renderPUBlock(target, show, puUser, txt);
-
             inPU = false;
             puUser = "";
             puBuffer = [];
@@ -1525,6 +1549,7 @@ function updateTranspose(dir) {
           songContentEl.appendChild(chorusContainer);
           continue;
         }
+
         if (/\{eoc\s*:\s*\}/i.test(line) || /\{eoc\s*\}/i.test(line)) {
           inChorus = false;
           chorusContainer = null;
@@ -1532,80 +1557,72 @@ function updateTranspose(dir) {
         }
 
         const comment = line.match(/\{c\s*:\s*(.*?)\}/i);
-        if (comment) { addCommentLine(comment[1], target); continue; }
+        if (comment) {
+          addCommentLine(comment[1], target);
+          continue;
+        }
 
         const { chordLine, lyricLine } = parseChordProLine(line);
-
         const key = normAnchorText(lyricLine);
         renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
         const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
-
         addChordBlock(chordLine, lyricLine, target, anchorId);
       }
     }
 
-    socket.on('load-song', f => {
-  if (!isLeader) {
-    stopAutoScroll(); // ✅ sécurité supplémentaire
-    const idx = allSongs.indexOf(f);
-    if (idx !== -1) openSong(idx);
-  }
-});
-
     function openEditor() {
-  stopAutoScroll();
-  startEditor();
-}
+      stopAutoScroll();
+      startEditor();
+    }
 
-async function startEditor() {
-  const ta = document.getElementById('editor-textarea');
-  const res = await fetch('/partitions/' + currentFileName);
-  ta.value = await res.text();
+    async function startEditor() {
+      const ta = document.getElementById('editor-textarea');
+      const res = await fetch('/partitions/' + currentFileName);
+      ta.value = await res.text();
 
-  document.getElementById('editor-container').style.display = 'flex';
+      document.getElementById('editor-container').style.display = 'flex';
 
-  setTimeout(() => {
-    renderChordBankFromEditor();
-    ta.addEventListener('input', renderChordBankFromEditor);
-  }, 0);
-}
+      setTimeout(() => {
+        renderChordBankFromEditor();
+        ta.addEventListener('input', renderChordBankFromEditor);
+      }, 0);
+    }
 
-function closeEditor() {
-  const ta = document.getElementById('editor-textarea');
-  if (ta) ta.removeEventListener('input', renderChordBankFromEditor);
-
-  document.getElementById('editor-container').style.display = 'none';
-}
+    function closeEditor() {
+      const ta = document.getElementById('editor-textarea');
+      if (ta) ta.removeEventListener('input', renderChordBankFromEditor);
+      document.getElementById('editor-container').style.display = 'none';
+    }
 
     async function saveEditor() {
-  const newContent = document.getElementById('editor-textarea').value;
-  if (!currentFileName) return;
+      const newContent = document.getElementById('editor-textarea').value;
+      if (!currentFileName) return;
 
-  const pin = prompt("PIN requis pour enregistrer les modifications") || "";
-  const cleanPin = String(pin).trim();
-  if (!cleanPin) return;
+      const pin = prompt("PIN requis pour enregistrer les modifications") || "";
+      const cleanPin = String(pin).trim();
+      if (!cleanPin) return;
 
-  const res = await fetch('/save-song', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileName: currentFileName, content: newContent, pin: cleanPin })
-  });
+      const res = await fetch('/save-song', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: currentFileName, content: newContent, pin: cleanPin })
+      });
 
-  if (res.ok) {
-    currentRaw = newContent;
-    renderChordPro();
-    renderGrids();
-    closeEditor();
+      if (res.ok) {
+        currentRaw = newContent;
+        renderChordPro();
+        renderGrids();
+        closeEditor();
 
-    if (isLeader) socket.emit('change-song', currentFileName);
+        if (isLeader) socket.emit('change-song', currentFileName);
 
-    showToast("Modification enregistrée ✅");
-  } else if (res.status === 403) {
-    alert("PIN invalide");
-  } else {
-    alert("Erreur d'enregistrement");
-  }
-}
+        showToast("Modification enregistrée ✅");
+      } else if (res.status === 403) {
+        alert("PIN invalide");
+      } else {
+        alert("Erreur d'enregistrement");
+      }
+    }
 
     function closeViewer() {
       stopAutoScroll();
@@ -1644,9 +1661,7 @@ function closeEditor() {
         const text = String(g?.text || "").trim();
         if (!anchor || !text) continue;
 
-        const el = viewerElement.querySelector(
-          `[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`
-        );
+        const el = viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`);
         if (!el) continue;
 
         const top = el.offsetTop + el.offsetHeight + 6;
@@ -1741,7 +1756,6 @@ function closeEditor() {
 
           showToast("Sauvegarde importée ✅");
           setTimeout(() => location.reload(), 600);
-
         } catch (e) {
           console.error(e);
           alert("Erreur : impossible d'importer la sauvegarde.");
@@ -1801,10 +1815,10 @@ function closeEditor() {
     }
 
     applyTheme();
-initUsers();
-fetchSongs();
-syncSettingsUI();
-applyLeaderUI();
+    initUsers();
+    fetchSongs();
+    syncSettingsUI();
+    applyLeaderUI();
 
     if (songSearchInput) {
       songSearchInput.addEventListener('input', () => filterSongList(songSearchInput.value));
