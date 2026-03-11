@@ -28,6 +28,8 @@ fs.mkdirSync(SONG_SETTINGS_DIR, { recursive: true });
 
 let leaderSocketId = null;
 let leaderUserName = null;
+let leaderDeviceId = null;
+
 const connectedUsers = new Map();
 
 function isValidSongName(name) {
@@ -138,7 +140,7 @@ function writeSongSettings(fileName, settings) {
 function broadcastConnectedUsers() {
   const uniqueUsers = [...new Set(
     [...connectedUsers.values()]
-      .map(v => String(v || '').trim())
+      .map(v => String(v?.userName || '').trim())
       .filter(Boolean)
   )].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
 
@@ -316,15 +318,23 @@ io.on('connection', (socket) => {
   broadcastConnectedUsers();
   broadcastPlayedTonight();
 
-  socket.on('register-user', (userName) => {
-    const clean = String(userName || '').trim();
-    if (!clean) return;
+  socket.on('register-user', ({ userName, deviceId }) => {
+    const cleanUser = String(userName || '').trim();
+    const cleanDeviceId = String(deviceId || '').trim();
 
-    socket.data.userName = clean;
-    connectedUsers.set(socket.id, clean);
+    if (!cleanUser || !cleanDeviceId) return;
 
-    if (leaderSocketId === socket.id) {
-      leaderUserName = clean;
+    socket.data.userName = cleanUser;
+    socket.data.deviceId = cleanDeviceId;
+
+    connectedUsers.set(socket.id, {
+      userName: cleanUser,
+      deviceId: cleanDeviceId
+    });
+
+    if (leaderDeviceId && cleanDeviceId === leaderDeviceId) {
+      leaderSocketId = socket.id;
+      leaderUserName = cleanUser;
     }
 
     broadcastConnectedUsers();
@@ -350,9 +360,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('request-leader', () => {
-    if (!leaderSocketId || leaderSocketId === socket.id) {
+    const deviceId = String(socket.data.deviceId || '').trim();
+    const userName = String(socket.data.userName || 'Leader').trim();
+
+    if (!deviceId) return;
+
+    if (!leaderDeviceId || leaderDeviceId === deviceId || !leaderSocketId) {
       leaderSocketId = socket.id;
-      leaderUserName = socket.data.userName || "Leader";
+      leaderDeviceId = deviceId;
+      leaderUserName = userName;
       broadcastLeaderState();
     } else {
       socket.emit('leader-denied', { leaderUserName });
@@ -362,6 +378,7 @@ io.on('connection', (socket) => {
   socket.on('release-leader', () => {
     if (leaderSocketId === socket.id) {
       leaderSocketId = null;
+      leaderDeviceId = null;
       leaderUserName = "";
       broadcastLeaderState();
       io.emit('apply-autoscroll', { active: false, speed: 50 });
@@ -413,7 +430,6 @@ io.on('connection', (socket) => {
 
     if (wasLeader) {
       leaderSocketId = null;
-      leaderUserName = "";
       broadcastLeaderState();
       io.emit('apply-autoscroll', { active: false, speed: 50 });
     }
