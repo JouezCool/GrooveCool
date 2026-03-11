@@ -58,6 +58,27 @@
   transform:translateX(-50%);
 }
 
+#concertFloatingActions{
+  position:fixed;
+  top:72px;
+  left:0;
+  right:0;
+  z-index:29;
+  pointer-events:none;
+}
+
+#concertFloatingActions .concert-float-btn{
+  position:absolute;
+  pointer-events:auto;
+  background:rgba(0,0,0,0.72);
+  backdrop-filter: blur(6px);
+}
+
+.center-btn{
+  left:50%;
+  transform:translateX(-50%);
+}
+
 body.concert-mode nav{
   display:none !important;
 }
@@ -73,6 +94,14 @@ body.concert-mode #notesPanel{
 
 body.concert-mode #leaderFloatingActions{
   top:12px;
+}
+
+body.concert-mode #concertFloatingActions{
+  top:12px;
+}
+
+body.concert-mode #settingsFixedWrap{
+  display:none !important;
 }
 
 #concertModeBtn.active-btn{
@@ -717,8 +746,11 @@ nav{
 	
 <div id="leaderFloatingActions">
   <button class="btn leader-float-btn" id="playedToggleBtn" onclick="togglePlayedCurrentSong()">JOUÉ</button>
-  <button class="btn leader-float-btn center-btn" id="concertModeBtn" onclick="toggleConcertMode()">MODE CONCERT</button>
   <button class="btn leader-float-btn" id="randomSongBtn" onclick="openRandomFilteredSong()">🎲 ALÉATOIRE</button>
+</div>
+
+<div id="concertFloatingActions">
+  <button class="btn concert-float-btn center-btn" id="concertModeBtn" onclick="toggleConcertMode()">MODE CONCERT</button>
 </div>
 
     <div id="notesPanel">
@@ -1007,6 +1039,14 @@ function applyLeaderUI() {
   }
 }
 
+function updateConcertFloatingVisibility() {
+  const concertWrap = document.getElementById('concertFloatingActions');
+  if (!concertWrap) return;
+
+  const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
+  concertWrap.style.display = viewerOpen ? 'block' : 'none';
+}
+
   function loadUsersList() {
     const savedList = localStorage.getItem('bandapp_users');
     if (savedList) {
@@ -1211,6 +1251,8 @@ function updateConcertModeUI() {
   if (concertModeBtn) {
     concertModeBtn.classList.toggle('active-btn', concertMode);
   }
+
+  updateConcertFloatingVisibility();
 }
 
 function toggleConcertMode() {
@@ -1394,6 +1436,7 @@ autoMarkCurrentSongAsPlayed();
 
     document.getElementById('library').style.display = 'none';
     document.getElementById('viewer-container').style.display = 'block';
+	updateConcertFloatingVisibility();
 
     if (isLeader) {
       socket.emit('sync-autoscroll', {
@@ -2162,6 +2205,7 @@ closeEditor();
     notesPanel.style.display = 'none';
     document.getElementById('library').style.display = 'block';
     document.getElementById('viewer-container').style.display = 'none';
+	updateConcertFloatingVisibility();
     if (songSearchInput) songSearchInput.focus();
   }
 
