@@ -53,6 +53,33 @@
   pointer-events:none;
 }
 
+.center-btn{
+  left:50%;
+  transform:translateX(-50%);
+}
+
+body.concert-mode nav{
+  display:none !important;
+}
+
+body.concert-mode #viewer{
+  height:100vh;
+  padding-top:20px;
+}
+
+body.concert-mode #notesPanel{
+  display:none !important;
+}
+
+body.concert-mode #leaderFloatingActions{
+  top:12px;
+}
+
+#concertModeBtn.active-btn{
+  background:rgba(255,152,0,0.25);
+  color:#fff;
+}
+
 #leaderFloatingActions .leader-float-btn{
   position:absolute;
   pointer-events:auto;
@@ -688,8 +715,9 @@ nav{
 <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
     </nav>
 	
-	<div id="leaderFloatingActions">
+<div id="leaderFloatingActions">
   <button class="btn leader-float-btn" id="playedToggleBtn" onclick="togglePlayedCurrentSong()">JOUÉ</button>
+  <button class="btn leader-float-btn center-btn" id="concertModeBtn" onclick="toggleConcertMode()">MODE CONCERT</button>
   <button class="btn leader-float-btn" id="randomSongBtn" onclick="openRandomFilteredSong()">🎲 ALÉATOIRE</button>
 </div>
 
@@ -722,23 +750,6 @@ nav{
 
   <div id="editor-leader-wrap" style="display:none; flex:1 1 auto; min-height:0; flex-direction:column;">
     <textarea id="editor-textarea" spellcheck="false"></textarea>
-  </div>
-
-  <div id="editor-personal-wrap" style="display:none; flex:1 1 auto; min-height:0; flex-direction:column; overflow:hidden;">
-    <div style="padding:12px; border-bottom:1px solid #2a2a2a; background:rgba(255,255,255,0.03);">
-      <div style="font-weight:900; margin-bottom:8px;">Morceau complet (lecture seule)</div>
-      <textarea id="editor-readonly-textarea" spellcheck="false" readonly
-        style="width:100%; height:30vh; background:#050505; color:#888; border:1px solid #333; padding:14px; box-sizing:border-box; resize:none; font-family:monospace; font-size:14px;"></textarea>
-    </div>
-
-    <div style="padding:12px; display:flex; flex-direction:column; gap:8px; flex:1 1 auto; min-height:0;">
-      <div style="font-weight:900;">Ma partie personnelle ({pu:<span id="editorPersonalUserName"></span>})</div>
-      <div style="font-size:12px; opacity:.75;">
-        Tu peux modifier uniquement ta partie personnelle. Le leader peut modifier tout le morceau.
-      </div>
-      <textarea id="editor-personal-textarea" spellcheck="false"
-        style="flex:1 1 auto; min-height:220px; width:100%; background:#000; color:#2196F3; border:1px solid #333; padding:20px; box-sizing:border-box; resize:none; font-family:monospace; font-size:16px;"></textarea>
-    </div>
   </div>
 
   <div class="editor-footer">
@@ -811,6 +822,8 @@ nav{
   let isLoadingSong = false;
   let lastConnectedUsers = [];
   let songMeta = {};
+  let concertMode = false;
+let currentSongOpenedAt = 0;
 let playedTonightSet = new Set();
 let deviceId = localStorage.getItem('bandapp_deviceId') || "";
 if (!deviceId) {
@@ -837,13 +850,10 @@ let currentSongSettings = {
   const netBadge = document.getElementById('netBadge'); // peut être null
   const connectedUsersList = document.getElementById('connectedUsersList');
   const toastEl = document.getElementById('toast');
+  const concertModeBtn = document.getElementById('concertModeBtn');
 
   const editorLeaderWrap = document.getElementById('editor-leader-wrap');
-  const editorPersonalWrap = document.getElementById('editor-personal-wrap');
   const editorTextarea = document.getElementById('editor-textarea');
-  const editorReadonlyTextarea = document.getElementById('editor-readonly-textarea');
-  const editorPersonalTextarea = document.getElementById('editor-personal-textarea');
-  const editorPersonalUserName = document.getElementById('editorPersonalUserName');
 const historyBackdrop = document.getElementById('historyBackdrop');
 const historyList = document.getElementById('historyList');
 const categoryFilterEl = document.getElementById('categoryFilter');
@@ -1195,6 +1205,19 @@ function updatePlayedButton() {
   playedToggleBtn.classList.toggle('active-btn', played);
 }
 
+function updateConcertModeUI() {
+  document.body.classList.toggle('concert-mode', concertMode);
+
+  if (concertModeBtn) {
+    concertModeBtn.classList.toggle('active-btn', concertMode);
+  }
+}
+
+function toggleConcertMode() {
+  concertMode = !concertMode;
+  updateConcertModeUI();
+}
+
 async function fetchSongs() {
   const res = await fetch('/list-songs');
   allSongs = (await res.json()).sort();
@@ -1264,6 +1287,7 @@ function getFilteredSongIndexes() {
 }
 
 function openRandomFilteredSong() {
+autoMarkCurrentSongAsPlayed();
   const filteredIndexes = getFilteredSongIndexes();
 
   if (!filteredIndexes.length) {
@@ -1340,14 +1364,30 @@ function resetSongFilters() {
       socket.emit('request-leader');
     }
   }
+  
+  function autoMarkCurrentSongAsPlayed() {
+  if (!isLeader) return;
+  if (!currentFileName) return;
+  if (isPlayedTonight(currentFileName)) return;
+
+  const openedForMs = Date.now() - currentSongOpenedAt;
+  if (openedForMs < 30000) return;
+
+  socket.emit('mark-played', {
+    fileName: currentFileName,
+    played: true
+  });
+}
 
   function openSong(idx) {
     if (idx < 0 || idx >= allSongs.length) return;
 
     stopAutoScroll();
 
+autoMarkCurrentSongAsPlayed();
     currentIndex = idx;
     currentFileName = allSongs[idx];
+	currentSongOpenedAt = Date.now();
 	updatePlayedButton();
 
     notesPanel.style.display = 'none';
@@ -1651,6 +1691,8 @@ socket.on('apply-scroll', data => {
 
 const filteredIndexes = getFilteredSongIndexes();
 const pos = filteredIndexes.indexOf(currentIndex);
+
+autoMarkCurrentSongAsPlayed();
 
 if (dx > 0 && pos > 0) {
   openSong(filteredIndexes[pos - 1]);
@@ -2067,7 +2109,6 @@ async function startEditor() {
   document.getElementById('editor-container').style.display = 'flex';
 
   if (editorLeaderWrap) editorLeaderWrap.style.display = 'flex';
-  if (editorPersonalWrap) editorPersonalWrap.style.display = 'none';
 
   setTimeout(() => {
     renderChordBankFromEditor();
@@ -2116,6 +2157,7 @@ closeEditor();
 }
 
   function closeViewer() {
+  currentSongOpenedAt = Date.now();
     stopAutoScroll();
     notesPanel.style.display = 'none';
     document.getElementById('library').style.display = 'block';
@@ -2345,6 +2387,7 @@ async function restoreHistoryVersion(historyId) {
   await fetchSongs();
   syncSettingsUI();
   applyLeaderUI();
+  updateConcertModeUI();
   filterSongList(songSearchInput?.value || "");
 })();
 
