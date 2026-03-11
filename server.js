@@ -35,38 +35,16 @@ function isValidSongName(name) {
   return true;
 }
 
-function isValidUserName(name) {
-  if (typeof name !== 'string') return false;
-  const clean = String(name).trim();
-  if (!clean) return false;
-  if (clean.length > 50) return false;
-  return true;
-}
-
 function pinOk(pin) {
   return String(pin || '') === LEADER_PIN;
-}
-
-function escapeRegExp(s) {
-  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function getSongPath(fileName) {
   const filePath = path.join(PARTITIONS_DIR, fileName);
   if (!filePath.startsWith(PARTITIONS_DIR + path.sep)) {
-    throw new Error('Chemin invalide');
+    throw new Error("Chemin invalide");
   }
   return filePath;
-}
-
-function readSong(fileName) {
-  const filePath = getSongPath(fileName);
-  return fs.readFileSync(filePath, 'utf8');
-}
-
-function writeSong(fileName, content) {
-  const filePath = getSongPath(fileName);
-  fs.writeFileSync(filePath, String(content ?? ''), 'utf8');
 }
 
 function historyFilePath(fileName) {
@@ -94,42 +72,17 @@ function writeHistory(fileName, entries) {
 function appendHistory(fileName, entry) {
   const items = readHistory(fileName);
   items.unshift(entry);
-  writeHistory(fileName, items.slice(0, 200));
+  writeHistory(fileName, items.slice(0, 50));
 }
 
-function createHistoryEntry({ fileName, previousContent, userName, mode }) {
+function createHistoryEntry({ fileName, previousContent, userName }) {
   return {
     id: crypto.randomUUID(),
     fileName,
     savedAt: new Date().toISOString(),
     savedBy: String(userName || 'Inconnu'),
-    mode: String(mode || 'unknown'),
     previousContent: String(previousContent ?? '')
   };
-}
-
-function upsertPersonalBlock(rawContent, userName, personalContent) {
-  const raw = String(rawContent ?? '').replace(/\r/g, '');
-  const user = String(userName).trim();
-  const inner = String(personalContent ?? '').replace(/\r/g, '').trimEnd();
-
-  const block = `{pu:${user}}\n${inner}\n{/pu}`;
-  const re = new RegExp(`\\{pu\\s*:\\s*${escapeRegExp(user)}\\s*\\}([\\s\\S]*?)\\{\\/pu\\s*\\}`, 'i');
-
-  if (re.test(raw)) {
-    return raw.replace(re, block);
-  }
-
-  const trimmed = raw.trimEnd();
-  return `${trimmed}\n\n${block}\n`;
-}
-
-function extractPersonalBlock(rawContent, userName) {
-  const raw = String(rawContent ?? '').replace(/\r/g, '');
-  const user = String(userName).trim();
-  const re = new RegExp(`\\{pu\\s*:\\s*${escapeRegExp(user)}\\s*\\}([\\s\\S]*?)\\{\\/pu\\s*\\}`, 'i');
-  const m = raw.match(re);
-  return m ? String(m[1] || '').replace(/^\n/, '').replace(/\n$/, '') : '';
 }
 
 function broadcastConnectedUsers() {
@@ -137,7 +90,7 @@ function broadcastConnectedUsers() {
     [...connectedUsers.values()]
       .map(v => String(v || '').trim())
       .filter(Boolean)
-  )].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  )].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity:'base' }));
 
   io.emit('connected-users', { users: uniqueUsers });
 }
@@ -163,27 +116,6 @@ app.get('/list-songs', (req, res) => {
   }
 });
 
-app.get('/song-personal-block', (req, res) => {
-  try {
-    const fileName = String(req.query.fileName || '');
-    const userName = String(req.query.userName || '');
-
-    if (!isValidSongName(fileName)) {
-      return res.status(400).json({ error: 'Nom de fichier invalide' });
-    }
-
-    if (!isValidUserName(userName)) {
-      return res.status(400).json({ error: 'Utilisateur invalide' });
-    }
-
-    const raw = readSong(fileName);
-    const personalContent = extractPersonalBlock(raw, userName);
-    res.json({ personalContent });
-  } catch (err) {
-    res.status(500).json({ error: 'Erreur' });
-  }
-});
-
 app.get('/song-history', (req, res) => {
   try {
     const fileName = String(req.query.fileName || '');
@@ -194,12 +126,12 @@ app.get('/song-history', (req, res) => {
     const items = readHistory(fileName).map(entry => ({
       id: entry.id,
       savedAt: entry.savedAt,
-      savedBy: entry.savedBy,
-      mode: entry.mode
+      savedBy: entry.savedBy
     }));
 
     res.json(items);
   } catch (err) {
+    console.error(err);
     res.status(500).json([]);
   }
 });
@@ -210,22 +142,28 @@ app.post('/restore-song', (req, res) => {
 
     if (!pinOk(pin)) return res.status(403).send("PIN invalide");
     if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
-    if (!historyId) return res.status(400).send("Historique invalide");
+    if (!historyId) return res.status(400).send("Version invalide");
 
+    const filePath = getSongPath(fileName);
     const history = readHistory(fileName);
     const entry = history.find(x => x.id === historyId);
-    if (!entry) return res.status(404).send("Version introuvable");
 
-    const currentContent = readSong(fileName);
+    if (!entry) {
+      return res.status(404).send("Version introuvable");
+    }
+
+    let currentContent = "";
+    if (fs.existsSync(filePath)) {
+      currentContent = fs.readFileSync(filePath, 'utf8');
+    }
 
     appendHistory(fileName, createHistoryEntry({
       fileName,
       previousContent: currentContent,
-      userName: userName || 'Leader',
-      mode: `restore:${entry.savedAt}`
+      userName: userName || 'Restauration'
     }));
 
-    writeSong(fileName, entry.previousContent);
+    fs.writeFileSync(filePath, String(entry.previousContent ?? ""), 'utf8');
 
     io.emit('song-updated', { fileName, at: Date.now() });
     res.send("OK");
@@ -236,54 +174,31 @@ app.post('/restore-song', (req, res) => {
 });
 
 app.post('/save-song', (req, res) => {
+  const { fileName, content, pin, userName } = req.body || {};
+
+  if (!pinOk(pin)) return res.status(403).send("PIN invalide");
+  if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
+
   try {
-    const { fileName, content, pin, mode, userName } = req.body || {};
+    const filePath = getSongPath(fileName);
 
-    if (!isValidSongName(fileName)) {
-      return res.status(400).send("Nom de fichier invalide");
+    let previousContent = "";
+    if (fs.existsSync(filePath)) {
+      previousContent = fs.readFileSync(filePath, 'utf8');
     }
 
-    const currentContent = readSong(fileName);
+    appendHistory(fileName, createHistoryEntry({
+      fileName,
+      previousContent,
+      userName: userName || 'Inconnu'
+    }));
 
-    if (mode === 'full') {
-      if (!pinOk(pin)) return res.status(403).send("PIN invalide");
-      if (typeof content !== 'string') return res.status(400).send("Contenu invalide");
+    fs.writeFile(filePath, String(content ?? ""), 'utf8', (err) => {
+      if (err) return res.status(500).send("Erreur");
 
-      appendHistory(fileName, createHistoryEntry({
-        fileName,
-        previousContent: currentContent,
-        userName: userName || 'Leader',
-        mode: 'full'
-      }));
-
-      writeSong(fileName, content);
       io.emit('song-updated', { fileName, at: Date.now() });
-      return res.send("OK");
-    }
-
-    if (mode === 'personal') {
-      if (!isValidUserName(userName)) {
-        return res.status(400).send("Utilisateur invalide");
-      }
-      if (typeof content !== 'string') {
-        return res.status(400).send("Contenu invalide");
-      }
-
-      const updatedContent = upsertPersonalBlock(currentContent, userName, content);
-
-      appendHistory(fileName, createHistoryEntry({
-        fileName,
-        previousContent: currentContent,
-        userName,
-        mode: `personal:${userName}`
-      }));
-
-      writeSong(fileName, updatedContent);
-      io.emit('song-updated', { fileName, at: Date.now() });
-      return res.send("OK");
-    }
-
-    return res.status(400).send("Mode invalide");
+      res.send("OK");
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send("Erreur");
@@ -326,7 +241,7 @@ io.on('connection', (socket) => {
       leaderSocketId = null;
       leaderUserName = "";
       broadcastLeaderState();
-      io.emit('apply-autoscroll', { active: false, speed: 50 });
+      io.emit('apply-autoscroll', { active:false, speed:50 });
     }
   });
 
@@ -377,7 +292,7 @@ io.on('connection', (socket) => {
       leaderSocketId = null;
       leaderUserName = "";
       broadcastLeaderState();
-      io.emit('apply-autoscroll', { active: false, speed: 50 });
+      io.emit('apply-autoscroll', { active:false, speed:50 });
     }
   });
 });
