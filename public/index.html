@@ -694,6 +694,10 @@ nav{
         <span id="transposeVal" style="min-width:20px; text-align:center">0</span>
         <button class="btn" onclick="updateTranspose(1)">+</button>
       </div>
+	  
+	  <div class="controls-group leader-only">
+  <button class="btn" onclick="saveCurrentSongSettings()">💾 RÉGLAGES</button>
+</div>
 
 <button class="btn" onclick="toggleNotes()">NOTES</button>
 <button class="btn" onclick="openHistoryModal()">HISTORIQUE</button>
@@ -824,6 +828,11 @@ nav{
   let lastConnectedUsers = [];
   let songMeta = {};
 let playedTonightSet = new Set();
+let currentSongSettings = {
+  fontSize: 26,
+  speed: 50,
+  transpose: 0
+};
 
   const viewerElement = document.getElementById('viewer');
   const songContentEl = document.getElementById('songContent');
@@ -1092,6 +1101,26 @@ function applyLeaderUI() {
       netBadge.classList.add('off');
     }
   });
+  
+  socket.on('song-settings-updated', async ({ fileName, settings }) => {
+  if (normName(fileName) !== normName(currentFileName)) return;
+
+  fontSize = Number.isFinite(Number(settings?.fontSize)) ? Number(settings.fontSize) : 26;
+  transposeValue = Number.isFinite(Number(settings?.transpose)) ? Number(settings.transpose) : 0;
+  speedInput.value = Number.isFinite(Number(settings?.speed)) ? Number(settings.speed) : 50;
+
+  document.getElementById('transposeVal').innerText =
+    (transposeValue > 0 ? '+' : '') + transposeValue;
+
+  renderChordPro();
+
+  if (isLeader && isScrolling) {
+    socket.emit('sync-autoscroll', {
+      active: true,
+      speed: Number(speedInput.value) || 50
+    });
+  }
+});
 
 socket.on('connected-users', (data) => {
   console.log("connected-users reçu :", data);
@@ -1334,6 +1363,75 @@ function resetSongFilters() {
     loadSong(currentFileName);
     setTimeout(loadNotes, 10);
   }
+  
+  async function saveCurrentSongSettings() {
+  if (!isLeader) return;
+  if (!currentFileName) return;
+
+  const pin = prompt("PIN requis pour enregistrer les réglages du morceau") || "";
+  const cleanPin = String(pin).trim();
+  if (!cleanPin) return;
+
+  try {
+    const res = await fetch('/song-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: currentFileName,
+        pin: cleanPin,
+        fontSize,
+        speed: Number(speedInput.value) || 50,
+        transpose: transposeValue
+      })
+    });
+
+    if (res.ok) {
+      showToast("Réglages du morceau enregistrés ✅");
+    } else if (res.status === 403) {
+      alert("PIN invalide");
+    } else {
+      alert("Erreur d'enregistrement des réglages");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Erreur d'enregistrement des réglages");
+  }
+}
+  
+  async function loadSongSettings(fileName) {
+  try {
+    const res = await fetch('/song-settings?fileName=' + encodeURIComponent(fileName), {
+      cache: 'no-store'
+    });
+
+    const data = await res.json();
+
+    currentSongSettings = {
+      fontSize: Number.isFinite(Number(data?.fontSize)) ? Number(data.fontSize) : 26,
+      speed: Number.isFinite(Number(data?.speed)) ? Number(data.speed) : 50,
+      transpose: Number.isFinite(Number(data?.transpose)) ? Number(data.transpose) : 0
+    };
+
+    fontSize = currentSongSettings.fontSize;
+    transposeValue = currentSongSettings.transpose;
+    speedInput.value = currentSongSettings.speed;
+
+    document.getElementById('transposeVal').innerText =
+      (transposeValue > 0 ? '+' : '') + transposeValue;
+  } catch (err) {
+    console.error(err);
+    currentSongSettings = {
+      fontSize: 26,
+      speed: 50,
+      transpose: 0
+    };
+
+    fontSize = 26;
+    transposeValue = 0;
+    speedInput.value = 50;
+    document.getElementById('transposeVal').innerText = "0";
+  }
+}
 
 async function loadSong(f) {
   try {
@@ -1347,14 +1445,13 @@ async function loadSong(f) {
     pendingRemoteScrollTop = 0;
     isRemoteScrolling = false;
 
-    const res = await fetch('/partitions/' + encodeURIComponent(f), { cache: 'no-store' });
-    currentRaw = await res.text();
+const res = await fetch('/partitions/' + encodeURIComponent(f), { cache: 'no-store' });
+currentRaw = await res.text();
 
-    transposeValue = 0;
-    document.getElementById('transposeVal').innerText = "0";
-	updatePlayedButton();
+await loadSongSettings(f);
+updatePlayedButton();
 
-    renderChordPro();
+renderChordPro();
 
     viewerElement.scrollTop = 0;
 
