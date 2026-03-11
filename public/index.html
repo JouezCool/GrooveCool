@@ -558,8 +558,8 @@
       </div>
 
       <button class="btn" onclick="toggleNotes()">NOTES</button>
+	  <button class="btn" onclick="openHistoryModal()">HISTORIQUE</button>
       <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
-	  <button class="btn leader-only" onclick="openHistoryModal()">HISTORIQUE</button>
     </nav>
 
     <div id="updateBanner">
@@ -653,7 +653,7 @@
     </div>
   </div>
   
-  <div id="historyBackdrop" style="
+<div id="historyBackdrop" style="
   position:fixed; inset:0; display:none; z-index:6600;
   background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:18px;">
   <div style="width:min(760px,100%); max-height:85vh; background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden; display:flex; flex-direction:column;">
@@ -708,8 +708,8 @@
   const editorReadonlyTextarea = document.getElementById('editor-readonly-textarea');
   const editorPersonalTextarea = document.getElementById('editor-personal-textarea');
   const editorPersonalUserName = document.getElementById('editorPersonalUserName');
-  const historyBackdrop = document.getElementById('historyBackdrop');
-  const historyList = document.getElementById('historyList');
+const historyBackdrop = document.getElementById('historyBackdrop');
+const historyList = document.getElementById('historyList');
 
   let touchStartX = 0, touchStartY = 0;
   const SWIPE_MIN_X = 110;
@@ -729,14 +729,14 @@
     toastTimer = setTimeout(() => { toastEl.style.display = 'none'; }, 1700);
   }
 
-  function escapeHtml(s) {
-    return String(s || '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
-  }
+function escapeHtml(s) {
+  return String(s || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
 
   function applyTheme() {
     const root = document.documentElement;
@@ -1668,63 +1668,40 @@
     document.getElementById('editor-container').style.display = 'none';
   }
 
-  async function saveEditor() {
-    if (!currentFileName) return;
+async function saveEditor() {
+  const newContent = document.getElementById('editor-textarea').value;
+  if (!currentFileName) return;
 
-    if (isLeader) {
-      const newContent = editorTextarea.value;
-      const pin = prompt("PIN requis pour enregistrer les modifications du morceau commun") || "";
-      const cleanPin = String(pin).trim();
-      if (!cleanPin) return;
+  const pin = prompt("PIN requis pour enregistrer les modifications") || "";
+  const cleanPin = String(pin).trim();
+  if (!cleanPin) return;
 
-      const res = await fetch('/save-song', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileName: currentFileName,
-          content: newContent,
-          pin: cleanPin,
-          mode: 'full',
-          userName: currentUser
-        })
-      });
+  const res = await fetch('/save-song', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fileName: currentFileName,
+      content: newContent,
+      pin: cleanPin,
+      userName: currentUser
+    })
+  });
 
-      if (res.ok) {
-        currentRaw = newContent;
-        renderChordPro();
-        renderGrids();
-        closeEditor();
-        if (isLeader) socket.emit('change-song', currentFileName);
-        showToast("Modification enregistrée ✅");
-      } else if (res.status === 403) {
-        alert("PIN invalide");
-      } else {
-        alert("Erreur d'enregistrement");
-      }
-      return;
-    }
+  if (res.ok) {
+    currentRaw = newContent;
+    renderChordPro();
+    renderGrids();
+    closeEditor();
 
-    const personalContent = editorPersonalTextarea.value;
+    if (isLeader) socket.emit('change-song', currentFileName);
 
-    const res = await fetch('/save-song', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fileName: currentFileName,
-        content: personalContent,
-        mode: 'personal',
-        userName: currentUser
-      })
-    });
-
-    if (res.ok) {
-      closeEditor();
-      await loadSong(currentFileName);
-      showToast("Partie personnelle enregistrée ✅");
-    } else {
-      alert("Erreur d'enregistrement");
-    }
+    showToast("Modification enregistrée ✅");
+  } else if (res.status === 403) {
+    alert("PIN invalide");
+  } else {
+    alert("Erreur d'enregistrement");
   }
+}
 
   function closeViewer() {
     stopAutoScroll();
@@ -1920,79 +1897,83 @@
       ).join('');
   }
 
-  async function openHistoryModal() {
-    if (!isLeader || !currentFileName) return;
+async function openHistoryModal() {
+  if (!currentFileName) return;
 
-    historyBackdrop.style.display = 'flex';
-    historyList.innerHTML = "Chargement...";
+  historyBackdrop.style.display = 'flex';
+  historyList.innerHTML = "Chargement...";
 
-    try {
-      const res = await fetch('/song-history?fileName=' + encodeURIComponent(currentFileName));
-      const items = await res.json();
+  try {
+    const res = await fetch('/song-history?fileName=' + encodeURIComponent(currentFileName));
+    const items = await res.json();
 
-      if (!Array.isArray(items) || !items.length) {
-        historyList.innerHTML = "<div>Aucune version enregistrée.</div>";
-        return;
-      }
-
-      historyList.innerHTML = items.map(item => {
-        return `
-          <div style="border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:12px; margin-bottom:10px; background:rgba(255,255,255,0.04);">
-            <div style="font-weight:900; margin-bottom:6px;">${escapeHtml(item.savedAt || '')}</div>
-            <div style="font-size:13px; opacity:.8; margin-bottom:8px;">
-              Par ${escapeHtml(item.savedBy || 'Inconnu')} — ${escapeHtml(item.mode || '')}
-            </div>
-            <button class="btn" onclick="restoreHistoryVersion('${item.id}')">Restaurer cette version</button>
-          </div>
-        `;
-      }).join('');
-    } catch (err) {
-      console.error(err);
-      historyList.innerHTML = "<div>Erreur de chargement de l'historique.</div>";
+    if (!Array.isArray(items) || !items.length) {
+      historyList.innerHTML = "<div>Aucune version enregistrée.</div>";
+      return;
     }
+
+    historyList.innerHTML = items.map((item, idx) => {
+      const label = idx === 0 ? "Restaurer la dernière version" : "Restaurer cette version";
+      return `
+        <div style="border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:12px; margin-bottom:10px; background:rgba(255,255,255,0.04);">
+          <div style="font-weight:900; margin-bottom:6px;">${escapeHtml(item.savedAt || '')}</div>
+          <div style="font-size:13px; opacity:.8; margin-bottom:8px;">
+            Par ${escapeHtml(item.savedBy || 'Inconnu')}
+          </div>
+          <button class="btn" onclick="restoreHistoryVersion('${item.id}')">${label}</button>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error(err);
+    historyList.innerHTML = "<div>Erreur de chargement de l'historique.</div>";
   }
+}
 
-  function closeHistoryModal() {
-    historyBackdrop.style.display = 'none';
-  }
+function closeHistoryModal() {
+  historyBackdrop.style.display = 'none';
+}
 
-  async function restoreHistoryVersion(historyId) {
-    if (!isLeader || !currentFileName) return;
+async function restoreHistoryVersion(historyId) {
+  if (!currentFileName) return;
 
-    const ok = confirm("Restaurer cette version du morceau ?");
-    if (!ok) return;
+  const ok = confirm("Restaurer cette version du morceau ?");
+  if (!ok) return;
 
-    const pin = prompt("PIN requis pour restaurer une ancienne version") || "";
-    const cleanPin = String(pin).trim();
-    if (!cleanPin) return;
+  const pin = prompt("PIN requis pour restaurer une ancienne version") || "";
+  const cleanPin = String(pin).trim();
+  if (!cleanPin) return;
 
-    try {
-      const res = await fetch('/restore-song', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileName: currentFileName,
-          historyId,
-          pin: cleanPin,
-          userName: currentUser
-        })
-      });
+  try {
+    const res = await fetch('/restore-song', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: currentFileName,
+        historyId,
+        pin: cleanPin,
+        userName: currentUser
+      })
+    });
 
-      if (res.ok) {
-        closeHistoryModal();
-        await loadSong(currentFileName);
-        if (isLeader) socket.emit('change-song', currentFileName);
-        showToast("Version restaurée ✅");
-      } else if (res.status === 403) {
-        alert("PIN invalide");
-      } else {
-        alert("Erreur lors de la restauration");
-      }
-    } catch (err) {
-      console.error(err);
+    if (res.ok) {
+      closeHistoryModal();
+      stopAutoScroll();
+      await loadSong(currentFileName);
+
+      if (isLeader) socket.emit('change-song', currentFileName);
+
+      showToast("Version restaurée ✅");
+    } else if (res.status === 403) {
+      alert("PIN invalide");
+    } else {
       alert("Erreur lors de la restauration");
     }
+  } catch (err) {
+    console.error(err);
+    alert("Erreur lors de la restauration");
   }
+}
 
   applyTheme();
   initUsers();
