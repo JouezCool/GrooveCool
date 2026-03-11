@@ -16,27 +16,10 @@ app.use(express.static('public', { etag: false, maxAge: 0 }));
 
 const PARTITIONS_DIR = path.join(__dirname, 'public', 'partitions');
 const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
+
 let leaderSocketId = null;
 let leaderUserName = null;
 const connectedUsers = new Map();
-
-function broadcastConnectedUsers() {
-  const uniqueUsers = [...new Set(
-    [...connectedUsers.values()]
-      .map(v => String(v || "").trim())
-      .filter(Boolean)
-  )].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity:'base' }));
-
-  io.emit('connected-users', { users: uniqueUsers });
-}
-
-function broadcastLeaderState() {
-  io.emit('leader-state', {
-    leaderSocketId,
-    leaderUserName,
-    hasLeader: !!leaderSocketId
-  });
-}
 
 function isValidSongName(name) {
   if (typeof name !== 'string') return false;
@@ -49,6 +32,24 @@ function isValidSongName(name) {
 
 function pinOk(pin) {
   return String(pin || '') === LEADER_PIN;
+}
+
+function broadcastConnectedUsers() {
+  const uniqueUsers = [...new Set(
+    [...connectedUsers.values()]
+      .map(v => String(v || '').trim())
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity:'base' }));
+
+  io.emit('connected-users', { users: uniqueUsers });
+}
+
+function broadcastLeaderState() {
+  io.emit('leader-state', {
+    leaderSocketId,
+    leaderUserName,
+    hasLeader: !!leaderSocketId
+  });
 }
 
 app.get('/list-songs', (req, res) => {
@@ -86,48 +87,22 @@ app.post('/save-song', (req, res) => {
 io.on('connection', (socket) => {
   console.log('📱 connecté', socket.id);
 
+  broadcastLeaderState();
+  broadcastConnectedUsers();
+
   socket.on('register-user', (userName) => {
     const clean = String(userName || '').trim();
     if (!clean) return;
-  
+
+    socket.data.userName = clean;
     connectedUsers.set(socket.id, clean);
-    broadcastConnectedUsers();
-  
-    if (leaderSocketId) {
-      io.emit('leader-state', {
-        leaderSocketId,
-        leaderUserName
-      });
-    }
-  });
-
-  socket.on('disconnect', () => {
-    const wasLeader = socket.id === leaderSocketId;
-  
-    connectedUsers.delete(socket.id);
-    broadcastConnectedUsers();
-  
-    if (wasLeader) {
-      leaderSocketId = null;
-      leaderUserName = null;
-      io.emit('leader-state', {
-        leaderSocketId: null,
-        leaderUserName: null
-      });
-      io.emit('apply-autoscroll', { active:false, speed:50 });
-    }
-  });
-
-  // envoie l’état leader au nouvel arrivant
-  broadcastLeaderState();
-
-  socket.on('register-user', (userName) => {
-    socket.data.userName = String(userName || '').trim();
 
     if (leaderSocketId === socket.id) {
-      leaderUserName = socket.data.userName || "";
-      broadcastLeaderState();
+      leaderUserName = clean;
     }
+
+    broadcastConnectedUsers();
+    broadcastLeaderState();
   });
 
   socket.on('request-leader', () => {
@@ -145,6 +120,7 @@ io.on('connection', (socket) => {
       leaderSocketId = null;
       leaderUserName = "";
       broadcastLeaderState();
+      io.emit('apply-autoscroll', { active:false, speed:50 });
     }
   });
 
@@ -174,7 +150,7 @@ io.on('connection', (socket) => {
   socket.on('leader-fontsize', (value) => {
     socket.broadcast.emit('apply-fontsize', value);
   });
-  
+
   socket.on('leader-transpose', (value) => {
     socket.broadcast.emit('apply-transpose', value);
   });
@@ -186,10 +162,16 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('❌ déconnecté', socket.id);
 
-    if (leaderSocketId === socket.id) {
+    const wasLeader = leaderSocketId === socket.id;
+
+    connectedUsers.delete(socket.id);
+    broadcastConnectedUsers();
+
+    if (wasLeader) {
       leaderSocketId = null;
       leaderUserName = "";
       broadcastLeaderState();
+      io.emit('apply-autoscroll', { active:false, speed:50 });
     }
   });
 });
