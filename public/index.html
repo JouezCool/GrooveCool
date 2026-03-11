@@ -496,11 +496,12 @@ nav{
       margin-bottom:8px;
     }
 
-    #connectedUsersList{
-      white-space:pre-line;
-      line-height:1.5;
-      font-size:14px;
-    }
+#connectedUsersList{
+  white-space:pre-line;
+  line-height:1.5;
+  font-size:14px;
+  color: var(--text);
+}
   </style>
 </head>
 
@@ -636,11 +637,10 @@ nav{
         <button class="btn" onclick="triggerImport()">⬆️ Importer sauvegarde</button>
         <input id="importFile" type="file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
 
-        <div id="connectedUsersBox">
-          <div id="connectedUsersTitle">Connectés</div>
-          <div id="connectedUsersList">—</div>
-        </div>
-      </div>
+<div id="connectedUsersBox">
+  <div id="connectedUsersTitle">Connectés</div>
+  <div id="connectedUsersList">Aucun utilisateur connecté</div>
+</div>
 
       <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end;">
         <button class="btn btn-blue" onclick="closeSettings()">OK</button>
@@ -681,6 +681,7 @@ nav{
   let pendingRemoteScrollTop = 0;
   let currentSongZoom = 1;
   let isLoadingSong = false;
+  let lastConnectedUsers = [];
 
   const viewerElement = document.getElementById('viewer');
   const songContentEl = document.getElementById('songContent');
@@ -772,10 +773,11 @@ function escapeHtml(s) {
     syncSettingsUI();
   }
 
-  function openSettings() {
-    syncSettingsUI();
-    settingsBackdrop.style.display = 'flex';
-  }
+function openSettings() {
+  syncSettingsUI();
+  renderConnectedUsers(lastConnectedUsers);
+  settingsBackdrop.style.display = 'flex';
+}
 
   function closeSettings() {
     settingsBackdrop.style.display = 'none';
@@ -797,16 +799,17 @@ function escapeHtml(s) {
     if (tb) tb.innerText = (themeMode === 'dark') ? "Thème: Sombre" : "Thème: Clair";
   }
 
-  function renderConnectedUsers(usersList) {
-    if (!connectedUsersList) return;
+function renderConnectedUsers(usersList) {
+  const el = document.getElementById('connectedUsersList');
+  if (!el) return;
 
-    if (!Array.isArray(usersList) || !usersList.length) {
-      connectedUsersList.textContent = "Aucun utilisateur connecté";
-      return;
-    }
-
-    connectedUsersList.textContent = usersList.join("\n");
+  if (!Array.isArray(usersList) || usersList.length === 0) {
+    el.textContent = "Aucun utilisateur connecté";
+    return;
   }
+
+  el.innerHTML = usersList.map(name => `<div>${escapeHtml(name)}</div>`).join('');
+}
 
   function applyLeaderUI() {
     document.querySelectorAll('.leader-only').forEach(el => {
@@ -937,9 +940,11 @@ function escapeHtml(s) {
     }
   });
 
-  socket.on('connected-users', (data) => {
-    renderConnectedUsers(data?.users || []);
-  });
+socket.on('connected-users', (data) => {
+  console.log("connected-users reçu :", data);
+  lastConnectedUsers = Array.isArray(data?.users) ? data.users : [];
+  renderConnectedUsers(lastConnectedUsers);
+});
 
   socket.on('leader-state', (data) => {
     const wasLeader = isLeader;
