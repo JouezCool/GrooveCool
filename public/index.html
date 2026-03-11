@@ -1831,53 +1831,6 @@ async function saveEditor() {
     if (songSearchInput) songSearchInput.focus();
   }
 
-  function gridsKey(fileName){
-    const u = currentUser || "unknown";
-    return `grids:${u}:${fileName}`;
-  }
-
-  function loadGrids(fileName){
-    try {
-      const raw = localStorage.getItem(gridsKey(fileName)) || "[]";
-      const arr = JSON.parse(raw);
-      return Array.isArray(arr) ? arr : [];
-    } catch {
-      return [];
-    }
-  }
-
-  function renderGrids(){
-    if (!currentFileName) return;
-
-    const layer = document.getElementById('overlayLayer');
-    if (!layer) return;
-    layer.innerHTML = "";
-
-    const grids = loadGrids(currentFileName);
-
-    for (const g of grids){
-      const anchor = g?.anchor;
-      const text = String(g?.text || "").trim();
-      if (!anchor || !text) continue;
-
-      const el = viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`);
-      if (!el) continue;
-
-      const top = el.offsetTop + el.offsetHeight + 6;
-
-      const wrap = document.createElement('div');
-      wrap.className = 'gridOverlay';
-      wrap.style.top = top + "px";
-
-      const box = document.createElement('div');
-      box.className = 'box';
-      box.textContent = text;
-
-      wrap.appendChild(box);
-      layer.appendChild(wrap);
-    }
-  }
-
   const BACKUP_PREFIXES = ['bandapp_', 'notes:', 'overlay:', 'grids:'];
 
   function isBackupKey(k) {
