@@ -5,6 +5,7 @@ const io = require('socket.io')(http);
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const playedTonight = new Set();
 
 app.use(express.json({ limit: '1mb' }));
 
@@ -25,6 +26,12 @@ fs.mkdirSync(HISTORY_DIR, { recursive: true });
 let leaderSocketId = null;
 let leaderUserName = null;
 const connectedUsers = new Map();
+
+function broadcastPlayedTonight() {
+  io.emit('played-tonight-state', {
+    songs: [...playedTonight]
+  });
+}
 
 function isValidSongName(name) {
   if (typeof name !== 'string') return false;
@@ -210,6 +217,7 @@ io.on('connection', (socket) => {
 
   broadcastLeaderState();
   broadcastConnectedUsers();
+  broadcastPlayedTonight();
 
   socket.on('register-user', (userName) => {
     const clean = String(userName || '').trim();
@@ -225,6 +233,24 @@ io.on('connection', (socket) => {
     broadcastConnectedUsers();
     broadcastLeaderState();
   });
+  
+  socket.on('mark-played', ({ fileName, played }) => {
+  const name = String(fileName || '').trim();
+  if (!name) return;
+
+  if (played) {
+    playedTonight.add(name);
+  } else {
+    playedTonight.delete(name);
+  }
+
+  broadcastPlayedTonight();
+});
+
+socket.on('reset-played-tonight', () => {
+  playedTonight.clear();
+  broadcastPlayedTonight();
+});
 
   socket.on('request-leader', () => {
     if (!leaderSocketId || leaderSocketId === socket.id) {
