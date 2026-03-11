@@ -559,6 +559,7 @@
 
       <button class="btn" onclick="toggleNotes()">NOTES</button>
       <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
+	  <button class="btn leader-only" onclick="openHistoryModal()">HISTORIQUE</button>
     </nav>
 
     <div id="updateBanner">
@@ -579,30 +580,49 @@
     </div>
   </div>
 
-  <div id="editor-container">
-    <div id="editor-warning">
-      ATTENTION : TOUT CE QUE TU MODIFIES ICI MODIFIE DÉFINITIVEMENT LA VERSION COMMUNE DU MORCEAU POUR TOUT LE MONDE.
-    </div>
+<div id="editor-container">
+  <div id="editor-warning">
+    ATTENTION : LES MODIFICATIONS DE LA VERSION COMMUNE IMPACTENT TOUT LE MONDE.
+  </div>
 
-    <div id="editor-toolbar">
-      <button class="btn" onclick="insertTemplatePU()">+ {pu}</button>
-      <button class="btn" onclick="insertAtCursor('{soc}\n')">+ {soc}</button>
-      <button class="btn" onclick="insertAtCursor('\n{eoc}\n')">+ {eoc}</button>
-      <button class="btn" onclick="insertTemplateComment()">+ {c:}</button>
-      <button class="btn" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
+  <div id="editor-toolbar">
+    <button class="btn leader-only" onclick="insertTemplatePU()">+ {pu}</button>
+    <button class="btn leader-only" onclick="insertAtCursor('{soc}\n')">+ {soc}</button>
+    <button class="btn leader-only" onclick="insertAtCursor('\n{eoc}\n')">+ {eoc}</button>
+    <button class="btn leader-only" onclick="insertTemplateComment()">+ {c:}</button>
+    <button class="btn leader-only" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
 
-      <div style="flex:1"></div>
+    <div style="flex:1"></div>
 
-      <div id="chordBank" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;"></div>
-    </div>
+    <div id="chordBank" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;"></div>
+  </div>
 
+  <div id="editor-leader-wrap" style="display:none; flex:1 1 auto; min-height:0; flex-direction:column;">
     <textarea id="editor-textarea" spellcheck="false"></textarea>
+  </div>
 
-    <div class="editor-footer">
-      <button class="btn" onclick="closeEditor()" style="border-color:#ff5252; color:#ff5252;">ANNULER</button>
-      <button class="btn btn-blue" onclick="saveEditor()">ENREGISTRER</button>
+  <div id="editor-personal-wrap" style="display:none; flex:1 1 auto; min-height:0; flex-direction:column; overflow:hidden;">
+    <div style="padding:12px; border-bottom:1px solid #2a2a2a; background:rgba(255,255,255,0.03);">
+      <div style="font-weight:900; margin-bottom:8px;">Morceau complet (lecture seule)</div>
+      <textarea id="editor-readonly-textarea" spellcheck="false" readonly
+        style="width:100%; height:30vh; background:#050505; color:#888; border:1px solid #333; padding:14px; box-sizing:border-box; resize:none; font-family:monospace; font-size:14px;"></textarea>
+    </div>
+
+    <div style="padding:12px; display:flex; flex-direction:column; gap:8px; flex:1 1 auto; min-height:0;">
+      <div style="font-weight:900;">Ma partie personnelle ({pu:<span id="editorPersonalUserName"></span>})</div>
+      <div style="font-size:12px; opacity:.75;">
+        Tu peux modifier uniquement ta partie personnelle. Le leader peut modifier tout le morceau.
+      </div>
+      <textarea id="editor-personal-textarea" spellcheck="false"
+        style="flex:1 1 auto; min-height:220px; width:100%; background:#000; color:#2196F3; border:1px solid #333; padding:20px; box-sizing:border-box; resize:none; font-family:monospace; font-size:16px;"></textarea>
     </div>
   </div>
+
+  <div class="editor-footer">
+    <button class="btn" onclick="closeEditor()" style="border-color:#ff5252; color:#ff5252;">ANNULER</button>
+    <button class="btn btn-blue" onclick="saveEditor()">ENREGISTRER</button>
+  </div>
+</div>
 
   <div id="settingsBackdrop" style="
     position:fixed; inset:0; display:none; z-index:6500;
@@ -632,354 +652,391 @@
       </div>
     </div>
   </div>
+  
+  <div id="historyBackdrop" style="
+  position:fixed; inset:0; display:none; z-index:6600;
+  background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:18px;">
+  <div style="width:min(760px,100%); max-height:85vh; background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden; display:flex; flex-direction:column;">
+    <header style="padding:14px 16px; border-bottom:1px solid #2a2a2a; background:#161616;">
+      <h3 style="margin:0; font-size:14px; color:#fff;">Historique du morceau</h3>
+    </header>
 
-  <script>
-    const socket = io();
+    <div id="historyList" style="padding:14px 16px; overflow:auto; flex:1 1 auto;">
+      Chargement...
+    </div>
 
-    let isLeader = false, allSongs = [], currentIndex = -1;
-    let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
+    <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end;">
+      <button class="btn btn-blue" onclick="closeHistoryModal()">FERMER</button>
+    </div>
+  </div>
+</div>
 
-    let isRemoteScrolling = false;
-    let isScrolling = false;
-    let rafId = null;
-    let lastRafTime = 0;
-    let scrollCarry = 0;
-    let remoteScrollRaf = null;
-    let pendingRemoteScrollTop = 0;
-    let currentSongZoom = 1;
+<script>
+  const socket = io();
 
-    const viewerElement = document.getElementById('viewer');
-    const songContentEl = document.getElementById('songContent');
-    const speedInput = document.getElementById('scrollSpeed');
-    const updateBanner = document.getElementById('updateBanner');
-    const notesPanel = document.getElementById('notesPanel');
-    const notesTextarea = document.getElementById('notesTextarea');
-    const songSearchInput = document.getElementById('songSearch');
-    const songCountEl = document.getElementById('songCount');
-    const userOverlay = document.getElementById('userOverlay');
-    const userGrid = document.getElementById('userGrid');
-    const settingsBackdrop = document.getElementById('settingsBackdrop');
-    const settingsBtnFixed = document.getElementById('settingsBtnFixed');
-    const netBadge = document.getElementById('netBadge');
-    const connectedUsersList = document.getElementById('connectedUsersList');
-    const toastEl = document.getElementById('toast');
+  let isLeader = false, allSongs = [], currentIndex = -1;
+  let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
 
-    let touchStartX = 0, touchStartY = 0;
-    const SWIPE_MIN_X = 110;
-    const SWIPE_RATIO = 1.4;
+  let isRemoteScrolling = false;
+  let isScrolling = false;
+  let rafId = null;
+  let lastRafTime = 0;
+  let scrollCarry = 0;
+  let remoteScrollRaf = null;
+  let pendingRemoteScrollTop = 0;
+  let currentSongZoom = 1;
 
-    const DEFAULT_USERS = ["Nemo","Estelle","Gillou","Bubu","Christian","Christophe"];
-    let currentUser = "";
-    let users = [];
-    let toastTimer = null;
-    let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin';
-    let themeMode = localStorage.getItem('bandapp_theme') || 'dark';
+  const viewerElement = document.getElementById('viewer');
+  const songContentEl = document.getElementById('songContent');
+  const speedInput = document.getElementById('scrollSpeed');
+  const updateBanner = document.getElementById('updateBanner');
+  const notesPanel = document.getElementById('notesPanel');
+  const notesTextarea = document.getElementById('notesTextarea');
+  const songSearchInput = document.getElementById('songSearch');
+  const songCountEl = document.getElementById('songCount');
+  const userOverlay = document.getElementById('userOverlay');
+  const userGrid = document.getElementById('userGrid');
+  const settingsBackdrop = document.getElementById('settingsBackdrop');
+  const settingsBtnFixed = document.getElementById('settingsBtnFixed');
+  const netBadge = document.getElementById('netBadge');
+  const connectedUsersList = document.getElementById('connectedUsersList');
+  const toastEl = document.getElementById('toast');
 
-    function showToast(msg) {
-      if (toastTimer) clearTimeout(toastTimer);
-      toastEl.textContent = msg;
-      toastEl.style.display = 'block';
-      toastTimer = setTimeout(() => { toastEl.style.display = 'none'; }, 1700);
+  const editorLeaderWrap = document.getElementById('editor-leader-wrap');
+  const editorPersonalWrap = document.getElementById('editor-personal-wrap');
+  const editorTextarea = document.getElementById('editor-textarea');
+  const editorReadonlyTextarea = document.getElementById('editor-readonly-textarea');
+  const editorPersonalTextarea = document.getElementById('editor-personal-textarea');
+  const editorPersonalUserName = document.getElementById('editorPersonalUserName');
+  const historyBackdrop = document.getElementById('historyBackdrop');
+  const historyList = document.getElementById('historyList');
+
+  let touchStartX = 0, touchStartY = 0;
+  const SWIPE_MIN_X = 110;
+  const SWIPE_RATIO = 1.4;
+
+  const DEFAULT_USERS = ["Nemo","Estelle","Gillou","Bubu","Christian","Christophe"];
+  let currentUser = "";
+  let users = [];
+  let toastTimer = null;
+  let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin';
+  let themeMode = localStorage.getItem('bandapp_theme') || 'dark';
+
+  function showToast(msg) {
+    if (toastTimer) clearTimeout(toastTimer);
+    toastEl.textContent = msg;
+    toastEl.style.display = 'block';
+    toastTimer = setTimeout(() => { toastEl.style.display = 'none'; }, 1700);
+  }
+
+  function escapeHtml(s) {
+    return String(s || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function applyTheme() {
+    const root = document.documentElement;
+
+    if (themeMode === 'light') {
+      root.style.setProperty('--bg', '#f7f7f7');
+      root.style.setProperty('--text', '#111');
+      root.style.setProperty('--nav-bg', '#ffffff');
+      root.style.setProperty('--nav-text', '#111');
+      root.style.setProperty('--panel-bg', '#ffffff');
+      root.style.setProperty('--panel-border', '#d6d6d6');
+      root.style.setProperty('--chorus-bg', '#eaf2ff');
+      root.style.setProperty('--chorus-border', '#3b82f6');
+      root.style.setProperty('--chorus-text', '#111');
+      root.style.setProperty('--comment-bg', '#ffe08a');
+      root.style.setProperty('--comment-text', '#111');
+      settingsBtnFixed.style.background = 'rgba(255,255,255,0.7)';
+    } else {
+      root.style.setProperty('--bg', '#000');
+      root.style.setProperty('--text', '#eee');
+      root.style.setProperty('--nav-bg', '#1a1a1a');
+      root.style.setProperty('--nav-text', '#eee');
+      root.style.setProperty('--panel-bg', '#111');
+      root.style.setProperty('--panel-border', '#333');
+      root.style.setProperty('--chorus-bg', '#111827');
+      root.style.setProperty('--chorus-border', '#60a5fa');
+      root.style.setProperty('--chorus-text', '#eee');
+      root.style.setProperty('--comment-bg', '#ffd54f');
+      root.style.setProperty('--comment-text', '#000');
+      settingsBtnFixed.style.background = 'rgba(0,0,0,0.25)';
+    }
+  }
+
+  function toggleTheme() {
+    themeMode = (themeMode === 'dark') ? 'light' : 'dark';
+    localStorage.setItem('bandapp_theme', themeMode);
+    applyTheme();
+    syncSettingsUI();
+  }
+
+  function openSettings() {
+    syncSettingsUI();
+    settingsBackdrop.style.display = 'flex';
+  }
+
+  function closeSettings() {
+    settingsBackdrop.style.display = 'none';
+  }
+
+  function openUserFromSettings() {
+    closeSettings();
+    setTimeout(() => openUserPicker(true), 50);
+  }
+
+  function syncSettingsUI() {
+    const lb = document.getElementById('settingsLeaderBtn');
+    if (lb) lb.innerText = isLeader ? "Quitter le mode Leader" : "Devenir leader";
+
+    const cb = document.getElementById('settingsChordBtn');
+    if (cb) cb.innerText = (chordStyle === 'latin') ? "Accords: Do" : "Accords: C";
+
+    const tb = document.getElementById('settingsThemeBtn');
+    if (tb) tb.innerText = (themeMode === 'dark') ? "Thème: Sombre" : "Thème: Clair";
+  }
+
+  function renderConnectedUsers(usersList) {
+    if (!connectedUsersList) return;
+
+    if (!Array.isArray(usersList) || !usersList.length) {
+      connectedUsersList.textContent = "Aucun utilisateur connecté";
+      return;
     }
 
-    function applyTheme() {
-      const root = document.documentElement;
+    connectedUsersList.textContent = usersList.join("\n");
+  }
 
-      if (themeMode === 'light') {
-        root.style.setProperty('--bg', '#f7f7f7');
-        root.style.setProperty('--text', '#111');
-        root.style.setProperty('--nav-bg', '#ffffff');
-        root.style.setProperty('--nav-text', '#111');
-        root.style.setProperty('--panel-bg', '#ffffff');
-        root.style.setProperty('--panel-border', '#d6d6d6');
-        root.style.setProperty('--chorus-bg', '#eaf2ff');
-        root.style.setProperty('--chorus-border', '#3b82f6');
-        root.style.setProperty('--chorus-text', '#111');
-        root.style.setProperty('--comment-bg', '#ffe08a');
-        root.style.setProperty('--comment-text', '#111');
-        settingsBtnFixed.style.background = 'rgba(255,255,255,0.7)';
-      } else {
-        root.style.setProperty('--bg', '#000');
-        root.style.setProperty('--text', '#eee');
-        root.style.setProperty('--nav-bg', '#1a1a1a');
-        root.style.setProperty('--nav-text', '#eee');
-        root.style.setProperty('--panel-bg', '#111');
-        root.style.setProperty('--panel-border', '#333');
-        root.style.setProperty('--chorus-bg', '#111827');
-        root.style.setProperty('--chorus-border', '#60a5fa');
-        root.style.setProperty('--chorus-text', '#eee');
-        root.style.setProperty('--comment-bg', '#ffd54f');
-        root.style.setProperty('--comment-text', '#000');
-        settingsBtnFixed.style.background = 'rgba(0,0,0,0.25)';
-      }
-    }
-
-    function toggleTheme() {
-      themeMode = (themeMode === 'dark') ? 'light' : 'dark';
-      localStorage.setItem('bandapp_theme', themeMode);
-      applyTheme();
-      syncSettingsUI();
-    }
-
-    function openSettings() {
-      syncSettingsUI();
-      settingsBackdrop.style.display = 'flex';
-    }
-
-    function closeSettings() {
-      settingsBackdrop.style.display = 'none';
-    }
-
-    function openUserFromSettings() {
-      closeSettings();
-      setTimeout(() => openUserPicker(true), 50);
-    }
-
-    function syncSettingsUI() {
-      const lb = document.getElementById('settingsLeaderBtn');
-      if (lb) lb.innerText = isLeader ? "Quitter le mode Leader" : "Devenir leader";
-
-      const cb = document.getElementById('settingsChordBtn');
-      if (cb) cb.innerText = (chordStyle === 'latin') ? "Accords: Do" : "Accords: C";
-
-      const tb = document.getElementById('settingsThemeBtn');
-      if (tb) tb.innerText = (themeMode === 'dark') ? "Thème: Sombre" : "Thème: Clair";
-    }
-
-    function renderConnectedUsers(usersList) {
-      if (!connectedUsersList) return;
-
-      if (!Array.isArray(usersList) || !usersList.length) {
-        connectedUsersList.textContent = "Aucun utilisateur connecté";
-        return;
-      }
-
-      connectedUsersList.textContent = usersList.join("\n");
-    }
-
-    function applyLeaderUI() {
-      document.querySelectorAll('.leader-only').forEach(el => {
-        if (isLeader) {
-          if (el.classList.contains('controls-group')) {
-            el.style.display = 'flex';
-          } else {
-            el.style.display = '';
-          }
+  function applyLeaderUI() {
+    document.querySelectorAll('.leader-only').forEach(el => {
+      if (isLeader) {
+        if (el.classList.contains('controls-group')) {
+          el.style.display = 'flex';
         } else {
-          el.style.display = 'none';
+          el.style.display = '';
         }
-      });
-
-      const badge = document.getElementById('leaderBadge');
-      if (!badge) return;
-
-      if (isLeader) {
-        badge.textContent = "LEADER";
-        badge.classList.remove('off');
-        badge.classList.add('perso');
       } else {
-        badge.textContent = "FOLLOW";
-        badge.classList.remove('perso');
-        badge.classList.add('off');
-      }
-    }
-
-    function loadUsersList() {
-      const savedList = localStorage.getItem('bandapp_users');
-      if (savedList) {
-        try {
-          const parsed = JSON.parse(savedList);
-          if (Array.isArray(parsed) && parsed.length) return parsed;
-        } catch {}
-      }
-      return [...DEFAULT_USERS];
-    }
-
-    function saveUsersList() {
-      localStorage.setItem('bandapp_users', JSON.stringify(users));
-    }
-
-    function renderUserGrid() {
-      userGrid.innerHTML = "";
-      users.forEach(name => {
-        const div = document.createElement('div');
-        div.className = 'user-choice';
-        div.textContent = name;
-        div.onclick = () => setCurrentUser(name, true);
-        userGrid.appendChild(div);
-      });
-    }
-
-    function setCurrentUser(name, fromPicker) {
-      currentUser = String(name || "").trim();
-      if (!currentUser) return;
-
-      localStorage.setItem('bandapp_currentUser', currentUser);
-
-      const lab = document.getElementById('settingsUserLabel');
-      if (lab) lab.textContent = currentUser;
-
-      socket.emit('register-user', currentUser);
-
-      if (currentFileName) {
-        stopAutoScroll();
-        loadSong(currentFileName);
-        loadNotes();
-      }
-
-      if (fromPicker) {
-        userOverlay.style.display = 'none';
-        showToast(`Bienvenue ${currentUser}`);
-      }
-    }
-
-    function openUserPicker(force) {
-      const saved = localStorage.getItem('bandapp_currentUser') || "";
-      if (!force && saved) return;
-      userOverlay.style.display = 'flex';
-      renderUserGrid();
-    }
-
-    function addUser() {
-      const name = prompt("Nom du nouvel utilisateur ?") || "";
-      const clean = String(name).trim();
-      if (!clean) return;
-      if (users.some(u => u.toLowerCase() === clean.toLowerCase())) return;
-
-      users.push(clean);
-      users.sort((a,b)=>a.localeCompare(b, 'fr', { sensitivity:'base' }));
-      saveUsersList();
-      renderUserGrid();
-    }
-
-    function initUsers() {
-      users = loadUsersList();
-      saveUsersList();
-
-      const saved = localStorage.getItem('bandapp_currentUser') || "";
-      if (saved) {
-        setCurrentUser(saved, false);
-      } else {
-        openUserPicker(true);
-      }
-    }
-
-    socket.on('connect', () => {
-      settingsBtnFixed.style.borderColor = "#4CAF50";
-
-      if (netBadge) {
-        netBadge.textContent = "ONLINE";
-        netBadge.classList.remove('off');
-        netBadge.classList.add('on');
-      }
-
-      if (currentUser) socket.emit('register-user', currentUser);
-    });
-
-    socket.on('disconnect', () => {
-      settingsBtnFixed.style.borderColor = "#f44336";
-
-      if (netBadge) {
-        netBadge.textContent = "OFFLINE";
-        netBadge.classList.remove('on');
-        netBadge.classList.add('off');
+        el.style.display = 'none';
       }
     });
 
-    socket.on('connected-users', (data) => {
-      renderConnectedUsers(data?.users || []);
+    const badge = document.getElementById('leaderBadge');
+    if (!badge) return;
+
+    if (isLeader) {
+      badge.textContent = "LEADER";
+      badge.classList.remove('off');
+      badge.classList.add('perso');
+    } else {
+      badge.textContent = "FOLLOW";
+      badge.classList.remove('perso');
+      badge.classList.add('off');
+    }
+  }
+
+  function loadUsersList() {
+    const savedList = localStorage.getItem('bandapp_users');
+    if (savedList) {
+      try {
+        const parsed = JSON.parse(savedList);
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+      } catch {}
+    }
+    return [...DEFAULT_USERS];
+  }
+
+  function saveUsersList() {
+    localStorage.setItem('bandapp_users', JSON.stringify(users));
+  }
+
+  function renderUserGrid() {
+    userGrid.innerHTML = "";
+    users.forEach(name => {
+      const div = document.createElement('div');
+      div.className = 'user-choice';
+      div.textContent = name;
+      div.onclick = () => setCurrentUser(name, true);
+      userGrid.appendChild(div);
     });
+  }
 
-    socket.on('leader-state', (data) => {
-      const wasLeader = isLeader;
-      isLeader = data?.leaderSocketId === socket.id;
+  function setCurrentUser(name, fromPicker) {
+    currentUser = String(name || "").trim();
+    if (!currentUser) return;
 
-      if (wasLeader && !isLeader) {
-        stopAutoScroll();
-      }
+    localStorage.setItem('bandapp_currentUser', currentUser);
 
-      applyLeaderUI();
-      syncSettingsUI();
-    });
+    const lab = document.getElementById('settingsUserLabel');
+    if (lab) lab.textContent = currentUser;
 
-    socket.on('leader-denied', (data) => {
-      showToast(`Leader déjà pris par ${data?.leaderUserName || 'un autre appareil'}`);
-    });
+    socket.emit('register-user', currentUser);
 
-    async function fetchSongs() {
-      const res = await fetch('/list-songs');
-      allSongs = (await res.json()).sort();
-
-      const listEl = document.getElementById('songList');
-      listEl.innerHTML =
-        allSongs.map((s, idx) => `
-          <div class="song-item" data-name="${s.toLowerCase()}" onclick="openSong(${idx})">
-            <b>${s.replace('.pro','').replace('.cho','')}</b><span>❯</span>
-          </div>
-        `).join('');
-
-      updateSongCount();
-    }
-
-    function filterSongList(q) {
-      const query = String(q || "").toLowerCase().trim();
-      const items = document.querySelectorAll('#songList .song-item');
-      let shown = 0;
-
-      items.forEach(item => {
-        const name = item.dataset.name || "";
-        const ok = (!query || name.includes(query));
-        item.style.display = ok ? "flex" : "none";
-        if (ok) shown++;
-      });
-
-      updateSongCount(shown);
-    }
-
-    function updateSongCount(visibleCount) {
-      if (!songCountEl) return;
-      const total = allSongs.length || 0;
-      const visible = (typeof visibleCount === "number") ? visibleCount : total;
-      songCountEl.textContent = `${visible}/${total}`;
-    }
-
-    function toggleLeader() {
-      if (isLeader) {
-        socket.emit('release-leader');
-      } else {
-        socket.emit('request-leader');
-      }
-    }
-
-    function openSong(idx) {
-      if (idx < 0 || idx >= allSongs.length) return;
-
+    if (currentFileName) {
       stopAutoScroll();
-
-      currentIndex = idx;
-      currentFileName = allSongs[idx];
-
-      updateBanner.style.display = 'none';
-      notesPanel.style.display = 'none';
-
-      document.getElementById('library').style.display = 'none';
-      document.getElementById('viewer-container').style.display = 'block';
-
-      if (isLeader) {
-        socket.emit('sync-autoscroll', {
-          active: false,
-          speed: Number(speedInput.value) || 50
-        });
-
-        socket.emit('change-song', currentFileName);
-      }
-
       loadSong(currentFileName);
-      setTimeout(loadNotes, 10);
+      loadNotes();
     }
 
-    async function loadSong(f) {
-      const res = await fetch('/partitions/' + f);
+    if (fromPicker) {
+      userOverlay.style.display = 'none';
+      showToast(`Bienvenue ${currentUser}`);
+    }
+  }
+
+  function openUserPicker(force) {
+    const saved = localStorage.getItem('bandapp_currentUser') || "";
+    if (!force && saved) return;
+    userOverlay.style.display = 'flex';
+    renderUserGrid();
+  }
+
+  function addUser() {
+    const name = prompt("Nom du nouvel utilisateur ?") || "";
+    const clean = String(name).trim();
+    if (!clean) return;
+    if (users.some(u => u.toLowerCase() === clean.toLowerCase())) return;
+
+    users.push(clean);
+    users.sort((a,b)=>a.localeCompare(b, 'fr', { sensitivity:'base' }));
+    saveUsersList();
+    renderUserGrid();
+  }
+
+  function initUsers() {
+    users = loadUsersList();
+    saveUsersList();
+
+    const saved = localStorage.getItem('bandapp_currentUser') || "";
+    if (saved) {
+      setCurrentUser(saved, false);
+    } else {
+      openUserPicker(true);
+    }
+  }
+
+  socket.on('connect', () => {
+    settingsBtnFixed.style.borderColor = "#4CAF50";
+
+    if (netBadge) {
+      netBadge.textContent = "ONLINE";
+      netBadge.classList.remove('off');
+      netBadge.classList.add('on');
+    }
+
+    if (currentUser) socket.emit('register-user', currentUser);
+  });
+
+  socket.on('disconnect', () => {
+    settingsBtnFixed.style.borderColor = "#f44336";
+
+    if (netBadge) {
+      netBadge.textContent = "OFFLINE";
+      netBadge.classList.remove('on');
+      netBadge.classList.add('off');
+    }
+  });
+
+  socket.on('connected-users', (data) => {
+    renderConnectedUsers(data?.users || []);
+  });
+
+  socket.on('leader-state', (data) => {
+    const wasLeader = isLeader;
+    isLeader = data?.leaderSocketId === socket.id;
+
+    if (wasLeader && !isLeader) {
+      stopAutoScroll();
+    }
+
+    applyLeaderUI();
+    syncSettingsUI();
+  });
+
+  socket.on('leader-denied', (data) => {
+    showToast(`Leader déjà pris par ${data?.leaderUserName || 'un autre appareil'}`);
+  });
+
+  async function fetchSongs() {
+    const res = await fetch('/list-songs');
+    allSongs = (await res.json()).sort();
+
+    const listEl = document.getElementById('songList');
+    listEl.innerHTML =
+      allSongs.map((s, idx) => `
+        <div class="song-item" data-name="${s.toLowerCase()}" onclick="openSong(${idx})">
+          <b>${s.replace('.pro','').replace('.cho','')}</b><span>❯</span>
+        </div>
+      `).join('');
+
+    updateSongCount();
+  }
+
+  function filterSongList(q) {
+    const query = String(q || "").toLowerCase().trim();
+    const items = document.querySelectorAll('#songList .song-item');
+    let shown = 0;
+
+    items.forEach(item => {
+      const name = item.dataset.name || "";
+      const ok = (!query || name.includes(query));
+      item.style.display = ok ? "flex" : "none";
+      if (ok) shown++;
+    });
+
+    updateSongCount(shown);
+  }
+
+  function updateSongCount(visibleCount) {
+    if (!songCountEl) return;
+    const total = allSongs.length || 0;
+    const visible = (typeof visibleCount === "number") ? visibleCount : total;
+    songCountEl.textContent = `${visible}/${total}`;
+  }
+
+  function toggleLeader() {
+    if (isLeader) {
+      socket.emit('release-leader');
+    } else {
+      socket.emit('request-leader');
+    }
+  }
+
+  function openSong(idx) {
+    if (idx < 0 || idx >= allSongs.length) return;
+
+    stopAutoScroll();
+
+    currentIndex = idx;
+    currentFileName = allSongs[idx];
+
+    updateBanner.style.display = 'none';
+    notesPanel.style.display = 'none';
+
+    document.getElementById('library').style.display = 'none';
+    document.getElementById('viewer-container').style.display = 'block';
+
+    if (isLeader) {
+      socket.emit('sync-autoscroll', {
+        active: false,
+        speed: Number(speedInput.value) || 50
+      });
+
+      socket.emit('change-song', currentFileName);
+    }
+
+    loadSong(currentFileName);
+    setTimeout(loadNotes, 10);
+  }
+
+  async function loadSong(f) {
+    try {
+      const res = await fetch('/partitions/' + encodeURIComponent(f));
       currentRaw = await res.text();
 
       transposeValue = 0;
@@ -988,624 +1045,648 @@
       renderGrids();
       viewerElement.scrollTop = 0;
       updateBanner.style.display = 'none';
+    } catch (err) {
+      console.error(err);
+      showToast("Erreur de chargement");
     }
+  }
 
-    socket.on('load-song', f => {
-      if (!isLeader) {
-        stopAutoScroll();
-        const idx = allSongs.indexOf(f);
-        if (idx !== -1) openSong(idx);
-      }
-    });
-
-    function normName(s) {
-      return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    }
-
-    socket.on('song-updated', ({ fileName }) => {
-      const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
-      if (!viewerOpen) return;
-      const sameSong = normName(fileName) === normName(currentFileName);
-      if (sameSong) updateBanner.style.display = 'flex';
-    });
-
-    function dismissUpdate() {
-      updateBanner.style.display = 'none';
-    }
-
-    function reloadCurrentSong() {
+  socket.on('load-song', f => {
+    if (!isLeader) {
       stopAutoScroll();
-      loadSong(currentFileName);
+      const idx = allSongs.indexOf(f);
+      if (idx !== -1) openSong(idx);
     }
+  });
 
-    function notesKey(fileName) {
-      const u = currentUser || "unknown";
-      return "notes:" + u + ":" + fileName;
-    }
+  function normName(s) {
+    return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
 
-    function loadNotes() {
-      if (!currentFileName) return;
-      const val = localStorage.getItem(notesKey(currentFileName)) || "";
-      notesTextarea.value = val;
-    }
+  socket.on('song-updated', ({ fileName }) => {
+    const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
+    if (!viewerOpen) return;
+    const sameSong = normName(fileName) === normName(currentFileName);
+    if (sameSong) updateBanner.style.display = 'flex';
+  });
 
-    function saveNotes() {
-      if (!currentFileName) return;
-      localStorage.setItem(notesKey(currentFileName), notesTextarea.value || "");
-    }
+  function dismissUpdate() {
+    updateBanner.style.display = 'none';
+  }
 
-    function toggleNotes() {
-      const visible = notesPanel.style.display === "block";
-      notesPanel.style.display = visible ? "none" : "block";
-      if (!visible) loadNotes();
-    }
+  function reloadCurrentSong() {
+    stopAutoScroll();
+    loadSong(currentFileName);
+  }
 
-    notesTextarea.addEventListener('input', saveNotes);
+  function notesKey(fileName) {
+    const u = currentUser || "unknown";
+    return "notes:" + u + ":" + fileName;
+  }
 
-    function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+  function loadNotes() {
+    if (!currentFileName) return;
+    const val = localStorage.getItem(notesKey(currentFileName)) || "";
+    notesTextarea.value = val;
+  }
 
-    function getTopLyricAnchorState() {
-      const blocks = viewerElement.querySelectorAll('[data-kind="lyric"][data-anchor]');
-      if (!blocks.length) return null;
+  function saveNotes() {
+    if (!currentFileName) return;
+    localStorage.setItem(notesKey(currentFileName), notesTextarea.value || "");
+  }
 
-      const st = viewerElement.scrollTop;
-      for (const el of blocks) {
-        const top = el.offsetTop;
-        const h = el.offsetHeight || 1;
-        if (top + h > st + 8) {
-          const progress = clamp01((st - top) / h);
-          return { anchor: el.dataset.anchor, progress };
-        }
+  function toggleNotes() {
+    const visible = notesPanel.style.display === "block";
+    notesPanel.style.display = visible ? "none" : "block";
+    if (!visible) loadNotes();
+  }
+
+  notesTextarea.addEventListener('input', saveNotes);
+
+  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
+  function getTopLyricAnchorState() {
+    const blocks = viewerElement.querySelectorAll('[data-kind="lyric"][data-anchor]');
+    if (!blocks.length) return null;
+
+    const st = viewerElement.scrollTop;
+    for (const el of blocks) {
+      const top = el.offsetTop;
+      const h = el.offsetHeight || 1;
+      if (top + h > st + 8) {
+        const progress = clamp01((st - top) / h);
+        return { anchor: el.dataset.anchor, progress };
       }
-
-      const last = blocks[blocks.length - 1];
-      return { anchor: last.dataset.anchor, progress: 1 };
     }
 
-    let lastEmitAt = 0;
-    let lastEmitAnchor = "";
-    let lastEmitProg = -1;
+    const last = blocks[blocks.length - 1];
+    return { anchor: last.dataset.anchor, progress: 1 };
+  }
 
-    viewerElement.addEventListener('scroll', () => {
-      if (!isLeader || isRemoteScrolling || isScrolling) return;
+  let lastEmitAt = 0;
+  let lastEmitAnchor = "";
+  let lastEmitProg = -1;
 
-      const state = getTopLyricAnchorState();
-      if (!state) return;
+  viewerElement.addEventListener('scroll', () => {
+    if (!isLeader || isRemoteScrolling || isScrolling) return;
 
-      const now = Date.now();
-      if (
-        now - lastEmitAt < 120 &&
-        state.anchor === lastEmitAnchor &&
-        Math.abs(state.progress - lastEmitProg) < 0.05
-      ) {
-        return;
-      }
+    const state = getTopLyricAnchorState();
+    if (!state) return;
 
-      lastEmitAt = now;
-      lastEmitAnchor = state.anchor;
-      lastEmitProg = state.progress;
+    const now = Date.now();
+    if (
+      now - lastEmitAt < 120 &&
+      state.anchor === lastEmitAnchor &&
+      Math.abs(state.progress - lastEmitProg) < 0.05
+    ) {
+      return;
+    }
 
-      socket.emit('scroll-sync', state);
+    lastEmitAt = now;
+    lastEmitAnchor = state.anchor;
+    lastEmitProg = state.progress;
+
+    socket.emit('scroll-sync', state);
+  });
+
+  socket.on('apply-scroll', data => {
+    if (isLeader) return;
+    if (isScrolling) return;
+
+    const anchor = data?.anchor;
+    const progress = clamp01(Number(data?.progress) || 0);
+
+    const el = anchor
+      ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`)
+      : null;
+
+    let targetTop;
+    if (el) {
+      const top = el.offsetTop;
+      const h = el.offsetHeight || 1;
+      targetTop = top + progress * h;
+    } else {
+      const max = viewerElement.scrollHeight - viewerElement.clientHeight;
+      targetTop = progress * (max > 0 ? max : 0);
+    }
+
+    if (Math.abs(viewerElement.scrollTop - targetTop) < 8) return;
+
+    pendingRemoteScrollTop = targetTop;
+
+    if (remoteScrollRaf) cancelAnimationFrame(remoteScrollRaf);
+    remoteScrollRaf = requestAnimationFrame(() => {
+      isRemoteScrolling = true;
+      viewerElement.scrollTop = pendingRemoteScrollTop;
+      setTimeout(() => { isRemoteScrolling = false; }, 120);
     });
+  });
 
-    socket.on('apply-scroll', data => {
-      if (isLeader) return;
-      if (isScrolling) return;
+  function isEditorOpen() {
+    return document.getElementById('editor-container').style.display === 'flex';
+  }
 
-      const anchor = data?.anchor;
-      const progress = clamp01(Number(data?.progress) || 0);
+  function isViewerOpen() {
+    return document.getElementById('viewer-container').style.display === 'block';
+  }
 
-      const el = anchor
-        ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`)
-        : null;
+  function shouldBlockFollowerManualScroll(target) {
+    if (isLeader) return false;
+    if (!isViewerOpen()) return false;
+    if (isEditorOpen()) return false;
+    if (target && target.id === 'notesTextarea') return false;
+    return true;
+  }
 
-      let targetTop;
-      if (el) {
-        const top = el.offsetTop;
-        const h = el.offsetHeight || 1;
-        targetTop = top + progress * h;
-      } else {
-        const max = viewerElement.scrollHeight - viewerElement.clientHeight;
-        targetTop = progress * (max > 0 ? max : 0);
-      }
+  viewerElement.addEventListener('wheel', (e) => {
+    if (shouldBlockFollowerManualScroll(e.target)) e.preventDefault();
+  }, { passive:false });
 
-      if (Math.abs(viewerElement.scrollTop - targetTop) < 8) return;
+  viewerElement.addEventListener('touchmove', (e) => {
+    if (shouldBlockFollowerManualScroll(e.target)) e.preventDefault();
+  }, { passive:false });
 
-      pendingRemoteScrollTop = targetTop;
+  window.addEventListener('keydown', (e) => {
+    if (!shouldBlockFollowerManualScroll(document.activeElement)) return;
 
-      if (remoteScrollRaf) cancelAnimationFrame(remoteScrollRaf);
-      remoteScrollRaf = requestAnimationFrame(() => {
-        isRemoteScrolling = true;
-        viewerElement.scrollTop = pendingRemoteScrollTop;
-        setTimeout(() => { isRemoteScrolling = false; }, 120);
-      });
-    });
+    const blockedKeys = ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "];
+    if (blockedKeys.includes(e.key)) e.preventDefault();
+  }, { passive:false });
 
-    function isEditorOpen() {
-      return document.getElementById('editor-container').style.display === 'flex';
+  viewerElement.addEventListener('touchstart', (e) => {
+    if (!isViewerOpen() || isEditorOpen()) return;
+    if (e.target && e.target.id === 'notesTextarea') return;
+
+    const t = e.changedTouches[0];
+    touchStartX = t.screenX;
+    touchStartY = t.screenY;
+  }, { passive: true });
+
+  viewerElement.addEventListener('touchend', (e) => {
+    if (!isViewerOpen() || isEditorOpen()) return;
+    if (e.target && e.target.id === 'notesTextarea') return;
+
+    const t = e.changedTouches[0];
+    const dx = t.screenX - touchStartX;
+    const dy = t.screenY - touchStartY;
+
+    if (Math.abs(dx) < SWIPE_MIN_X) return;
+    if (Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return;
+
+    if (dx > 0 && currentIndex > 0) openSong(currentIndex - 1);
+    else if (dx < 0 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
+  }, { passive: true });
+
+  function sliderToPxPerSecond(value) {
+    const v = Number(value) || 50;
+    const delayMs = Math.max(10, 105 - v);
+    return 1000 / delayMs;
+  }
+
+  function autoScrollLoop(t) {
+    if (!isScrolling) return;
+
+    if (!lastRafTime) lastRafTime = t;
+    const dt = t - lastRafTime;
+    lastRafTime = t;
+
+    const pxPerSec = sliderToPxPerSecond(speedInput.value);
+    const deltaPx = (dt / 1000) * pxPerSec;
+
+    scrollCarry += deltaPx;
+    const step = Math.floor(scrollCarry);
+
+    if (step >= 1) {
+      viewerElement.scrollTop += step;
+      scrollCarry -= step;
     }
 
-    function isViewerOpen() {
-      return document.getElementById('viewer-container').style.display === 'block';
+    rafId = requestAnimationFrame(autoScrollLoop);
+  }
+
+  function startAutoScroll() {
+    if (isScrolling) return;
+    isScrolling = true;
+    document.getElementById('playBtn').innerText = "⏸";
+    document.getElementById('playBtn').classList.add('active-btn');
+    lastRafTime = 0;
+    scrollCarry = 0;
+    rafId = requestAnimationFrame(autoScrollLoop);
+  }
+
+  function stopAutoScroll() {
+    if (!isScrolling) return;
+    isScrolling = false;
+    const playBtn = document.getElementById('playBtn');
+    if (playBtn) {
+      playBtn.innerText = "▶";
+      playBtn.classList.remove('active-btn');
     }
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    lastRafTime = 0;
+    scrollCarry = 0;
+  }
 
-    function shouldBlockFollowerManualScroll(target) {
-      if (isLeader) return false;
-      if (!isViewerOpen()) return false;
-      if (isEditorOpen()) return false;
-      if (target && target.id === 'notesTextarea') return false;
-      return true;
-    }
-
-    viewerElement.addEventListener('wheel', (e) => {
-      if (shouldBlockFollowerManualScroll(e.target)) e.preventDefault();
-    }, { passive:false });
-
-    viewerElement.addEventListener('touchmove', (e) => {
-      if (shouldBlockFollowerManualScroll(e.target)) e.preventDefault();
-    }, { passive:false });
-
-    window.addEventListener('keydown', (e) => {
-      if (!shouldBlockFollowerManualScroll(document.activeElement)) return;
-
-      const blockedKeys = ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "];
-      if (blockedKeys.includes(e.key)) e.preventDefault();
-    }, { passive:false });
-
-    viewerElement.addEventListener('touchstart', (e) => {
-      if (!isViewerOpen() || isEditorOpen()) return;
-      if (e.target && e.target.id === 'notesTextarea') return;
-
-      const t = e.changedTouches[0];
-      touchStartX = t.screenX;
-      touchStartY = t.screenY;
-    }, { passive: true });
-
-    viewerElement.addEventListener('touchend', (e) => {
-      if (!isViewerOpen() || isEditorOpen()) return;
-      if (e.target && e.target.id === 'notesTextarea') return;
-
-      const t = e.changedTouches[0];
-      const dx = t.screenX - touchStartX;
-      const dy = t.screenY - touchStartY;
-
-      if (Math.abs(dx) < SWIPE_MIN_X) return;
-      if (Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return;
-
-      if (dx > 0 && currentIndex > 0) openSong(currentIndex - 1);
-      else if (dx < 0 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
-    }, { passive: true });
-
-    function sliderToPxPerSecond(value) {
-      const v = Number(value) || 50;
-      const delayMs = Math.max(10, 105 - v);
-      return 1000 / delayMs;
-    }
-
-    function autoScrollLoop(t) {
-      if (!isScrolling) return;
-
-      if (!lastRafTime) lastRafTime = t;
-      const dt = t - lastRafTime;
-      lastRafTime = t;
-
-      const pxPerSec = sliderToPxPerSecond(speedInput.value);
-      const deltaPx = (dt / 1000) * pxPerSec;
-
-      scrollCarry += deltaPx;
-      const step = Math.floor(scrollCarry);
-
-      if (step >= 1) {
-        viewerElement.scrollTop += step;
-        scrollCarry -= step;
-      }
-
-      rafId = requestAnimationFrame(autoScrollLoop);
-    }
-
-    function startAutoScroll() {
-      if (isScrolling) return;
-      isScrolling = true;
-      document.getElementById('playBtn').innerText = "⏸";
-      document.getElementById('playBtn').classList.add('active-btn');
-      lastRafTime = 0;
-      scrollCarry = 0;
-      rafId = requestAnimationFrame(autoScrollLoop);
-    }
-
-    function stopAutoScroll() {
-      if (!isScrolling) return;
-      isScrolling = false;
-      const playBtn = document.getElementById('playBtn');
-      if (playBtn) {
-        playBtn.innerText = "▶";
-        playBtn.classList.remove('active-btn');
-      }
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = null;
-      lastRafTime = 0;
-      scrollCarry = 0;
-    }
-
-    function toggleAutoScroll(emitSync) {
-      if (isScrolling) {
-        stopAutoScroll();
-      } else {
-        if (isLeader && emitSync) {
-          const state = getTopLyricAnchorState();
-          if (state) socket.emit('scroll-sync', state);
-        }
-        startAutoScroll();
-      }
-
+  function toggleAutoScroll(emitSync) {
+    if (isScrolling) {
+      stopAutoScroll();
+    } else {
       if (isLeader && emitSync) {
-        socket.emit('sync-autoscroll', {
-          active: isScrolling,
-          speed: Number(speedInput.value) || 50
-        });
+        const state = getTopLyricAnchorState();
+        if (state) socket.emit('scroll-sync', state);
       }
+      startAutoScroll();
     }
 
-    function handleSpeedChange() {
-      if (!isLeader) return;
-
-      socket.emit('leader-speed', Number(speedInput.value) || 50);
-
-      if (isScrolling) {
-        socket.emit('sync-autoscroll', {
-          active: true,
-          speed: Number(speedInput.value) || 50
-        });
-      }
-    }
-
-    socket.on('apply-autoscroll', d => {
-      if (!isLeader) {
-        speedInput.value = d.speed;
-        const wantActive = !!d.active;
-        if (wantActive && !isScrolling) startAutoScroll();
-        if (!wantActive && isScrolling) stopAutoScroll();
-      }
-    });
-
-    socket.on('apply-fontsize', value => {
-      if (isLeader) return;
-
-      const v = Number(value);
-      if (!isFinite(v)) return;
-
-      fontSize = v;
-      renderChordPro();
-      renderGrids();
-    });
-
-    socket.on('apply-transpose', value => {
-      if (isLeader) return;
-
-      const v = Number(value);
-      if (!isFinite(v)) return;
-
-      transposeValue = v;
-      document.getElementById('transposeVal').innerText =
-        (transposeValue > 0 ? '+' : '') + transposeValue;
-
-      renderChordPro();
-      renderGrids();
-    });
-
-    socket.on('apply-speed', value => {
-      if (isLeader) return;
-
-      const v = Number(value);
-      if (!isFinite(v)) return;
-
-      speedInput.value = v;
-    });
-
-    function updateFontSize(delta) {
-      fontSize += delta;
-      renderChordPro();
-      renderGrids();
-
-      if (isLeader) {
-        socket.emit('leader-fontsize', fontSize);
-      }
-    }
-
-    function updateTranspose(dir) {
-      transposeValue += dir;
-      document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
-      renderChordPro();
-      renderGrids();
-
-      if (isLeader) {
-        socket.emit('leader-transpose', transposeValue);
-      }
-    }
-
-    function toggleChordStyle() {
-      chordStyle = (chordStyle === 'latin') ? 'american' : 'latin';
-      localStorage.setItem('bandapp_chordStyle', chordStyle);
-      syncSettingsUI();
-      renderChordPro();
-      renderGrids();
-    }
-
-    const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-    const scaleLat = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
-
-    function normalizeNote(note) {
-      return note
-        .replace('Bb','A#')
-        .replace('Db','C#')
-        .replace('Eb','D#')
-        .replace('Gb','F#')
-        .replace('Ab','G#');
-    }
-
-    function transChord(chord, steps) {
-      return chord.replace(/([A-G][#b]?)/g, (match) => {
-        const n = normalizeNote(match);
-        const idx = scale.indexOf(n);
-        if (idx === -1) return match;
-        let newIdx = (idx + steps) % 12;
-        if (newIdx < 0) newIdx += 12;
-        return (chordStyle === 'latin' ? scaleLat[newIdx] : scale[newIdx]);
+    if (isLeader && emitSync) {
+      socket.emit('sync-autoscroll', {
+        active: isScrolling,
+        speed: Number(speedInput.value) || 50
       });
     }
+  }
 
-    function parseChordProLine(line) {
-      let chordLine = '';
-      let lyricLine = '';
+  function handleSpeedChange() {
+    if (!isLeader) return;
 
-      let i = 0;
-      while (i < line.length) {
-        const ch = line[i];
+    socket.emit('leader-speed', Number(speedInput.value) || 50);
 
-        if (ch === '[') {
-          const end = line.indexOf(']', i);
-          if (end !== -1) {
-            const chordRaw = line.slice(i + 1, end);
-            const chord = transChord(chordRaw, transposeValue);
+    if (isScrolling) {
+      socket.emit('sync-autoscroll', {
+        active: true,
+        speed: Number(speedInput.value) || 50
+      });
+    }
+  }
 
-            const pos = lyricLine.length;
-            if (chordLine.length < pos) chordLine += ' '.repeat(pos - chordLine.length);
-            chordLine = chordLine.slice(0, pos) + chord + chordLine.slice(pos + chord.length);
-            i = end + 1;
-            continue;
-          }
+  socket.on('apply-autoscroll', d => {
+    if (!isLeader) {
+      speedInput.value = d.speed;
+      const wantActive = !!d.active;
+      if (wantActive && !isScrolling) startAutoScroll();
+      if (!wantActive && isScrolling) stopAutoScroll();
+    }
+  });
+
+  socket.on('apply-fontsize', value => {
+    if (isLeader) return;
+
+    const v = Number(value);
+    if (!isFinite(v)) return;
+
+    fontSize = v;
+    renderChordPro();
+    renderGrids();
+  });
+
+  socket.on('apply-transpose', value => {
+    if (isLeader) return;
+
+    const v = Number(value);
+    if (!isFinite(v)) return;
+
+    transposeValue = v;
+    document.getElementById('transposeVal').innerText =
+      (transposeValue > 0 ? '+' : '') + transposeValue;
+
+    renderChordPro();
+    renderGrids();
+  });
+
+  socket.on('apply-speed', value => {
+    if (isLeader) return;
+
+    const v = Number(value);
+    if (!isFinite(v)) return;
+
+    speedInput.value = v;
+  });
+
+  function updateFontSize(delta) {
+    fontSize += delta;
+    renderChordPro();
+    renderGrids();
+
+    if (isLeader) {
+      socket.emit('leader-fontsize', fontSize);
+    }
+  }
+
+  function updateTranspose(dir) {
+    transposeValue += dir;
+    document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
+    renderChordPro();
+    renderGrids();
+
+    if (isLeader) {
+      socket.emit('leader-transpose', transposeValue);
+    }
+  }
+
+  function toggleChordStyle() {
+    chordStyle = (chordStyle === 'latin') ? 'american' : 'latin';
+    localStorage.setItem('bandapp_chordStyle', chordStyle);
+    syncSettingsUI();
+    renderChordPro();
+    renderGrids();
+  }
+
+  const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const scaleLat = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
+
+  function normalizeNote(note) {
+    return note
+      .replace('Bb','A#')
+      .replace('Db','C#')
+      .replace('Eb','D#')
+      .replace('Gb','F#')
+      .replace('Ab','G#');
+  }
+
+  function transChord(chord, steps) {
+    return chord.replace(/([A-G][#b]?)/g, (match) => {
+      const n = normalizeNote(match);
+      const idx = scale.indexOf(n);
+      if (idx === -1) return match;
+      let newIdx = (idx + steps) % 12;
+      if (newIdx < 0) newIdx += 12;
+      return (chordStyle === 'latin' ? scaleLat[newIdx] : scale[newIdx]);
+    });
+  }
+
+  function parseChordProLine(line) {
+    let chordLine = '';
+    let lyricLine = '';
+
+    let i = 0;
+    while (i < line.length) {
+      const ch = line[i];
+
+      if (ch === '[') {
+        const end = line.indexOf(']', i);
+        if (end !== -1) {
+          const chordRaw = line.slice(i + 1, end);
+          const chord = transChord(chordRaw, transposeValue);
+
+          const pos = lyricLine.length;
+          if (chordLine.length < pos) chordLine += ' '.repeat(pos - chordLine.length);
+          chordLine = chordLine.slice(0, pos) + chord + chordLine.slice(pos + chord.length);
+          i = end + 1;
+          continue;
         }
-
-        lyricLine += ch;
-        chordLine += (ch === '\t') ? '\t' : ' ';
-        i++;
       }
 
-      if (chordLine.length < lyricLine.length) chordLine += ' '.repeat(lyricLine.length - chordLine.length);
-      return { chordLine, lyricLine };
+      lyricLine += ch;
+      chordLine += (ch === '\t') ? '\t' : ' ';
+      i++;
     }
 
-    function clearSongContent() {
-      songContentEl.replaceChildren();
+    if (chordLine.length < lyricLine.length) chordLine += ' '.repeat(lyricLine.length - chordLine.length);
+    return { chordLine, lyricLine };
+  }
+
+  function clearSongContent() {
+    songContentEl.replaceChildren();
+  }
+
+  function parseZoomIpadDirective(line){
+    const m = String(line || "").trim().match(/^\{zoom-ipad\s*:\s*([0-9]*\.?[0-9]+)\s*\}$/i);
+    if (!m) return null;
+    const v = Number(m[1]);
+    if (!isFinite(v) || v <= 0) return null;
+    return v;
+  }
+
+  function addCenteredTitle(text, level) {
+    const el = document.createElement(level === 1 ? 'h1' : 'h2');
+    el.style.textAlign = 'center';
+    el.style.fontSize = ((level === 1 ? 34 : 20) * currentSongZoom) + 'px';
+    if (level === 2) el.style.color = (themeMode === 'light' ? '#555' : '#888');
+    el.textContent = text;
+    songContentEl.appendChild(el);
+  }
+
+  function addCommentLine(text, targetEl) {
+    const wrap = document.createElement('div');
+    wrap.className = 'commentwrap';
+
+    const span = document.createElement('span');
+    span.className = 'commentline';
+    span.textContent = text;
+
+    wrap.appendChild(span);
+    targetEl.appendChild(wrap);
+  }
+
+  function addChordBlock(chordLine, lyricLine, targetEl, anchorId) {
+    const block = document.createElement('div');
+    block.className = 'block';
+    block.style.fontSize = (fontSize * currentSongZoom) + 'px';
+    block.dataset.kind = 'lyric';
+    if (anchorId) block.dataset.anchor = anchorId;
+
+    const preChord = document.createElement('pre');
+    preChord.className = 'chordline';
+    preChord.textContent = chordLine;
+
+    const preLyric = document.createElement('pre');
+    preLyric.className = 'lyricline';
+    preLyric.textContent = lyricLine;
+
+    if (chordLine.trim().length > 0) block.appendChild(preChord);
+    block.appendChild(preLyric);
+    targetEl.appendChild(block);
+  }
+
+  function normAnchorText(s){
+    return String(s || "").toLowerCase().replace(/\s+/g, ' ').trim();
+  }
+
+  function hashDJB2(str){
+    let h = 5381;
+    for (let i=0; i<str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i);
+    return (h >>> 0).toString(16);
+  }
+
+  function parsePUStart(line){
+    const m = line.match(/^\{pu\s*:\s*([^}]+)\}$/i);
+    if (!m) return null;
+    return { user: m[1].trim() };
+  }
+
+  function renderPUBlock(targetEl, showContent, label, text){
+    const wrap = document.createElement('div');
+    wrap.className = 'pu-block';
+
+    const linesCount = (String(text || "").split('\n').length);
+
+    if (showContent) {
+      const lab = document.createElement('div');
+      lab.className = 'pu-label';
+      lab.textContent = label;
+      wrap.appendChild(lab);
+    } else if (linesCount > 10) {
+      const lab = document.createElement('div');
+      lab.className = 'pu-label';
+      lab.textContent = `SOLO ${label}`;
+      wrap.appendChild(lab);
     }
 
-    function parseZoomIpadDirective(line){
-      const m = String(line || "").trim().match(/^\{zoom-ipad\s*:\s*([0-9]*\.?[0-9]+)\s*\}$/i);
-      if (!m) return null;
-      const v = Number(m[1]);
-      if (!isFinite(v) || v <= 0) return null;
-      return v;
+    const pre = document.createElement('pre');
+    pre.className = 'pu-pre';
+    pre.textContent = showContent
+      ? (text || "")
+      : Array.from({ length: linesCount }, () => " ").join("\n");
+
+    wrap.appendChild(pre);
+    targetEl.appendChild(wrap);
+  }
+
+  function renderChordPro() {
+    clearSongContent();
+    renderChordPro._occ = {};
+
+    const lines = currentRaw.split('\n');
+
+    let zoomSong = 1;
+    for (const line of lines) {
+      const z = parseZoomIpadDirective(line);
+      if (z !== null) { zoomSong = z; break; }
     }
 
-    function addCenteredTitle(text, level) {
-      const el = document.createElement(level === 1 ? 'h1' : 'h2');
-      el.style.textAlign = 'center';
-      el.style.fontSize = ((level === 1 ? 34 : 20) * currentSongZoom) + 'px';
-      if (level === 2) el.style.color = (themeMode === 'light' ? '#555' : '#888');
-      el.textContent = text;
-      songContentEl.appendChild(el);
-    }
+    currentSongZoom = zoomSong;
+    songContentEl.style.setProperty('--song-zoom', String(currentSongZoom));
 
-    function addCommentLine(text, targetEl) {
-      const wrap = document.createElement('div');
-      wrap.className = 'commentwrap';
+    const overlayLayer = document.createElement('div');
+    overlayLayer.id = 'overlayLayer';
+    songContentEl.appendChild(overlayLayer);
 
-      const span = document.createElement('span');
-      span.className = 'commentline';
-      span.textContent = text;
+    let inChorus = false;
+    let chorusContainer = null;
+    let inPU = false;
+    let puUser = "";
+    let puBuffer = [];
 
-      wrap.appendChild(span);
-      targetEl.appendChild(wrap);
-    }
+    for (const lineRaw of lines) {
+      const line = String(lineRaw || "");
+      if (parseZoomIpadDirective(line) !== null) continue;
 
-    function addChordBlock(chordLine, lyricLine, targetEl, anchorId) {
-      const block = document.createElement('div');
-      block.className = 'block';
-      block.style.fontSize = (fontSize * currentSongZoom) + 'px';
-      block.dataset.kind = 'lyric';
-      if (anchorId) block.dataset.anchor = anchorId;
+      const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
 
-      const preChord = document.createElement('pre');
-      preChord.className = 'chordline';
-      preChord.textContent = chordLine;
-
-      const preLyric = document.createElement('pre');
-      preLyric.className = 'lyricline';
-      preLyric.textContent = lyricLine;
-
-      if (chordLine.trim().length > 0) block.appendChild(preChord);
-      block.appendChild(preLyric);
-      targetEl.appendChild(block);
-    }
-
-    function normAnchorText(s){
-      return String(s || "").toLowerCase().replace(/\s+/g, ' ').trim();
-    }
-
-    function hashDJB2(str){
-      let h = 5381;
-      for (let i=0; i<str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i);
-      return (h >>> 0).toString(16);
-    }
-
-    function parsePUStart(line){
-      const m = line.match(/^\{pu\s*:\s*([^}]+)\}$/i);
-      if (!m) return null;
-      return { user: m[1].trim() };
-    }
-
-    function renderPUBlock(targetEl, showContent, label, text){
-      const wrap = document.createElement('div');
-      wrap.className = 'pu-block';
-
-      const linesCount = (String(text || "").split('\n').length);
-
-      if (showContent) {
-        const lab = document.createElement('div');
-        lab.className = 'pu-label';
-        lab.textContent = label;
-        wrap.appendChild(lab);
-      } else if (linesCount > 10) {
-        const lab = document.createElement('div');
-        lab.className = 'pu-label';
-        lab.textContent = `SOLO ${label}`;
-        wrap.appendChild(lab);
-      }
-
-      const pre = document.createElement('pre');
-      pre.className = 'pu-pre';
-      pre.textContent = showContent
-        ? (text || "")
-        : Array.from({ length: linesCount }, () => " ").join("\n");
-
-      wrap.appendChild(pre);
-      targetEl.appendChild(wrap);
-    }
-
-    function renderChordPro() {
-      clearSongContent();
-      renderChordPro._occ = {};
-
-      const lines = currentRaw.split('\n');
-
-      let zoomSong = 1;
-      for (const line of lines) {
-        const z = parseZoomIpadDirective(line);
-        if (z !== null) { zoomSong = z; break; }
-      }
-
-      currentSongZoom = zoomSong;
-      songContentEl.style.setProperty('--song-zoom', String(currentSongZoom));
-
-      const overlayLayer = document.createElement('div');
-      overlayLayer.id = 'overlayLayer';
-      songContentEl.appendChild(overlayLayer);
-
-      let inChorus = false;
-      let chorusContainer = null;
-      let inPU = false;
-      let puUser = "";
-      let puBuffer = [];
-
-      for (const lineRaw of lines) {
-        const line = String(lineRaw || "");
-        if (parseZoomIpadDirective(line) !== null) continue;
-
-        const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
-
-        if (!inPU) {
-          const start = parsePUStart(line.trim());
-          if (start) {
-            inPU = true;
-            puUser = start.user;
-            puBuffer = [];
-            continue;
-          }
-        } else {
-          if (/^\{\/pu\s*\}$/i.test(line.trim())) {
-            const show = (currentUser || "").toLowerCase() === puUser.toLowerCase();
-            const txt = puBuffer.join("\n");
-            renderPUBlock(target, show, puUser, txt);
-            inPU = false;
-            puUser = "";
-            puBuffer = [];
-            continue;
-          }
-
-          puBuffer.push(line);
+      if (!inPU) {
+        const start = parsePUStart(line.trim());
+        if (start) {
+          inPU = true;
+          puUser = start.user;
+          puBuffer = [];
+          continue;
+        }
+      } else {
+        if (/^\{\/pu\s*\}$/i.test(line.trim())) {
+          const show = (currentUser || "").toLowerCase() === puUser.toLowerCase();
+          const txt = puBuffer.join("\n");
+          renderPUBlock(target, show, puUser, txt);
+          inPU = false;
+          puUser = "";
+          puBuffer = [];
           continue;
         }
 
-        const title = line.match(/\{(?:t|title)\s*:\s*(.*?)\}/i);
-        if (title) { addCenteredTitle(title[1], 1); continue; }
-
-        const subtitle = line.match(/\{(?:st|subtitle)\s*:\s*(.*?)\}/i);
-        if (subtitle) { addCenteredTitle(subtitle[1], 2); continue; }
-
-        if (/\{soc\s*:\s*\}/i.test(line) || /\{soc\s*\}/i.test(line)) {
-          inChorus = true;
-          chorusContainer = document.createElement('div');
-          chorusContainer.className = 'chorus-block';
-          songContentEl.appendChild(chorusContainer);
-          continue;
-        }
-
-        if (/\{eoc\s*:\s*\}/i.test(line) || /\{eoc\s*\}/i.test(line)) {
-          inChorus = false;
-          chorusContainer = null;
-          continue;
-        }
-
-        const comment = line.match(/\{c\s*:\s*(.*?)\}/i);
-        if (comment) {
-          addCommentLine(comment[1], target);
-          continue;
-        }
-
-        const { chordLine, lyricLine } = parseChordProLine(line);
-        const key = normAnchorText(lyricLine);
-        renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
-        const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
-        addChordBlock(chordLine, lyricLine, target, anchorId);
+        puBuffer.push(line);
+        continue;
       }
+
+      const title = line.match(/\{(?:t|title)\s*:\s*(.*?)\}/i);
+      if (title) { addCenteredTitle(title[1], 1); continue; }
+
+      const subtitle = line.match(/\{(?:st|subtitle)\s*:\s*(.*?)\}/i);
+      if (subtitle) { addCenteredTitle(subtitle[1], 2); continue; }
+
+      if (/\{soc\s*:\s*\}/i.test(line) || /\{soc\s*\}/i.test(line)) {
+        inChorus = true;
+        chorusContainer = document.createElement('div');
+        chorusContainer.className = 'chorus-block';
+        songContentEl.appendChild(chorusContainer);
+        continue;
+      }
+
+      if (/\{eoc\s*:\s*\}/i.test(line) || /\{eoc\s*\}/i.test(line)) {
+        inChorus = false;
+        chorusContainer = null;
+        continue;
+      }
+
+      const comment = line.match(/\{c\s*:\s*(.*?)\}/i);
+      if (comment) {
+        addCommentLine(comment[1], target);
+        continue;
+      }
+
+      const { chordLine, lyricLine } = parseChordProLine(line);
+      const key = normAnchorText(lyricLine);
+      renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
+      const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
+      addChordBlock(chordLine, lyricLine, target, anchorId);
+    }
+  }
+
+  function openEditor() {
+    stopAutoScroll();
+    startEditor();
+  }
+
+  async function startEditor() {
+    if (!currentFileName) return;
+
+    const res = await fetch('/partitions/' + encodeURIComponent(currentFileName));
+    const raw = await res.text();
+
+    document.getElementById('editor-container').style.display = 'flex';
+
+    if (isLeader) {
+      editorLeaderWrap.style.display = 'flex';
+      editorPersonalWrap.style.display = 'none';
+      editorTextarea.value = raw;
+      renderChordBankFromEditor();
+      editorTextarea.oninput = renderChordBankFromEditor;
+      return;
     }
 
-    function openEditor() {
-      stopAutoScroll();
-      startEditor();
-    }
+    editorLeaderWrap.style.display = 'none';
+    editorPersonalWrap.style.display = 'flex';
+    editorReadonlyTextarea.value = raw;
+    editorPersonalUserName.textContent = currentUser || "";
 
-    async function startEditor() {
-      const ta = document.getElementById('editor-textarea');
-      const res = await fetch('/partitions/' + currentFileName);
-      ta.value = await res.text();
+    const blockRes = await fetch(`/song-personal-block?fileName=${encodeURIComponent(currentFileName)}&userName=${encodeURIComponent(currentUser)}`);
+    const data = await blockRes.json();
+    editorPersonalTextarea.value = data?.personalContent || "";
+  }
 
-      document.getElementById('editor-container').style.display = 'flex';
+  function closeEditor() {
+    editorTextarea.oninput = null;
+    document.getElementById('editor-container').style.display = 'none';
+  }
 
-      setTimeout(() => {
-        renderChordBankFromEditor();
-        ta.addEventListener('input', renderChordBankFromEditor);
-      }, 0);
-    }
+  async function saveEditor() {
+    if (!currentFileName) return;
 
-    function closeEditor() {
-      const ta = document.getElementById('editor-textarea');
-      if (ta) ta.removeEventListener('input', renderChordBankFromEditor);
-      document.getElementById('editor-container').style.display = 'none';
-    }
-
-    async function saveEditor() {
-      const newContent = document.getElementById('editor-textarea').value;
-      if (!currentFileName) return;
-
-      const pin = prompt("PIN requis pour enregistrer les modifications") || "";
+    if (isLeader) {
+      const newContent = editorTextarea.value;
+      const pin = prompt("PIN requis pour enregistrer les modifications du morceau commun") || "";
       const cleanPin = String(pin).trim();
       if (!cleanPin) return;
 
       const res = await fetch('/save-song', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: currentFileName, content: newContent, pin: cleanPin })
+        body: JSON.stringify({
+          fileName: currentFileName,
+          content: newContent,
+          pin: cleanPin,
+          mode: 'full',
+          userName: currentUser
+        })
       });
 
       if (res.ok) {
@@ -1613,218 +1694,317 @@
         renderChordPro();
         renderGrids();
         closeEditor();
-
         if (isLeader) socket.emit('change-song', currentFileName);
-
         showToast("Modification enregistrée ✅");
       } else if (res.status === 403) {
         alert("PIN invalide");
       } else {
         alert("Erreur d'enregistrement");
       }
+      return;
     }
 
-    function closeViewer() {
-      stopAutoScroll();
-      notesPanel.style.display = 'none';
-      document.getElementById('library').style.display = 'block';
-      document.getElementById('viewer-container').style.display = 'none';
-      if (songSearchInput) songSearchInput.focus();
-    }
+    const personalContent = editorPersonalTextarea.value;
 
-    function gridsKey(fileName){
-      const u = currentUser || "unknown";
-      return `grids:${u}:${fileName}`;
-    }
+    const res = await fetch('/save-song', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: currentFileName,
+        content: personalContent,
+        mode: 'personal',
+        userName: currentUser
+      })
+    });
 
-    function loadGrids(fileName){
-      try {
-        const raw = localStorage.getItem(gridsKey(fileName)) || "[]";
-        const arr = JSON.parse(raw);
-        return Array.isArray(arr) ? arr : [];
-      } catch {
-        return [];
+    if (res.ok) {
+      closeEditor();
+      await loadSong(currentFileName);
+      showToast("Partie personnelle enregistrée ✅");
+    } else {
+      alert("Erreur d'enregistrement");
+    }
+  }
+
+  function closeViewer() {
+    stopAutoScroll();
+    notesPanel.style.display = 'none';
+    document.getElementById('library').style.display = 'block';
+    document.getElementById('viewer-container').style.display = 'none';
+    if (songSearchInput) songSearchInput.focus();
+  }
+
+  function gridsKey(fileName){
+    const u = currentUser || "unknown";
+    return `grids:${u}:${fileName}`;
+  }
+
+  function loadGrids(fileName){
+    try {
+      const raw = localStorage.getItem(gridsKey(fileName)) || "[]";
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function renderGrids(){
+    if (!currentFileName) return;
+
+    const layer = document.getElementById('overlayLayer');
+    if (!layer) return;
+    layer.innerHTML = "";
+
+    const grids = loadGrids(currentFileName);
+
+    for (const g of grids){
+      const anchor = g?.anchor;
+      const text = String(g?.text || "").trim();
+      if (!anchor || !text) continue;
+
+      const el = viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`);
+      if (!el) continue;
+
+      const top = el.offsetTop + el.offsetHeight + 6;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'gridOverlay';
+      wrap.style.top = top + "px";
+
+      const box = document.createElement('div');
+      box.className = 'box';
+      box.textContent = text;
+
+      wrap.appendChild(box);
+      layer.appendChild(wrap);
+    }
+  }
+
+  const BACKUP_PREFIXES = ['bandapp_', 'notes:', 'overlay:', 'grids:'];
+
+  function isBackupKey(k) {
+    return BACKUP_PREFIXES.some(p => k.startsWith(p));
+  }
+
+  function exportBackup() {
+    try {
+      const data = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+        if (!isBackupKey(key)) continue;
+        data[key] = localStorage.getItem(key);
       }
+
+      const payload = {
+        app: "bandapp",
+        schemaVersion: 1,
+        exportedAt: new Date().toISOString(),
+        data
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const filename = `bandapp-backup-${y}-${m}-${day}.json`;
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      URL.revokeObjectURL(url);
+      showToast("Sauvegarde exportée ✅");
+    } catch (e) {
+      console.error(e);
+      alert("Erreur export sauvegarde");
     }
+  }
 
-    function renderGrids(){
-      if (!currentFileName) return;
+  function triggerImport() {
+    closeSettings();
+    const input = document.getElementById('importFile');
+    if (!input) return;
+    input.value = "";
+    setTimeout(() => input.click(), 80);
+  }
 
-      const layer = document.getElementById('overlayLayer');
-      if (!layer) return;
-      layer.innerHTML = "";
+  function handleImportFile(event) {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
 
-      const grids = loadGrids(currentFileName);
-
-      for (const g of grids){
-        const anchor = g?.anchor;
-        const text = String(g?.text || "").trim();
-        if (!anchor || !text) continue;
-
-        const el = viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`);
-        if (!el) continue;
-
-        const top = el.offsetTop + el.offsetHeight + 6;
-
-        const wrap = document.createElement('div');
-        wrap.className = 'gridOverlay';
-        wrap.style.top = top + "px";
-
-        const box = document.createElement('div');
-        box.className = 'box';
-        box.textContent = text;
-
-        wrap.appendChild(box);
-        layer.appendChild(wrap);
-      }
-    }
-
-    const BACKUP_PREFIXES = ['bandapp_', 'notes:', 'overlay:', 'grids:'];
-
-    function isBackupKey(k) {
-      return BACKUP_PREFIXES.some(p => k.startsWith(p));
-    }
-
-    function exportBackup() {
+    const reader = new FileReader();
+    reader.onload = () => {
       try {
-        const data = {};
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (!key) continue;
-          if (!isBackupKey(key)) continue;
-          data[key] = localStorage.getItem(key);
+        const txt = String(reader.result || "");
+        const json = JSON.parse(txt);
+
+        if (!json || json.app !== "bandapp" || typeof json.data !== "object") {
+          alert("Fichier de sauvegarde invalide.");
+          return;
         }
 
-        const payload = {
-          app: "bandapp",
-          schemaVersion: 1,
-          exportedAt: new Date().toISOString(),
-          data
-        };
+        const keys = Object.keys(json.data);
+        for (const k of keys) {
+          localStorage.setItem(k, json.data[k]);
+        }
 
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-
-        const d = new Date();
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const filename = `bandapp-backup-${y}-${m}-${day}.json`;
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-
-        URL.revokeObjectURL(url);
-        showToast("Sauvegarde exportée ✅");
+        showToast("Sauvegarde importée ✅");
+        setTimeout(() => location.reload(), 600);
       } catch (e) {
         console.error(e);
-        alert("Erreur export sauvegarde");
+        alert("Erreur : impossible d'importer la sauvegarde.");
       }
+    };
+    reader.readAsText(file);
+  }
+
+  function insertAtCursor(text){
+    const ta = document.getElementById('editor-textarea');
+    if (!ta || !isLeader) return;
+
+    const start = ta.selectionStart || 0;
+    const end = ta.selectionEnd || 0;
+
+    ta.value = ta.value.substring(0, start) + text + ta.value.substring(end);
+    ta.selectionStart = ta.selectionEnd = start + text.length;
+    ta.focus();
+  }
+
+  function insertTemplatePU(){
+    const u = currentUser || "Nom";
+    insertAtCursor(`{pu:${u}}\n\n{/pu}\n`);
+  }
+
+  function insertTemplateComment(){
+    insertAtCursor(`{c: }\n`);
+  }
+
+  function extractChordsFromText(text){
+    const set = new Set();
+    const re = /\[([^\]]+)\]/g;
+    let m;
+    while ((m = re.exec(text)) !== null){
+      set.add(m[1].trim());
+    }
+    return Array.from(set);
+  }
+
+  function renderChordBankFromEditor(){
+    const bank = document.getElementById('chordBank');
+    if (!bank) return;
+
+    if (!isLeader) {
+      bank.innerHTML = "";
+      return;
     }
 
-    function triggerImport() {
-      closeSettings();
-      const input = document.getElementById('importFile');
-      if (!input) return;
-      input.value = "";
-      setTimeout(() => input.click(), 80);
+    const chords = extractChordsFromText(editorTextarea.value);
+
+    if (!chords.length){
+      bank.innerHTML = "";
+      return;
     }
 
-    function handleImportFile(event) {
-      const file = event?.target?.files?.[0];
-      if (!file) return;
+    bank.innerHTML =
+      "<span style='opacity:.5;font-size:12px;'>Accords:</span>" +
+      chords.map(c =>
+        `<button class="btn" style="padding:6px 10px;font-size:12px;" onclick="insertAtCursor('[${escapeHtml(c)}]')">${escapeHtml(c)}</button>`
+      ).join('');
+  }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const txt = String(reader.result || "");
-          const json = JSON.parse(txt);
+  async function openHistoryModal() {
+    if (!isLeader || !currentFileName) return;
 
-          if (!json || json.app !== "bandapp" || typeof json.data !== "object") {
-            alert("Fichier de sauvegarde invalide.");
-            return;
-          }
+    historyBackdrop.style.display = 'flex';
+    historyList.innerHTML = "Chargement...";
 
-          const keys = Object.keys(json.data);
-          for (const k of keys) {
-            localStorage.setItem(k, json.data[k]);
-          }
+    try {
+      const res = await fetch('/song-history?fileName=' + encodeURIComponent(currentFileName));
+      const items = await res.json();
 
-          showToast("Sauvegarde importée ✅");
-          setTimeout(() => location.reload(), 600);
-        } catch (e) {
-          console.error(e);
-          alert("Erreur : impossible d'importer la sauvegarde.");
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    function insertAtCursor(text){
-      const ta = document.getElementById('editor-textarea');
-      if (!ta) return;
-
-      const start = ta.selectionStart || 0;
-      const end = ta.selectionEnd || 0;
-
-      ta.value = ta.value.substring(0, start) + text + ta.value.substring(end);
-      ta.selectionStart = ta.selectionEnd = start + text.length;
-      ta.focus();
-    }
-
-    function insertTemplatePU(){
-      const u = currentUser || "Nom";
-      insertAtCursor(`{pu:${u}}\n\n{/pu}\n`);
-    }
-
-    function insertTemplateComment(){
-      insertAtCursor(`{c: }\n`);
-    }
-
-    function extractChordsFromText(text){
-      const set = new Set();
-      const re = /\[([^\]]+)\]/g;
-      let m;
-      while ((m = re.exec(text)) !== null){
-        set.add(m[1].trim());
-      }
-      return Array.from(set);
-    }
-
-    function renderChordBankFromEditor(){
-      const bank = document.getElementById('chordBank');
-      const ta = document.getElementById('editor-textarea');
-      if (!bank || !ta) return;
-
-      const chords = extractChordsFromText(ta.value);
-
-      if (!chords.length){
-        bank.innerHTML = "";
+      if (!Array.isArray(items) || !items.length) {
+        historyList.innerHTML = "<div>Aucune version enregistrée.</div>";
         return;
       }
 
-      bank.innerHTML =
-        "<span style='opacity:.5;font-size:12px;'>Accords:</span>" +
-        chords.map(c =>
-          `<button class="btn" style="padding:6px 10px;font-size:12px;" onclick="insertAtCursor('[${c}]')">${c}</button>`
-        ).join('');
+      historyList.innerHTML = items.map(item => {
+        return `
+          <div style="border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:12px; margin-bottom:10px; background:rgba(255,255,255,0.04);">
+            <div style="font-weight:900; margin-bottom:6px;">${escapeHtml(item.savedAt || '')}</div>
+            <div style="font-size:13px; opacity:.8; margin-bottom:8px;">
+              Par ${escapeHtml(item.savedBy || 'Inconnu')} — ${escapeHtml(item.mode || '')}
+            </div>
+            <button class="btn" onclick="restoreHistoryVersion('${item.id}')">Restaurer cette version</button>
+          </div>
+        `;
+      }).join('');
+    } catch (err) {
+      console.error(err);
+      historyList.innerHTML = "<div>Erreur de chargement de l'historique.</div>";
     }
+  }
 
-    applyTheme();
-    initUsers();
-    fetchSongs();
-    syncSettingsUI();
-    applyLeaderUI();
+  function closeHistoryModal() {
+    historyBackdrop.style.display = 'none';
+  }
 
-    if (songSearchInput) {
-      songSearchInput.addEventListener('input', () => filterSongList(songSearchInput.value));
-      songSearchInput.addEventListener('search', () => filterSongList(songSearchInput.value));
-      filterSongList(songSearchInput.value);
+  async function restoreHistoryVersion(historyId) {
+    if (!isLeader || !currentFileName) return;
+
+    const ok = confirm("Restaurer cette version du morceau ?");
+    if (!ok) return;
+
+    const pin = prompt("PIN requis pour restaurer une ancienne version") || "";
+    const cleanPin = String(pin).trim();
+    if (!cleanPin) return;
+
+    try {
+      const res = await fetch('/restore-song', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: currentFileName,
+          historyId,
+          pin: cleanPin,
+          userName: currentUser
+        })
+      });
+
+      if (res.ok) {
+        closeHistoryModal();
+        await loadSong(currentFileName);
+        if (isLeader) socket.emit('change-song', currentFileName);
+        showToast("Version restaurée ✅");
+      } else if (res.status === 403) {
+        alert("PIN invalide");
+      } else {
+        alert("Erreur lors de la restauration");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de la restauration");
     }
-  </script>
+  }
+
+  applyTheme();
+  initUsers();
+  fetchSongs();
+  syncSettingsUI();
+  applyLeaderUI();
+
+  if (songSearchInput) {
+    songSearchInput.addEventListener('input', () => filterSongList(songSearchInput.value));
+    songSearchInput.addEventListener('search', () => filterSongList(songSearchInput.value));
+    filterSongList(songSearchInput.value);
+  }
+</script>
 </body>
 </html>
