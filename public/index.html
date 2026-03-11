@@ -482,19 +482,18 @@ nav{
       overflow-wrap: anywhere;
     }
 
-    #connectedUsersBox{
-      border:1px solid rgba(255,255,255,0.12);
-      border-radius:12px;
-      padding:12px;
-      background:rgba(255,255,255,0.04);
-    }
+#connectedUsersBox{
+  border:1px solid var(--panel-border);
+  background:var(--panel-bg);
+  border-radius:8px;
+  padding:10px;
+  margin-top:10px;
+}
 
-    #connectedUsersTitle{
-      font-weight:900;
-      font-size:12px;
-      opacity:.7;
-      margin-bottom:8px;
-    }
+#connectedUsersTitle{
+  color: var(--text);
+  font-weight:600;
+}
 
 #connectedUsersList{
   white-space:pre-line;
@@ -503,10 +502,6 @@ nav{
   color: var(--text);
 }
 
-#connectedUsersTitle{
-  color: var(--text);
-  font-weight:600;
-}
   </style>
 </head>
 
