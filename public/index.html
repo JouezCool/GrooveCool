@@ -30,6 +30,31 @@
       --comment-bg:#ffd54f;
       --comment-text:#000;
     }
+	
+	#leaderFloatingActions{
+  display:none;
+  position:fixed;
+  top:72px;
+  left:0;
+  right:0;
+  z-index:30;
+  pointer-events:none;
+}
+
+#leaderFloatingActions .leader-float-btn{
+  position:absolute;
+  pointer-events:auto;
+  background:rgba(0,0,0,0.72);
+  backdrop-filter: blur(6px);
+}
+
+#playedToggleBtn{
+  left:12px;
+}
+
+#randomSongBtn{
+  right:12px;
+}
 
     body{
       font-family:sans-serif;
@@ -658,12 +683,15 @@ nav{
         <button class="btn" onclick="updateTranspose(1)">+</button>
       </div>
 
-      <button class="btn" onclick="toggleNotes()">NOTES</button>
-	  <button class="btn" onclick="openHistoryModal()">HISTORIQUE</button>
-	  <button class="btn" id="playedToggleBtn" onclick="togglePlayedCurrentSong()">JOUÉ</button>
-      <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
-	  <button class="btn" onclick="openRandomFilteredSong()">🎲 ALÉATOIRE</button>
+<button class="btn" onclick="toggleNotes()">NOTES</button>
+<button class="btn" onclick="openHistoryModal()">HISTORIQUE</button>
+<button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
     </nav>
+	
+	<div id="leaderFloatingActions">
+  <button class="btn leader-float-btn" id="playedToggleBtn" onclick="togglePlayedCurrentSong()">JOUÉ</button>
+  <button class="btn leader-float-btn" id="randomSongBtn" onclick="openRandomFilteredSong()">🎲 ALÉATOIRE</button>
+</div>
 
     <div id="notesPanel">
       <textarea id="notesTextarea" placeholder="Tes annotations personnelles..."></textarea>
@@ -919,32 +947,37 @@ function renderConnectedUsers(usersList) {
   el.innerHTML = usersList.map(name => `<div>${escapeHtml(name)}</div>`).join('');
 }
 
-  function applyLeaderUI() {
-    document.querySelectorAll('.leader-only').forEach(el => {
-      if (isLeader) {
-        if (el.classList.contains('controls-group')) {
-          el.style.display = 'flex';
-        } else {
-          el.style.display = '';
-        }
-      } else {
-        el.style.display = 'none';
-      }
-    });
-
-    const badge = document.getElementById('leaderBadge');
-    if (!badge) return;
-
+function applyLeaderUI() {
+  document.querySelectorAll('.leader-only').forEach(el => {
     if (isLeader) {
-      badge.textContent = "LEADER";
-      badge.classList.remove('off');
-      badge.classList.add('perso');
+      if (el.classList.contains('controls-group')) {
+        el.style.display = 'flex';
+      } else {
+        el.style.display = '';
+      }
     } else {
-      badge.textContent = "FOLLOW";
-      badge.classList.remove('perso');
-      badge.classList.add('off');
+      el.style.display = 'none';
     }
+  });
+
+  const floating = document.getElementById('leaderFloatingActions');
+  if (floating) {
+    floating.style.display = isLeader ? 'block' : 'none';
   }
+
+  const badge = document.getElementById('leaderBadge');
+  if (!badge) return;
+
+  if (isLeader) {
+    badge.textContent = "LEADER";
+    badge.classList.remove('off');
+    badge.classList.add('perso');
+  } else {
+    badge.textContent = "FOLLOW";
+    badge.classList.remove('perso');
+    badge.classList.add('off');
+  }
+}
 
   function loadUsersList() {
     const savedList = localStorage.getItem('bandapp_users');
