@@ -239,10 +239,11 @@ nav{
   gap:8px;
   border-bottom:1px solid var(--panel-border);
   flex-wrap:wrap;
-  #viewer-container nav .btn,
+}
+
+#viewer-container nav .btn,
 #viewer-container nav input[type="range"]{
   flex-shrink:0;
-}
 }
 
     .controls-group{
@@ -526,20 +527,69 @@ nav{
     </div>
   </div>
 
-  <div id="library">
-    <div class="lib-header">
-      <h2 style="margin:0; white-space:nowrap;">Répertoire</h2>
+<div id="library">
+  <div class="lib-header">
+    <h2 style="margin:0; white-space:nowrap;">Répertoire</h2>
 
-      <input id="songSearch" type="search" placeholder="Rechercher un morceau..."
-        style="flex:1; margin:0 12px; padding:10px 12px; border-radius:10px;
-               border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.25);
-               color:var(--nav-text); outline:none; max-width:420px;" />
+    <input id="songSearch" type="search" placeholder="Rechercher un morceau..."
+      style="flex:1; margin:0 12px; padding:10px 12px; border-radius:10px;
+             border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.25);
+             color:var(--nav-text); outline:none; max-width:320px;" />
 
-      <span style="opacity:.8; font-size:12px; white-space:nowrap;" id="songCount"></span>
-    </div>
-
-    <div id="songList"></div>
+    <span style="opacity:.8; font-size:12px; white-space:nowrap;" id="songCount"></span>
   </div>
+
+  <div id="libraryFilters" style="
+    padding:12px 20px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    background:var(--nav-bg);
+    border-bottom:1px solid var(--panel-border);
+  ">
+    <select id="categoryFilter" style="
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.15);
+      background:rgba(0,0,0,0.25);
+      color:var(--nav-text);
+      outline:none;
+    ">
+      <option value="Répertoire">Répertoire</option>
+      <option value="En travail">En travail</option>
+      <option value="1 minute">1 minute</option>
+      <option value="Archives">Archives</option>
+      <option value="">Toutes les catégories</option>
+    </select>
+
+    <select id="styleFilter" style="
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.15);
+      background:rgba(0,0,0,0.25);
+      color:var(--nav-text);
+      outline:none;
+    ">
+      <option value="">Tous les styles</option>
+    </select>
+
+    <select id="decadeFilter" style="
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.15);
+      background:rgba(0,0,0,0.25);
+      color:var(--nav-text);
+      outline:none;
+    ">
+      <option value="">Toutes les décennies</option>
+    </select>
+
+    <button class="btn" onclick="resetSongFilters()">Réinitialiser</button>
+  </div>
+
+  <div id="songList"></div>
+</div>
 
   <div id="viewer-container">
     <nav>
@@ -682,6 +732,7 @@ nav{
   let currentSongZoom = 1;
   let isLoadingSong = false;
   let lastConnectedUsers = [];
+  let songMeta = {};
 
   const viewerElement = document.getElementById('viewer');
   const songContentEl = document.getElementById('songContent');
@@ -706,6 +757,9 @@ nav{
   const editorPersonalUserName = document.getElementById('editorPersonalUserName');
 const historyBackdrop = document.getElementById('historyBackdrop');
 const historyList = document.getElementById('historyList');
+const categoryFilterEl = document.getElementById('categoryFilter');
+const styleFilterEl = document.getElementById('styleFilter');
+const decadeFilterEl = document.getElementById('decadeFilter');
 
   let touchStartX = 0, touchStartY = 0;
   const SWIPE_MIN_X = 110;
@@ -961,36 +1015,99 @@ socket.on('connected-users', (data) => {
   socket.on('leader-denied', (data) => {
     showToast(`Leader déjà pris par ${data?.leaderUserName || 'un autre appareil'}`);
   });
-
-  async function fetchSongs() {
-    const res = await fetch('/list-songs');
-    allSongs = (await res.json()).sort();
-
-    const listEl = document.getElementById('songList');
-    listEl.innerHTML =
-      allSongs.map((s, idx) => `
-        <div class="song-item" data-name="${s.toLowerCase()}" onclick="openSong(${idx})">
-          <b>${s.replace('.pro','').replace('.cho','')}</b><span>❯</span>
-        </div>
-      `).join('');
-
-    updateSongCount();
+  
+  async function fetchSongMeta() {
+  try {
+    const res = await fetch('/song-meta.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('song-meta.json introuvable');
+    songMeta = await res.json();
+  } catch (err) {
+    console.warn('Erreur de chargement des métadonnées', err);
+    songMeta = {};
   }
+}
 
-  function filterSongList(q) {
-    const query = String(q || "").toLowerCase().trim();
-    const items = document.querySelectorAll('#songList .song-item');
-    let shown = 0;
+function populateSongFilters() {
+  if (!styleFilterEl || !decadeFilterEl) return;
 
-    items.forEach(item => {
-      const name = item.dataset.name || "";
-      const ok = (!query || name.includes(query));
-      item.style.display = ok ? "flex" : "none";
-      if (ok) shown++;
-    });
+  const styles = new Set();
+  const decades = new Set();
 
-    updateSongCount(shown);
-  }
+  allSongs.forEach(song => {
+    const meta = songMeta[song] || {};
+    if (meta.style) styles.add(String(meta.style).trim());
+    if (meta.decade) decades.add(String(meta.decade).trim());
+  });
+
+  const sortedStyles = [...styles].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  const sortedDecades = [...decades].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+
+  styleFilterEl.innerHTML =
+    `<option value="">Tous les styles</option>` +
+    sortedStyles.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+
+  decadeFilterEl.innerHTML =
+    `<option value="">Toutes les décennies</option>` +
+    sortedDecades.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+}
+
+async function fetchSongs() {
+  const res = await fetch('/list-songs');
+  allSongs = (await res.json()).sort();
+
+  const listEl = document.getElementById('songList');
+  listEl.innerHTML =
+    allSongs.map((s, idx) => `
+      <div class="song-item"
+           data-name="${s.toLowerCase()}"
+           data-style="${((songMeta[s]?.style || '') + '').toLowerCase()}"
+           data-decade="${((songMeta[s]?.decade || '') + '').toLowerCase()}"
+           data-category="${((songMeta[s]?.category || 'Répertoire') + '').toLowerCase()}"
+           onclick="openSong(${idx})">
+        <b>${s.replace('.pro','').replace('.cho','')}</b><span>❯</span>
+      </div>
+    `).join('');
+
+  populateSongFilters();
+  updateSongCount();
+}
+
+function filterSongList(q) {
+  const query = String(q || "").toLowerCase().trim();
+  const selectedCategory = String(categoryFilterEl?.value || "Répertoire").toLowerCase().trim();
+  const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
+  const selectedDecade = String(decadeFilterEl?.value || "").toLowerCase().trim();
+
+  const items = document.querySelectorAll('#songList .song-item');
+  let shown = 0;
+
+  items.forEach(item => {
+    const name = item.dataset.name || "";
+    const category = item.dataset.category || "répertoire";
+    const style = item.dataset.style || "";
+    const decade = item.dataset.decade || "";
+
+    const matchQuery = !query || name.includes(query);
+    const matchCategory = !selectedCategory || category === selectedCategory;
+    const matchStyle = !selectedStyle || style === selectedStyle;
+    const matchDecade = !selectedDecade || decade === selectedDecade;
+
+    const ok = matchQuery && matchCategory && matchStyle && matchDecade;
+
+    item.style.display = ok ? "flex" : "none";
+    if (ok) shown++;
+  });
+
+  updateSongCount(shown);
+}
+
+function resetSongFilters() {
+  if (songSearchInput) songSearchInput.value = "";
+  if (categoryFilterEl) categoryFilterEl.value = "Répertoire";
+  if (styleFilterEl) styleFilterEl.value = "";
+  if (decadeFilterEl) decadeFilterEl.value = "";
+  filterSongList("");
+}
 
   function updateSongCount(visibleCount) {
     if (!songCountEl) return;
@@ -1649,37 +1766,27 @@ socket.on('apply-scroll', data => {
     startEditor();
   }
 
-  async function startEditor() {
-    if (!currentFileName) return;
+async function startEditor() {
+  const ta = document.getElementById('editor-textarea');
+  const res = await fetch('/partitions/' + encodeURIComponent(currentFileName), { cache: 'no-store' });
+  ta.value = await res.text();
 
-    const res = await fetch('/partitions/' + encodeURIComponent(currentFileName));
-    const raw = await res.text();
+  document.getElementById('editor-container').style.display = 'flex';
 
-    document.getElementById('editor-container').style.display = 'flex';
+  if (editorLeaderWrap) editorLeaderWrap.style.display = 'flex';
+  if (editorPersonalWrap) editorPersonalWrap.style.display = 'none';
 
-    if (isLeader) {
-      editorLeaderWrap.style.display = 'flex';
-      editorPersonalWrap.style.display = 'none';
-      editorTextarea.value = raw;
-      renderChordBankFromEditor();
-      editorTextarea.oninput = renderChordBankFromEditor;
-      return;
-    }
+  setTimeout(() => {
+    renderChordBankFromEditor();
+    ta.oninput = renderChordBankFromEditor;
+  }, 0);
+}
 
-    editorLeaderWrap.style.display = 'none';
-    editorPersonalWrap.style.display = 'flex';
-    editorReadonlyTextarea.value = raw;
-    editorPersonalUserName.textContent = currentUser || "";
-
-    const blockRes = await fetch(`/song-personal-block?fileName=${encodeURIComponent(currentFileName)}&userName=${encodeURIComponent(currentUser)}`);
-    const data = await blockRes.json();
-    editorPersonalTextarea.value = data?.personalContent || "";
-  }
-
-  function closeEditor() {
-    editorTextarea.oninput = null;
-    document.getElementById('editor-container').style.display = 'none';
-  }
+function closeEditor() {
+  const ta = document.getElementById('editor-textarea');
+  if (ta) ta.oninput = null;
+  document.getElementById('editor-container').style.display = 'none';
+}
 
 async function saveEditor() {
   const newContent = document.getElementById('editor-textarea').value;
@@ -1856,17 +1963,19 @@ async function saveEditor() {
     reader.readAsText(file);
   }
 
-  function insertAtCursor(text){
-    const ta = document.getElementById('editor-textarea');
-    if (!ta || !isLeader) return;
+function insertAtCursor(text){
+  const ta = document.getElementById('editor-textarea');
+  if (!ta) return;
 
-    const start = ta.selectionStart || 0;
-    const end = ta.selectionEnd || 0;
+  const start = ta.selectionStart || 0;
+  const end = ta.selectionEnd || 0;
 
-    ta.value = ta.value.substring(0, start) + text + ta.value.substring(end);
-    ta.selectionStart = ta.selectionEnd = start + text.length;
-    ta.focus();
-  }
+  ta.value = ta.value.substring(0, start) + text + ta.value.substring(end);
+  ta.selectionStart = ta.selectionEnd = start + text.length;
+  ta.focus();
+
+  renderChordBankFromEditor();
+}
 
   function insertTemplatePU(){
     const u = currentUser || "Nom";
@@ -1890,11 +1999,6 @@ async function saveEditor() {
   function renderChordBankFromEditor(){
     const bank = document.getElementById('chordBank');
     if (!bank) return;
-
-    if (!isLeader) {
-      bank.innerHTML = "";
-      return;
-    }
 
     const chords = extractChordsFromText(editorTextarea.value);
 
@@ -1988,17 +2092,32 @@ async function restoreHistoryVersion(historyId) {
   }
 }
 
+(async function initApp() {
   applyTheme();
   initUsers();
-  fetchSongs();
+  await fetchSongMeta();
+  await fetchSongs();
   syncSettingsUI();
   applyLeaderUI();
+  filterSongList(songSearchInput?.value || "");
+})();
 
-  if (songSearchInput) {
-    songSearchInput.addEventListener('input', () => filterSongList(songSearchInput.value));
-    songSearchInput.addEventListener('search', () => filterSongList(songSearchInput.value));
-    filterSongList(songSearchInput.value);
-  }
+if (songSearchInput) {
+  songSearchInput.addEventListener('input', () => filterSongList(songSearchInput.value));
+  songSearchInput.addEventListener('search', () => filterSongList(songSearchInput.value));
+}
+
+if (categoryFilterEl) {
+  categoryFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
+}
+
+if (styleFilterEl) {
+  styleFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
+}
+
+if (decadeFilterEl) {
+  decadeFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
+}
 </script>
 </body>
 </html>
