@@ -746,6 +746,7 @@ nav{
       </div>
     </div>
   </div>
+ </div>
   
 <div id="historyBackdrop" style="
   position:fixed; inset:0; display:none; z-index:6600;
@@ -782,7 +783,6 @@ nav{
   let isLoadingSong = false;
   let lastConnectedUsers = [];
   let songMeta = {};
-  let songMeta = {};
 let playedTonightSet = new Set();
 
   const viewerElement = document.getElementById('viewer');
@@ -808,9 +808,6 @@ let playedTonightSet = new Set();
   const editorPersonalUserName = document.getElementById('editorPersonalUserName');
 const historyBackdrop = document.getElementById('historyBackdrop');
 const historyList = document.getElementById('historyList');
-const categoryFilterEl = document.getElementById('categoryFilter');
-const styleFilterEl = document.getElementById('styleFilter');
-const decadeFilterEl = document.getElementById('decadeFilter');
 const categoryFilterEl = document.getElementById('categoryFilter');
 const ambianceFilterEl = document.getElementById('ambianceFilter');
 const audienceFilterEl = document.getElementById('audienceFilter');
@@ -1073,53 +1070,7 @@ socket.on('connected-users', (data) => {
     showToast(`Leader déjà pris par ${data?.leaderUserName || 'un autre appareil'}`);
   });
   
-  async function fetchSongMeta() {
-  try {
-    const res = await fetch('/song-meta.json', { cache: 'no-store' });
-    if (!res.ok) throw new Error('song-meta.json introuvable');
-    songMeta = await res.json();
-  } catch (err) {
-    console.warn('Erreur de chargement des métadonnées', err);
-    songMeta = {};
-  }
-}
-
-function populateSongFilters() {
-  if (!styleFilterEl || !decadeFilterEl) return;
-
-  const styles = new Set();
-  const decades = new Set();
-
-  allSongs.forEach(song => {
-    const meta = songMeta[song] || {};
-    if (meta.style) styles.add(String(meta.style).trim());
-    if (meta.decade) decades.add(String(meta.decade).trim());
-  });
-
-  const sortedStyles = [...styles].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
-  const sortedDecades = [...decades].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
-
-  styleFilterEl.innerHTML =
-    `<option value="">Tous les styles</option>` +
-    sortedStyles.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-
-  decadeFilterEl.innerHTML =
-    `<option value="">Toutes les décennies</option>` +
-    sortedDecades.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-}
-
-async function fetchSongMeta() {
-  try {
-    const res = await fetch('/song-meta.json', { cache: 'no-store' });
-    if (!res.ok) throw new Error('song-meta.json introuvable');
-    songMeta = await res.json();
-  } catch (err) {
-    console.warn('Erreur de chargement des métadonnées', err);
-    songMeta = {};
-  }
-}
-
-function populateSongFilters() {
+ function populateSongFilters() {
   if (!ambianceFilterEl || !audienceFilterEl) return;
 
   const ambiances = new Set();
@@ -1141,6 +1092,17 @@ function populateSongFilters() {
   audienceFilterEl.innerHTML =
     `<option value="">Toutes les audiences</option>` +
     sortedAudiences.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+}
+
+async function fetchSongMeta() {
+  try {
+    const res = await fetch('/song-meta.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('song-meta.json introuvable');
+    songMeta = await res.json();
+  } catch (err) {
+    console.warn('Erreur de chargement des métadonnées', err);
+    songMeta = {};
+  }
 }
 
 function isPlayedTonight(fileName) {
@@ -1294,7 +1256,6 @@ async function loadSong(f) {
 	updatePlayedButton();
 
     renderChordPro();
-    renderGrids();
 
     viewerElement.scrollTop = 0;
 
@@ -1933,10 +1894,9 @@ async function saveEditor() {
   });
 
   if (res.ok) {
-    currentRaw = newContent;
-    renderChordPro();
-    renderGrids();
-    closeEditor();
+currentRaw = newContent;
+renderChordPro();
+closeEditor();
 
     if (isLeader) socket.emit('change-song', currentFileName);
 
