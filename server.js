@@ -5,6 +5,7 @@ const io = require('socket.io')(http);
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+
 const playedTonight = new Set();
 
 app.use(express.json({ limit: '1mb' }));
@@ -18,20 +19,16 @@ app.use(express.static('public', { etag: false, maxAge: 0 }));
 
 const PARTITIONS_DIR = path.join(__dirname, 'public', 'partitions');
 const HISTORY_DIR = path.join(__dirname, 'history');
+const SONG_SETTINGS_DIR = path.join(__dirname, 'song-settings');
 const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
 
 fs.mkdirSync(PARTITIONS_DIR, { recursive: true });
 fs.mkdirSync(HISTORY_DIR, { recursive: true });
+fs.mkdirSync(SONG_SETTINGS_DIR, { recursive: true });
 
 let leaderSocketId = null;
 let leaderUserName = null;
 const connectedUsers = new Map();
-
-function broadcastPlayedTonight() {
-  io.emit('played-tonight-state', {
-    songs: [...playedTonight]
-  });
-}
 
 function isValidSongName(name) {
   if (typeof name !== 'string') return false;
@@ -57,6 +54,11 @@ function getSongPath(fileName) {
 function historyFilePath(fileName) {
   const safe = Buffer.from(fileName, 'utf8').toString('base64url');
   return path.join(HISTORY_DIR, safe + '.json');
+}
+
+function settingsFilePath(fileName) {
+  const safe = Buffer.from(fileName, 'utf8').toString('base64url');
+  return path.join(SONG_SETTINGS_DIR, safe + '.json');
 }
 
 function readHistory(fileName) {
@@ -92,12 +94,53 @@ function createHistoryEntry({ fileName, previousContent, userName }) {
   };
 }
 
+function readSongSettings(fileName) {
+  const fp = settingsFilePath(fileName);
+  if (!fs.existsSync(fp)) {
+    return {
+      fontSize: 26,
+      speed: 50,
+      transpose: 0
+    };
+  }
+
+  try {
+    const raw = fs.readFileSync(fp, 'utf8');
+    const data = JSON.parse(raw);
+
+    return {
+      fontSize: Number.isFinite(Number(data.fontSize)) ? Number(data.fontSize) : 26,
+      speed: Number.isFinite(Number(data.speed)) ? Number(data.speed) : 50,
+      transpose: Number.isFinite(Number(data.transpose)) ? Number(data.transpose) : 0
+    };
+  } catch {
+    return {
+      fontSize: 26,
+      speed: 50,
+      transpose: 0
+    };
+  }
+}
+
+function writeSongSettings(fileName, settings) {
+  const fp = settingsFilePath(fileName);
+
+  const clean = {
+    fontSize: Number.isFinite(Number(settings.fontSize)) ? Number(settings.fontSize) : 26,
+    speed: Number.isFinite(Number(settings.speed)) ? Number(settings.speed) : 50,
+    transpose: Number.isFinite(Number(settings.transpose)) ? Number(settings.transpose) : 0
+  };
+
+  fs.writeFileSync(fp, JSON.stringify(clean, null, 2), 'utf8');
+  return clean;
+}
+
 function broadcastConnectedUsers() {
   const uniqueUsers = [...new Set(
     [...connectedUsers.values()]
       .map(v => String(v || '').trim())
       .filter(Boolean)
-  )].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity:'base' }));
+  )].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
 
   io.emit('connected-users', { users: uniqueUsers });
 }
@@ -110,6 +153,12 @@ function broadcastLeaderState() {
   });
 }
 
+function broadcastPlayedTonight() {
+  io.emit('played-tonight-state', {
+    songs: [...playedTonight]
+  });
+}
+
 app.get('/list-songs', (req, res) => {
   try {
     const files = fs.readdirSync(PARTITIONS_DIR);
@@ -119,6 +168,7 @@ app.get('/list-songs', (req, res) => {
     });
     res.json(songs);
   } catch (err) {
+    console.error(err);
     res.status(500).json([]);
   }
 });
@@ -140,6 +190,53 @@ app.get('/song-history', (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json([]);
+  }
+});
+
+app.get('/song-settings', (req, res) => {
+  try {
+    const fileName = String(req.query.fileName || '');
+    if (!isValidSongName(fileName)) {
+      return res.status(400).json({
+        fontSize: 26,
+        speed: 50,
+        transpose: 0
+      });
+    }
+
+    res.json(readSongSettings(fileName));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      fontSize: 26,
+      speed: 50,
+      transpose: 0
+    });
+  }
+});
+
+app.post('/song-settings', (req, res) => {
+  try {
+    const { fileName, pin, fontSize, speed, transpose } = req.body || {};
+
+    if (!pinOk(pin)) return res.status(403).send("PIN invalide");
+    if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
+
+    const saved = writeSongSettings(fileName, {
+      fontSize,
+      speed,
+      transpose
+    });
+
+    io.emit('song-settings-updated', {
+      fileName,
+      settings: saved
+    });
+
+    res.json(saved);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur");
   }
 });
 
@@ -233,24 +330,24 @@ io.on('connection', (socket) => {
     broadcastConnectedUsers();
     broadcastLeaderState();
   });
-  
+
   socket.on('mark-played', ({ fileName, played }) => {
-  const name = String(fileName || '').trim();
-  if (!name) return;
+    const name = String(fileName || '').trim();
+    if (!name) return;
 
-  if (played) {
-    playedTonight.add(name);
-  } else {
-    playedTonight.delete(name);
-  }
+    if (played) {
+      playedTonight.add(name);
+    } else {
+      playedTonight.delete(name);
+    }
 
-  broadcastPlayedTonight();
-});
+    broadcastPlayedTonight();
+  });
 
-socket.on('reset-played-tonight', () => {
-  playedTonight.clear();
-  broadcastPlayedTonight();
-});
+  socket.on('reset-played-tonight', () => {
+    playedTonight.clear();
+    broadcastPlayedTonight();
+  });
 
   socket.on('request-leader', () => {
     if (!leaderSocketId || leaderSocketId === socket.id) {
@@ -267,7 +364,7 @@ socket.on('reset-played-tonight', () => {
       leaderSocketId = null;
       leaderUserName = "";
       broadcastLeaderState();
-      io.emit('apply-autoscroll', { active:false, speed:50 });
+      io.emit('apply-autoscroll', { active: false, speed: 50 });
     }
   });
 
@@ -318,7 +415,7 @@ socket.on('reset-played-tonight', () => {
       leaderSocketId = null;
       leaderUserName = "";
       broadcastLeaderState();
-      io.emit('apply-autoscroll', { active:false, speed:50 });
+      io.emit('apply-autoscroll', { active: false, speed: 50 });
     }
   });
 });
