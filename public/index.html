@@ -108,16 +108,15 @@
       background: rgba(76,175,80,0.18);
     }
 
-    #settingsFixedWrap{
-      position:fixed;
-      top:10px;
-      right:10px;
-      z-index:6000;
-      display:flex;
-      align-items:center;
-      gap:8px;
-      max-width:calc(100vw - 20px);
-    }
+#settingsFixedWrap{
+  position:fixed;
+  top:10px;
+  right:10px;
+  z-index:6000;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
 
     #settingsBtnFixed{
       border:2px solid var(--accent);
@@ -128,20 +127,6 @@
       padding:10px 12px;
       cursor:pointer;
       backdrop-filter: blur(6px);
-    }
-
-    #settingsUserLabel{
-      font-weight:900;
-      font-size:12px;
-      color:var(--text);
-      background:rgba(0,0,0,0.25);
-      border:1px solid rgba(255,255,255,0.15);
-      padding:8px 10px;
-      border-radius:10px;
-      max-width:120px;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
     }
 
     #toast{
@@ -579,8 +564,7 @@ nav{
 <body>
 <div id="settingsFixedWrap">
   <span id="leaderBadge" class="version-badge off">SUIVEUR</span>
-  <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
-  <span id="settingsUserLabel"></span>
+  <button id="settingsBtnFixed" onclick="openSettings()">⚙️ Utilisateur</button>
 </div>
 
   <div id="toast"></div>
@@ -828,6 +812,11 @@ nav{
   let lastConnectedUsers = [];
   let songMeta = {};
 let playedTonightSet = new Set();
+let deviceId = localStorage.getItem('bandapp_deviceId') || "";
+if (!deviceId) {
+  deviceId = (crypto?.randomUUID?.() || ('dev-' + Date.now() + '-' + Math.random().toString(36).slice(2)));
+  localStorage.setItem('bandapp_deviceId', deviceId);
+}
 let currentSongSettings = {
   fontSize: 26,
   speed: 50,
@@ -922,6 +911,14 @@ function escapeHtml(s) {
       settingsBtnFixed.style.background = 'rgba(0,0,0,0.25)';
     }
   }
+  
+  function updateSettingsButtonLabel() {
+  const btn = document.getElementById('settingsBtnFixed');
+  if (!btn) return;
+
+  const label = currentUser || "Utilisateur";
+  btn.textContent = `⚙️ ${label}`;
+}
 
   function toggleTheme() {
     themeMode = (themeMode === 'dark') ? 'light' : 'dark';
@@ -1032,10 +1029,12 @@ function applyLeaderUI() {
 
     localStorage.setItem('bandapp_currentUser', currentUser);
 
-    const lab = document.getElementById('settingsUserLabel');
-    if (lab) lab.textContent = currentUser;
+updateSettingsButtonLabel();
 
-    socket.emit('register-user', currentUser);
+socket.emit('register-user', {
+  userName: currentUser,
+  deviceId
+});
 
     if (currentFileName) {
       stopAutoScroll();
@@ -1089,7 +1088,12 @@ function applyLeaderUI() {
       netBadge.classList.add('on');
     }
 
-    if (currentUser) socket.emit('register-user', currentUser);
+if (currentUser) {
+  socket.emit('register-user', {
+    userName: currentUser,
+    deviceId
+  });
+}
   });
 
   socket.on('disconnect', () => {
@@ -2336,6 +2340,7 @@ async function restoreHistoryVersion(historyId) {
 (async function initApp() {
   applyTheme();
   initUsers();
+  updateSettingsButtonLabel();
   await fetchSongMeta();
   await fetchSongs();
   syncSettingsUI();
