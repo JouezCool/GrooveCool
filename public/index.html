@@ -229,17 +229,21 @@
       z-index:10;
     }
 
-    nav{
-      display:flex;
-      background:var(--nav-bg);
-      color:var(--nav-text);
-      min-height:60px;
-      align-items:center;
-      padding:0 10px;
-      gap:8px;
-      border-bottom:1px solid var(--panel-border);
-      flex-wrap:wrap;
-    }
+nav{
+  display:flex;
+  background:var(--nav-bg);
+  color:var(--nav-text);
+  min-height:60px;
+  align-items:center;
+  padding:6px 10px;
+  gap:8px;
+  border-bottom:1px solid var(--panel-border);
+  flex-wrap:wrap;
+  #viewer-container nav .btn,
+#viewer-container nav input[type="range"]{
+  flex-shrink:0;
+}
+}
 
     .controls-group{
       display:flex;
@@ -501,12 +505,11 @@
 </head>
 
 <body>
-  <div id="settingsFixedWrap">
-    <span id="netBadge" class="version-badge off">OFFLINE</span>
-    <span id="leaderBadge" class="version-badge off">SUIVEUR</span>
-    <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
-    <span id="settingsUserLabel"></span>
-  </div>
+<div id="settingsFixedWrap">
+  <span id="leaderBadge" class="version-badge off">SUIVEUR</span>
+  <button id="settingsBtnFixed" onclick="openSettings()">⚙️</button>
+  <span id="settingsUserLabel"></span>
+</div>
 
   <div id="toast"></div>
 
@@ -585,17 +588,17 @@
     ATTENTION : LES MODIFICATIONS DE LA VERSION COMMUNE IMPACTENT TOUT LE MONDE.
   </div>
 
-  <div id="editor-toolbar">
-    <button class="btn leader-only" onclick="insertTemplatePU()">+ {pu}</button>
-    <button class="btn leader-only" onclick="insertAtCursor('{soc}\n')">+ {soc}</button>
-    <button class="btn leader-only" onclick="insertAtCursor('\n{eoc}\n')">+ {eoc}</button>
-    <button class="btn leader-only" onclick="insertTemplateComment()">+ {c:}</button>
-    <button class="btn leader-only" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
+<div id="editor-toolbar">
+  <button class="btn" onclick="insertTemplatePU()">+ {pu}</button>
+  <button class="btn" onclick="insertAtCursor('{soc}\n')">+ {soc}</button>
+  <button class="btn" onclick="insertAtCursor('\n{eoc}\n')">+ {eoc}</button>
+  <button class="btn" onclick="insertTemplateComment()">+ {c:}</button>
+  <button class="btn" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
 
-    <div style="flex:1"></div>
+  <div style="flex:1"></div>
 
-    <div id="chordBank" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;"></div>
-  </div>
+  <div id="chordBank" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;"></div>
+</div>
 
   <div id="editor-leader-wrap" style="display:none; flex:1 1 auto; min-height:0; flex-direction:column;">
     <textarea id="editor-textarea" spellcheck="false"></textarea>
@@ -685,6 +688,7 @@
   let remoteScrollRaf = null;
   let pendingRemoteScrollTop = 0;
   let currentSongZoom = 1;
+  let isLoadingSong = false;
 
   const viewerElement = document.getElementById('viewer');
   const songContentEl = document.getElementById('songContent');
@@ -698,7 +702,7 @@
   const userGrid = document.getElementById('userGrid');
   const settingsBackdrop = document.getElementById('settingsBackdrop');
   const settingsBtnFixed = document.getElementById('settingsBtnFixed');
-  const netBadge = document.getElementById('netBadge');
+  const netBadge = document.getElementById('netBadge'); // peut être null
   const connectedUsersList = document.getElementById('connectedUsersList');
   const toastEl = document.getElementById('toast');
 
@@ -1034,22 +1038,46 @@ function escapeHtml(s) {
     setTimeout(loadNotes, 10);
   }
 
-  async function loadSong(f) {
-    try {
-      const res = await fetch('/partitions/' + encodeURIComponent(f));
-      currentRaw = await res.text();
+async function loadSong(f) {
+  try {
+    isLoadingSong = true;
 
-      transposeValue = 0;
-      document.getElementById('transposeVal').innerText = "0";
-      renderChordPro();
-      renderGrids();
-      viewerElement.scrollTop = 0;
-      updateBanner.style.display = 'none';
-    } catch (err) {
-      console.error(err);
-      showToast("Erreur de chargement");
+    if (remoteScrollRaf) {
+      cancelAnimationFrame(remoteScrollRaf);
+      remoteScrollRaf = null;
     }
+
+    pendingRemoteScrollTop = 0;
+    isRemoteScrolling = false;
+
+    const res = await fetch('/partitions/' + encodeURIComponent(f), { cache: 'no-store' });
+    currentRaw = await res.text();
+
+    transposeValue = 0;
+    document.getElementById('transposeVal').innerText = "0";
+
+    renderChordPro();
+    renderGrids();
+
+    viewerElement.scrollTop = 0;
+
+    requestAnimationFrame(() => {
+      viewerElement.scrollTop = 0;
+      requestAnimationFrame(() => {
+        viewerElement.scrollTop = 0;
+        updateBanner.style.display = 'none';
+
+        setTimeout(() => {
+          isLoadingSong = false;
+        }, 150);
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    isLoadingSong = false;
+    showToast("Erreur de chargement");
   }
+}
 
   socket.on('load-song', f => {
     if (!isLeader) {
@@ -1149,38 +1177,39 @@ function escapeHtml(s) {
     socket.emit('scroll-sync', state);
   });
 
-  socket.on('apply-scroll', data => {
-    if (isLeader) return;
-    if (isScrolling) return;
+socket.on('apply-scroll', data => {
+  if (isLeader) return;
+  if (isScrolling) return;
+  if (isLoadingSong) return;
 
-    const anchor = data?.anchor;
-    const progress = clamp01(Number(data?.progress) || 0);
+  const anchor = data?.anchor;
+  const progress = clamp01(Number(data?.progress) || 0);
 
-    const el = anchor
-      ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`)
-      : null;
+  const el = anchor
+    ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`)
+    : null;
 
-    let targetTop;
-    if (el) {
-      const top = el.offsetTop;
-      const h = el.offsetHeight || 1;
-      targetTop = top + progress * h;
-    } else {
-      const max = viewerElement.scrollHeight - viewerElement.clientHeight;
-      targetTop = progress * (max > 0 ? max : 0);
-    }
+  let targetTop;
+  if (el) {
+    const top = el.offsetTop;
+    const h = el.offsetHeight || 1;
+    targetTop = top + progress * h;
+  } else {
+    const max = viewerElement.scrollHeight - viewerElement.clientHeight;
+    targetTop = progress * (max > 0 ? max : 0);
+  }
 
-    if (Math.abs(viewerElement.scrollTop - targetTop) < 8) return;
+  if (Math.abs(viewerElement.scrollTop - targetTop) < 8) return;
 
-    pendingRemoteScrollTop = targetTop;
+  pendingRemoteScrollTop = targetTop;
 
-    if (remoteScrollRaf) cancelAnimationFrame(remoteScrollRaf);
-    remoteScrollRaf = requestAnimationFrame(() => {
-      isRemoteScrolling = true;
-      viewerElement.scrollTop = pendingRemoteScrollTop;
-      setTimeout(() => { isRemoteScrolling = false; }, 120);
-    });
+  if (remoteScrollRaf) cancelAnimationFrame(remoteScrollRaf);
+  remoteScrollRaf = requestAnimationFrame(() => {
+    isRemoteScrolling = true;
+    viewerElement.scrollTop = pendingRemoteScrollTop;
+    setTimeout(() => { isRemoteScrolling = false; }, 120);
   });
+});
 
   function isEditorOpen() {
     return document.getElementById('editor-container').style.display === 'flex';
