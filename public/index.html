@@ -228,6 +228,39 @@
       background:var(--bg);
       z-index:10;
     }
+	
+	.song-item.played{
+  opacity:0.6;
+}
+
+.song-left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+
+.song-title{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.song-badge{
+  font-size:11px;
+  font-weight:900;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.08);
+  color:var(--text);
+  white-space:nowrap;
+}
+
+.song-badge.played{
+  border-color: rgba(76,175,80,0.55);
+  background: rgba(76,175,80,0.18);
+}
 
 nav{
   display:flex;
@@ -563,7 +596,7 @@ nav{
       <option value="">Toutes les catégories</option>
     </select>
 
-    <select id="styleFilter" style="
+    <select id="ambianceFilter" style="
       padding:10px 12px;
       border-radius:10px;
       border:1px solid rgba(255,255,255,0.15);
@@ -571,10 +604,10 @@ nav{
       color:var(--nav-text);
       outline:none;
     ">
-      <option value="">Tous les styles</option>
+      <option value="">Toutes les ambiances</option>
     </select>
 
-    <select id="decadeFilter" style="
+    <select id="audienceFilter" style="
       padding:10px 12px;
       border-radius:10px;
       border:1px solid rgba(255,255,255,0.15);
@@ -582,10 +615,25 @@ nav{
       color:var(--nav-text);
       outline:none;
     ">
-      <option value="">Toutes les décennies</option>
+      <option value="">Toutes les audiences</option>
     </select>
 
-    <button class="btn" onclick="resetSongFilters()">Réinitialiser</button>
+    <select id="playedFilter" style="
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.15);
+      background:rgba(0,0,0,0.25);
+      color:var(--nav-text);
+      outline:none;
+    ">
+      <option value="">Tous</option>
+      <option value="unplayed">Non joués</option>
+      <option value="played">Déjà joués</option>
+    </select>
+
+    <button class="btn" onclick="suggestRandomSong()">🎲 Suggestion</button>
+    <button class="btn" onclick="resetSongFilters()">Réinitialiser filtres</button>
+    <button class="btn" onclick="resetTonight()">Réinitialiser la soirée</button>
   </div>
 
   <div id="songList"></div>
@@ -613,6 +661,7 @@ nav{
 
       <button class="btn" onclick="toggleNotes()">NOTES</button>
 	  <button class="btn" onclick="openHistoryModal()">HISTORIQUE</button>
+	  <button class="btn" id="playedToggleBtn" onclick="togglePlayedCurrentSong()">JOUÉ</button>
       <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
     </nav>
 
@@ -733,6 +782,8 @@ nav{
   let isLoadingSong = false;
   let lastConnectedUsers = [];
   let songMeta = {};
+  let songMeta = {};
+let playedTonightSet = new Set();
 
   const viewerElement = document.getElementById('viewer');
   const songContentEl = document.getElementById('songContent');
@@ -760,6 +811,12 @@ const historyList = document.getElementById('historyList');
 const categoryFilterEl = document.getElementById('categoryFilter');
 const styleFilterEl = document.getElementById('styleFilter');
 const decadeFilterEl = document.getElementById('decadeFilter');
+const categoryFilterEl = document.getElementById('categoryFilter');
+const ambianceFilterEl = document.getElementById('ambianceFilter');
+const audienceFilterEl = document.getElementById('audienceFilter');
+const playedFilterEl = document.getElementById('playedFilter');
+const playedToggleBtn = document.getElementById('playedToggleBtn');
+
 
   let touchStartX = 0, touchStartY = 0;
   const SWIPE_MIN_X = 110;
@@ -1051,32 +1108,95 @@ function populateSongFilters() {
     sortedDecades.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
 }
 
+async function fetchSongMeta() {
+  try {
+    const res = await fetch('/song-meta.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('song-meta.json introuvable');
+    songMeta = await res.json();
+  } catch (err) {
+    console.warn('Erreur de chargement des métadonnées', err);
+    songMeta = {};
+  }
+}
+
+function populateSongFilters() {
+  if (!ambianceFilterEl || !audienceFilterEl) return;
+
+  const ambiances = new Set();
+  const audiences = new Set();
+
+  allSongs.forEach(song => {
+    const meta = songMeta[song] || {};
+    if (meta.ambiance) ambiances.add(String(meta.ambiance).trim());
+    if (meta.audience) audiences.add(String(meta.audience).trim());
+  });
+
+  const sortedAmbiances = [...ambiances].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  const sortedAudiences = [...audiences].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+
+  ambianceFilterEl.innerHTML =
+    `<option value="">Toutes les ambiances</option>` +
+    sortedAmbiances.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+
+  audienceFilterEl.innerHTML =
+    `<option value="">Toutes les audiences</option>` +
+    sortedAudiences.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+}
+
+function isPlayedTonight(fileName) {
+  return playedTonightSet.has(fileName);
+}
+
+function updatePlayedButton() {
+  if (!playedToggleBtn || !currentFileName) return;
+
+  const played = isPlayedTonight(currentFileName);
+  playedToggleBtn.textContent = played ? "JOUÉ ✅" : "JOUÉ";
+  playedToggleBtn.classList.toggle('active-btn', played);
+}
+
 async function fetchSongs() {
   const res = await fetch('/list-songs');
   allSongs = (await res.json()).sort();
 
-  const listEl = document.getElementById('songList');
-  listEl.innerHTML =
-    allSongs.map((s, idx) => `
-      <div class="song-item"
-           data-name="${s.toLowerCase()}"
-           data-style="${((songMeta[s]?.style || '') + '').toLowerCase()}"
-           data-decade="${((songMeta[s]?.decade || '') + '').toLowerCase()}"
-           data-category="${((songMeta[s]?.category || 'Répertoire') + '').toLowerCase()}"
-           onclick="openSong(${idx})">
-        <b>${s.replace('.pro','').replace('.cho','')}</b><span>❯</span>
-      </div>
-    `).join('');
-
+  renderSongList();
   populateSongFilters();
   updateSongCount();
+}
+
+function renderSongList() {
+  const listEl = document.getElementById('songList');
+
+  listEl.innerHTML = allSongs.map((s, idx) => {
+    const meta = songMeta[s] || {};
+    const played = isPlayedTonight(s);
+
+    return `
+      <div class="song-item ${played ? 'played' : ''}"
+           data-name="${s.toLowerCase()}"
+           data-category="${((meta.category || 'Répertoire') + '').toLowerCase()}"
+           data-ambiance="${((meta.ambiance || '') + '').toLowerCase()}"
+           data-audience="${((meta.audience || '') + '').toLowerCase()}"
+           data-played="${played ? 'played' : 'unplayed'}"
+           onclick="openSong(${idx})">
+        <div class="song-left">
+          <span class="song-badge ${played ? 'played' : ''}">
+            ${played ? 'Joué' : 'À jouer'}
+          </span>
+          <b class="song-title">${s.replace('.pro','').replace('.cho','')}</b>
+        </div>
+        <span>❯</span>
+      </div>
+    `;
+  }).join('');
 }
 
 function filterSongList(q) {
   const query = String(q || "").toLowerCase().trim();
   const selectedCategory = String(categoryFilterEl?.value || "Répertoire").toLowerCase().trim();
-  const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
-  const selectedDecade = String(decadeFilterEl?.value || "").toLowerCase().trim();
+  const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
+  const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
+  const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
 
   const items = document.querySelectorAll('#songList .song-item');
   let shown = 0;
@@ -1084,15 +1204,17 @@ function filterSongList(q) {
   items.forEach(item => {
     const name = item.dataset.name || "";
     const category = item.dataset.category || "répertoire";
-    const style = item.dataset.style || "";
-    const decade = item.dataset.decade || "";
+    const ambiance = item.dataset.ambiance || "";
+    const audience = item.dataset.audience || "";
+    const played = item.dataset.played || "unplayed";
 
     const matchQuery = !query || name.includes(query);
     const matchCategory = !selectedCategory || category === selectedCategory;
-    const matchStyle = !selectedStyle || style === selectedStyle;
-    const matchDecade = !selectedDecade || decade === selectedDecade;
+    const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
+    const matchAudience = !selectedAudience || audience === selectedAudience;
+    const matchPlayed = !selectedPlayed || played === selectedPlayed;
 
-    const ok = matchQuery && matchCategory && matchStyle && matchDecade;
+    const ok = matchQuery && matchCategory && matchAmbiance && matchAudience && matchPlayed;
 
     item.style.display = ok ? "flex" : "none";
     if (ok) shown++;
@@ -1104,8 +1226,9 @@ function filterSongList(q) {
 function resetSongFilters() {
   if (songSearchInput) songSearchInput.value = "";
   if (categoryFilterEl) categoryFilterEl.value = "Répertoire";
-  if (styleFilterEl) styleFilterEl.value = "";
-  if (decadeFilterEl) decadeFilterEl.value = "";
+  if (ambianceFilterEl) ambianceFilterEl.value = "";
+  if (audienceFilterEl) audienceFilterEl.value = "";
+  if (playedFilterEl) playedFilterEl.value = "";
   filterSongList("");
 }
 
@@ -1131,6 +1254,7 @@ function resetSongFilters() {
 
     currentIndex = idx;
     currentFileName = allSongs[idx];
+	updatePlayedButton();
 
     notesPanel.style.display = 'none';
 
@@ -1167,6 +1291,7 @@ async function loadSong(f) {
 
     transposeValue = 0;
     document.getElementById('transposeVal').innerText = "0";
+	updatePlayedButton();
 
     renderChordPro();
     renderGrids();
@@ -2064,13 +2189,64 @@ if (categoryFilterEl) {
   categoryFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
 }
 
-if (styleFilterEl) {
-  styleFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
+if (ambianceFilterEl) {
+  ambianceFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
 }
 
-if (decadeFilterEl) {
-  decadeFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
+if (audienceFilterEl) {
+  audienceFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
 }
+
+if (playedFilterEl) {
+  playedFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
+}
+
+function suggestRandomSong() {
+  const visibleItems = [...document.querySelectorAll('#songList .song-item')]
+    .filter(item => item.style.display !== 'none');
+
+  if (!visibleItems.length) {
+    showToast("Aucun morceau dans cette sélection");
+    return;
+  }
+
+  const unplayedVisible = visibleItems.filter(item => item.dataset.played !== 'played');
+  const pool = unplayedVisible.length ? unplayedVisible : visibleItems;
+
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  chosen.scrollIntoView({ block: 'center', behavior: 'smooth' });
+
+  chosen.style.outline = '3px solid rgba(255,152,0,0.7)';
+  setTimeout(() => {
+    chosen.style.outline = '';
+  }, 1800);
+}
+
+function togglePlayedCurrentSong() {
+  if (!currentFileName) return;
+
+  const nextPlayed = !isPlayedTonight(currentFileName);
+  socket.emit('mark-played', {
+    fileName: currentFileName,
+    played: nextPlayed
+  });
+}
+
+function resetTonight() {
+  const ok = confirm("Réinitialiser tous les morceaux joués ce soir ?");
+  if (!ok) return;
+  socket.emit('reset-played-tonight');
+}
+
+socket.on('played-tonight-state', (data) => {
+  const arr = Array.isArray(data?.songs) ? data.songs : [];
+  playedTonightSet = new Set(arr);
+
+  renderSongList();
+  filterSongList(songSearchInput?.value || "");
+  updatePlayedButton();
+});
+
 </script>
 </body>
 </html>
