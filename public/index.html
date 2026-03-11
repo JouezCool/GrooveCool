@@ -565,14 +565,6 @@ nav{
       <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
     </nav>
 
-    <div id="updateBanner">
-      <div class="msg">Une mise à jour de cette chanson est disponible.</div>
-      <div style="display:flex; gap:8px;">
-        <button class="btn btn-small" onclick="dismissUpdate()">PLUS TARD</button>
-        <button class="btn btn-blue btn-small" onclick="reloadCurrentSong()">RECHARGER</button>
-      </div>
-    </div>
-
     <div id="notesPanel">
       <textarea id="notesTextarea" placeholder="Tes annotations personnelles..."></textarea>
     </div>
@@ -693,7 +685,6 @@ nav{
   const viewerElement = document.getElementById('viewer');
   const songContentEl = document.getElementById('songContent');
   const speedInput = document.getElementById('scrollSpeed');
-  const updateBanner = document.getElementById('updateBanner');
   const notesPanel = document.getElementById('notesPanel');
   const notesTextarea = document.getElementById('notesTextarea');
   const songSearchInput = document.getElementById('songSearch');
@@ -1019,7 +1010,6 @@ function escapeHtml(s) {
     currentIndex = idx;
     currentFileName = allSongs[idx];
 
-    updateBanner.style.display = 'none';
     notesPanel.style.display = 'none';
 
     document.getElementById('library').style.display = 'none';
@@ -1065,7 +1055,6 @@ async function loadSong(f) {
       viewerElement.scrollTop = 0;
       requestAnimationFrame(() => {
         viewerElement.scrollTop = 0;
-        updateBanner.style.display = 'none';
 
         setTimeout(() => {
           isLoadingSong = false;
@@ -1091,21 +1080,11 @@ async function loadSong(f) {
     return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
   }
 
-  socket.on('song-updated', ({ fileName }) => {
-    const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
-    if (!viewerOpen) return;
-    const sameSong = normName(fileName) === normName(currentFileName);
-    if (sameSong) updateBanner.style.display = 'flex';
-  });
+socket.on('song-updated', ({ fileName }) => {
+  if (normName(fileName) !== normName(currentFileName)) return;
 
-  function dismissUpdate() {
-    updateBanner.style.display = 'none';
-  }
-
-  function reloadCurrentSong() {
-    stopAutoScroll();
-    loadSong(currentFileName);
-  }
+  loadSong(currentFileName);
+});
 
   function notesKey(fileName) {
     const u = currentUser || "unknown";
