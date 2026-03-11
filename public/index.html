@@ -631,7 +631,6 @@ nav{
       <option value="played">Déjà joués</option>
     </select>
 
-    <button class="btn" onclick="suggestRandomSong()">🎲 Suggestion</button>
     <button class="btn" onclick="resetSongFilters()">Réinitialiser filtres</button>
     <button class="btn" onclick="resetTonight()">Réinitialiser la soirée</button>
   </div>
@@ -663,6 +662,7 @@ nav{
 	  <button class="btn" onclick="openHistoryModal()">HISTORIQUE</button>
 	  <button class="btn" id="playedToggleBtn" onclick="togglePlayedCurrentSong()">JOUÉ</button>
       <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
+	  <button class="btn" onclick="openRandomFilteredSong()">🎲 ALÉATOIRE</button>
     </nav>
 
     <div id="notesPanel">
@@ -1153,6 +1153,60 @@ function renderSongList() {
   }).join('');
 }
 
+function getFilteredSongIndexes() {
+  const query = String(songSearchInput?.value || "").toLowerCase().trim();
+  const selectedCategory = String(categoryFilterEl?.value || "Répertoire").toLowerCase().trim();
+  const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
+  const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
+  const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
+
+  const indexes = [];
+
+  allSongs.forEach((song, idx) => {
+    const meta = songMeta[song] || {};
+
+    const name = String(song || "").toLowerCase();
+    const category = String(meta.category || "Répertoire").toLowerCase();
+    const ambiance = String(meta.ambiance || "").toLowerCase();
+    const audience = String(meta.audience || "").toLowerCase();
+    const played = isPlayedTonight(song) ? "played" : "unplayed";
+
+    const matchQuery = !query || name.includes(query);
+    const matchCategory = !selectedCategory || category === selectedCategory;
+    const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
+    const matchAudience = !selectedAudience || audience === selectedAudience;
+    const matchPlayed = !selectedPlayed || played === selectedPlayed;
+
+    if (matchQuery && matchCategory && matchAmbiance && matchAudience && matchPlayed) {
+      indexes.push(idx);
+    }
+  });
+
+  return indexes;
+}
+
+function openRandomFilteredSong() {
+  const filteredIndexes = getFilteredSongIndexes();
+
+  if (!filteredIndexes.length) {
+    showToast("Aucun morceau dans cette sélection");
+    return;
+  }
+
+  const unplayedIndexes = filteredIndexes.filter(idx => !isPlayedTonight(allSongs[idx]));
+  const pool = unplayedIndexes.length ? unplayedIndexes : filteredIndexes;
+
+  let finalPool = pool;
+
+  if (currentIndex >= 0 && pool.length > 1) {
+    finalPool = pool.filter(idx => idx !== currentIndex);
+    if (!finalPool.length) finalPool = pool;
+  }
+
+  const randomIdx = finalPool[Math.floor(Math.random() * finalPool.length)];
+  openSong(randomIdx);
+}
+
 function filterSongList(q) {
   const query = String(q || "").toLowerCase().trim();
   const selectedCategory = String(categoryFilterEl?.value || "Répertoire").toLowerCase().trim();
@@ -1449,8 +1503,15 @@ socket.on('apply-scroll', data => {
     if (Math.abs(dx) < SWIPE_MIN_X) return;
     if (Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return;
 
-    if (dx > 0 && currentIndex > 0) openSong(currentIndex - 1);
-    else if (dx < 0 && currentIndex < allSongs.length - 1) openSong(currentIndex + 1);
+const filteredIndexes = getFilteredSongIndexes();
+const pos = filteredIndexes.indexOf(currentIndex);
+
+if (dx > 0 && pos > 0) {
+  openSong(filteredIndexes[pos - 1]);
+}
+else if (dx < 0 && pos !== -1 && pos < filteredIndexes.length - 1) {
+  openSong(filteredIndexes[pos + 1]);
+}
   }, { passive: true });
 
   function sliderToPxPerSecond(value) {
@@ -2159,27 +2220,6 @@ if (audienceFilterEl) {
 
 if (playedFilterEl) {
   playedFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
-}
-
-function suggestRandomSong() {
-  const visibleItems = [...document.querySelectorAll('#songList .song-item')]
-    .filter(item => item.style.display !== 'none');
-
-  if (!visibleItems.length) {
-    showToast("Aucun morceau dans cette sélection");
-    return;
-  }
-
-  const unplayedVisible = visibleItems.filter(item => item.dataset.played !== 'played');
-  const pool = unplayedVisible.length ? unplayedVisible : visibleItems;
-
-  const chosen = pool[Math.floor(Math.random() * pool.length)];
-  chosen.scrollIntoView({ block: 'center', behavior: 'smooth' });
-
-  chosen.style.outline = '3px solid rgba(255,152,0,0.7)';
-  setTimeout(() => {
-    chosen.style.outline = '';
-  }, 1800);
 }
 
 function togglePlayedCurrentSong() {
