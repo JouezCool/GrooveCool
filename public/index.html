@@ -729,7 +729,7 @@ nav{
       <option value="">Toutes les audiences</option>
     </select>
 	
-	<select id="singerFilter" style="
+<select id="singerFilter" style="
   padding:10px 12px;
   border-radius:10px;
   border:1px solid rgba(255,255,255,0.15);
@@ -905,13 +905,18 @@ nav{
 
 <div class="meta-form" style="padding:14px 16px; display:grid; gap:12px;">
   <label>
-    <div class="meta-label">Nom du fichier</div>
-    <input id="songMetaFileName" type="text" placeholder="Ex: Rolling in the Deep - Adele.pro">
+    <div class="meta-label">Titre du morceau</div>
+    <input id="songMetaTitleInput" type="text" placeholder="Ex: Rolling in the Deep">
   </label>
 
-  <label>
-    <div class="meta-label">Titre affiché</div>
-    <input id="songMetaTitleInput" type="text" placeholder="Ex: Rolling in the Deep">
+  <label id="songMetaArtistWrap">
+    <div class="meta-label">Artiste</div>
+    <input id="songMetaArtistInput" type="text" placeholder="Ex: Adele">
+  </label>
+
+  <label id="songMetaFileNameWrap">
+    <div class="meta-label">Nom du fichier</div>
+    <input id="songMetaFileName" type="text" placeholder="Ex: Rolling in the Deep - Adele.pro">
   </label>
 
   <label>
@@ -938,11 +943,6 @@ nav{
     <div class="meta-label">Chanteur(s)</div>
     <select id="songMetaChanteur" multiple size="6"></select>
   </label>
-
-  <div id="songMetaContentWrap" style="display:none;">
-    <div class="meta-label" style="margin-bottom:6px;">Contenu initial du morceau</div>
-    <textarea id="songMetaContent"></textarea>
-  </div>
 </div>
 
     <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end; gap:10px;">
@@ -1008,6 +1008,9 @@ const categoryFilterEl = document.getElementById('categoryFilter');
 const ambianceFilterEl = document.getElementById('ambianceFilter');
 const audienceFilterEl = document.getElementById('audienceFilter');
 const singerFilterEl = document.getElementById('singerFilter');
+const songMetaArtistInput = document.getElementById('songMetaArtistInput');
+const songMetaArtistWrap = document.getElementById('songMetaArtistWrap');
+const songMetaFileNameWrap = document.getElementById('songMetaFileNameWrap');
 const styleFilterEl = document.getElementById('styleFilter');
 const playedFilterEl = document.getElementById('playedFilter');
 const playedToggleBtn = document.getElementById('playedToggleBtn');
@@ -1137,10 +1140,13 @@ function openCreateSongModal() {
   songMetaMode = 'create';
 
   songMetaTitle.textContent = "Nouveau morceau";
-  songMetaFileName.value = "";
   songMetaTitleInput.value = "";
-  songMetaFileName.disabled = false;
-  songMetaContentWrap.style.display = 'none';
+  songMetaArtistInput.value = "";
+  songMetaFileName.value = "";
+  songMetaFileName.disabled = true;
+
+  if (songMetaArtistWrap) songMetaArtistWrap.style.display = 'grid';
+  if (songMetaFileNameWrap) songMetaFileNameWrap.style.display = 'none';
 
   prepareSongMetaFormSelections({
     category: 'Répertoire',
@@ -1239,8 +1245,12 @@ async function openEditSongMetaModal() {
 
     songMetaFileName.value = currentFileName;
     songMetaTitleInput.value = data?.title || currentFileName.replace(/\.(pro|cho)$/i, '');
+    songMetaArtistInput.value = "";
+
     songMetaFileName.disabled = true;
-    songMetaContentWrap.style.display = 'none';
+
+    if (songMetaArtistWrap) songMetaArtistWrap.style.display = 'none';
+    if (songMetaFileNameWrap) songMetaFileNameWrap.style.display = 'grid';
 
     prepareSongMetaFormSelections({
       category: data?.category || 'Répertoire',
@@ -1258,40 +1268,70 @@ async function openEditSongMetaModal() {
 }
 
 async function saveSongMetaModal() {
-  const fileName = String(songMetaFileName.value || "").trim();
-  if (!fileName) {
-    alert("Nom du fichier requis");
-    return;
-  }
-
   const pin = prompt("PIN requis") || "";
   const cleanPin = String(pin).trim();
   if (!cleanPin) return;
 
-const payload = {
-  fileName,
-  pin: cleanPin,
-  title: songMetaTitleInput.value,
-  category: songMetaCategory.value,
-  style: getSelectedValues(songMetaStyle),
-  ambiance: songMetaAmbiance.value,
-  audience: getSelectedValues(songMetaAudience),
-  chanteur: getSelectedValues(songMetaChanteur)
-};
-
   try {
     let res;
 
-if (songMetaMode === 'create') {
-  const displayTitle = String(songMetaTitleInput.value || '').trim();
-  payload.content = `{title: ${displayTitle || fileName.replace(/\.(pro|cho)$/i, '')}}\n\n`;
+    if (songMetaMode === 'create') {
+      const title = String(songMetaTitleInput.value || "").trim();
+      const artist = String(songMetaArtistInput.value || "").trim();
 
-  res = await fetch('/create-song', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-}
+      if (!title) {
+        alert("Titre du morceau requis");
+        return;
+      }
+
+      if (!artist) {
+        alert("Artiste requis");
+        return;
+      }
+
+      const fileName = `${title} - ${artist}.pro`;
+
+      const payload = {
+        fileName,
+        pin: cleanPin,
+        title,
+        category: songMetaCategory.value,
+        style: getSelectedValues(songMetaStyle),
+        ambiance: songMetaAmbiance.value,
+        audience: getSelectedValues(songMetaAudience),
+        chanteur: getSelectedValues(songMetaChanteur),
+        content: `{t:${title}}\n{st:${artist}}\n\n`
+      };
+
+      res = await fetch('/create-song', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } else {
+      const fileName = String(songMetaFileName.value || "").trim();
+      if (!fileName) {
+        alert("Nom de fichier requis");
+        return;
+      }
+
+      const payload = {
+        fileName,
+        pin: cleanPin,
+        title: songMetaTitleInput.value,
+        category: songMetaCategory.value,
+        style: getSelectedValues(songMetaStyle),
+        ambiance: songMetaAmbiance.value,
+        audience: getSelectedValues(songMetaAudience),
+        chanteur: getSelectedValues(songMetaChanteur)
+      };
+
+      res = await fetch('/save-song-meta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
 
     if (res.ok) {
       closeSongMetaModal();
@@ -1546,10 +1586,8 @@ function populateSongFilters() {
       if (clean) styles.add(clean);
     });
 
-    if (meta.ambiance) {
-      const clean = String(meta.ambiance || "").trim();
-      if (clean) ambiances.add(clean);
-    }
+    const amb = String(meta.ambiance || "").trim();
+    if (amb) ambiances.add(amb);
 
     audienceValues.forEach(v => {
       const clean = String(v || "").trim();
