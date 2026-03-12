@@ -116,12 +116,19 @@ body.concert-mode #settingsFixedWrap{
   backdrop-filter: blur(6px);
 }
 
+#leaderPlayBtn{
+  left:12px;
+  top:0;
+}
+
 #playedToggleBtn{
   left:12px;
+  top:52px;
 }
 
 #randomSongBtn{
   right:12px;
+  top:0;
 }
 
     body{
@@ -756,6 +763,7 @@ nav{
     </nav>
 	
 <div id="leaderFloatingActions">
+  <button class="btn leader-float-btn" id="leaderPlayBtn" onclick="toggleAutoScroll(true)">▶</button>
   <button class="btn leader-float-btn" id="playedToggleBtn" onclick="togglePlayedCurrentSong()">JOUÉ</button>
   <button class="btn leader-float-btn" id="randomSongBtn" onclick="openRandomFilteredSong()">🎲 ALÉATOIRE</button>
 </div>
@@ -1819,30 +1827,49 @@ else if (dx < 0 && pos !== -1 && pos < filteredIndexes.length - 1) {
 
     rafId = requestAnimationFrame(autoScrollLoop);
   }
+  
+  function updateLeaderPlayButton() {
+  const btn = document.getElementById('leaderPlayBtn');
+  if (!btn) return;
 
-  function startAutoScroll() {
-    if (isScrolling) return;
-    isScrolling = true;
-    document.getElementById('playBtn').innerText = "⏸";
-    document.getElementById('playBtn').classList.add('active-btn');
-    lastRafTime = 0;
-    scrollCarry = 0;
-    rafId = requestAnimationFrame(autoScrollLoop);
+  btn.textContent = isScrolling ? "⏸" : "▶";
+  btn.classList.toggle('active-btn', isScrolling);
+}
+
+function startAutoScroll() {
+  if (isScrolling) return;
+  isScrolling = true;
+
+  const playBtn = document.getElementById('playBtn');
+  if (playBtn) {
+    playBtn.innerText = "⏸";
+    playBtn.classList.add('active-btn');
   }
 
-  function stopAutoScroll() {
-    if (!isScrolling) return;
-    isScrolling = false;
-    const playBtn = document.getElementById('playBtn');
-    if (playBtn) {
-      playBtn.innerText = "▶";
-      playBtn.classList.remove('active-btn');
-    }
-    if (rafId) cancelAnimationFrame(rafId);
-    rafId = null;
-    lastRafTime = 0;
-    scrollCarry = 0;
+  updateLeaderPlayButton();
+
+  lastRafTime = 0;
+  scrollCarry = 0;
+  rafId = requestAnimationFrame(autoScrollLoop);
+}
+
+function stopAutoScroll() {
+  if (!isScrolling) return;
+  isScrolling = false;
+
+  const playBtn = document.getElementById('playBtn');
+  if (playBtn) {
+    playBtn.innerText = "▶";
+    playBtn.classList.remove('active-btn');
   }
+
+  updateLeaderPlayButton();
+
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  lastRafTime = 0;
+  scrollCarry = 0;
+}
 
   function toggleAutoScroll(emitSync) {
     if (isScrolling) {
@@ -1882,6 +1909,7 @@ else if (dx < 0 && pos !== -1 && pos < filteredIndexes.length - 1) {
       const wantActive = !!d.active;
       if (wantActive && !isScrolling) startAutoScroll();
       if (!wantActive && isScrolling) stopAutoScroll();
+	  updateLeaderPlayButton();
     }
   });
 
@@ -2408,18 +2436,27 @@ async function openHistoryModal() {
       return;
     }
 
-    historyList.innerHTML = items.map((item, idx) => {
-      const label = idx === 0 ? "Restaurer la dernière version" : "Restaurer cette version";
-      return `
-        <div style="border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:12px; margin-bottom:10px; background:rgba(255,255,255,0.04);">
-          <div style="font-weight:900; margin-bottom:6px;">${escapeHtml(item.savedAt || '')}</div>
-          <div style="font-size:13px; opacity:.8; margin-bottom:8px;">
-            Par ${escapeHtml(item.savedBy || 'Inconnu')}
-          </div>
-          <button class="btn" onclick="restoreHistoryVersion('${item.id}')">${label}</button>
-        </div>
-      `;
-    }).join('');
+historyList.innerHTML = items.map((item, idx) => {
+  const label = idx === 0 ? "Restaurer la dernière version" : "Restaurer cette version";
+  return `
+    <div style="
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:12px;
+      padding:12px;
+      margin-bottom:10px;
+      background:rgba(255,255,255,0.04);
+      color:var(--text);
+    ">
+      <div style="font-weight:900; margin-bottom:6px; color:var(--text);">
+        ${escapeHtml(item.savedAt || '')}
+      </div>
+      <div style="font-size:13px; opacity:.85; margin-bottom:8px; color:var(--text);">
+        Par ${escapeHtml(item.savedBy || 'Inconnu')}
+      </div>
+      <button class="btn" onclick="restoreHistoryVersion('${item.id}')">${label}</button>
+    </div>
+  `;
+}).join('');
   } catch (err) {
     console.error(err);
     historyList.innerHTML = "<div>Erreur de chargement de l'historique.</div>";
@@ -2480,6 +2517,7 @@ async function restoreHistoryVersion(historyId) {
   syncSettingsUI();
   applyLeaderUI();
   updateConcertModeUI();
+  updateLeaderPlayButton();
   filterSongList(songSearchInput?.value || "");
 })();
 
