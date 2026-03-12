@@ -1,5 +1,6 @@
 {
   "Rolling in the Deep - Adele.pro": {
+    "title": "Rolling in the Deep",
     "category": "Répertoire",
     "style": ["Pop", "Soul"],
     "ambiance": "dansant",
@@ -7,6 +8,7 @@
     "chanteur": ["Estelle"]
   },
   "Losing My Religion - REM.pro": {
+    "title": "Losing My Religion",
     "category": "Répertoire",
     "style": ["Pop Rock", "Alternatif"],
     "ambiance": "medium",
@@ -14,6 +16,7 @@
     "chanteur": ["Nemo"]
   },
   "En Apesenteur - Calogero.pro": {
+    "title": "En Apesenteur",
     "category": "Répertoire",
     "style": ["Pop", "Variété Française"],
     "ambiance": "medium",
@@ -21,6 +24,7 @@
     "chanteur": ["Nemo"]
   },
   "A Nos Actes Manqués - Jean-Jacques Goldman.pro": {
+    "title": "A Nos Actes Manqués",
     "category": "En travail",
     "style": ["Pop", "Variété Française"],
     "ambiance": "dansant",
@@ -28,6 +32,7 @@
     "chanteur": ["Estelle"]
   },
   "Si Tu Veux M_essayer - Florent Pagny.pro": {
+    "title": "Si Tu Veux M_essayer",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "medium",
@@ -35,13 +40,15 @@
     "chanteur": ["Bubu"]
   },
   "Let it Be Nemo - John LennonPaul McCartney.pro": {
+    "title": "Let it Be Nemo",
     "category": "Répertoire",
     "style": ["Pop", "Rock"],
     "ambiance": "calme",
     "audience": ["intergénération"],
     "chanteur": ["Nemo"]
   },
-    "Let it Be Estelle - John LennonPaul McCartney.pro": {
+  "Let it Be Estelle - John LennonPaul McCartney.pro": {
+    "title": "Let it Be Estelle",
     "category": "Répertoire",
     "style": ["Pop", "Rock"],
     "ambiance": "calme",
@@ -49,6 +56,7 @@
     "chanteur": ["Estelle"]
   },
   "Zombie - Cranberries.pro": {
+    "title": "Zombie",
     "category": "Répertoire",
     "style": ["Rock Alternatif"],
     "ambiance": "medium",
@@ -56,6 +64,7 @@
     "chanteur": ["Estelle"]
   },
   "La Dernière Séance - Eddy Mitchell.pro": {
+    "title": "La Dernière Séance",
     "category": "Répertoire",
     "style": ["Variété Française", "Country"],
     "ambiance": "calme",
@@ -63,6 +72,7 @@
     "chanteur": ["Gillou"]
   },
   "Quelque Chose De Tenessee - Johnny Hallyday.pro": {
+    "title": "Quelque Chose De Tenessee",
     "category": "Répertoire",
     "style": ["Variété Française", "Blues"],
     "ambiance": "calme",
@@ -70,6 +80,7 @@
     "chanteur": ["Bubu"]
   },
   "Mon Mec À Moi - Patricia Kass.pro": {
+    "title": "Mon Mec À Moi",
     "category": "Répertoire",
     "style": ["Variété Française", "Pop"],
     "ambiance": "medium",
@@ -77,6 +88,7 @@
     "chanteur": ["Estelle"]
   },
   "Je Te Donne - Jean-Jacques Goldman.pro": {
+    "title": "Je Te Donne",
     "category": "Répertoire",
     "style": ["Pop Rock", "Variété Française"],
     "ambiance": "dansant",
@@ -84,6 +96,7 @@
     "chanteur": ["Estelle", "Gillou"]
   },
   "La Dame De Haute Savoie - Francis Cabrel.pro": {
+    "title": "La Dame De Haute Savoie",
     "category": "Répertoire",
     "style": ["Variété Française", "Pop"],
     "ambiance": "medium",
@@ -91,6 +104,7 @@
     "chanteur": ["Bubu"]
   },
   "Sara Perche Ti Amo - Richi E Poveri.pro": {
+    "title": "Sara Perche Ti Amo",
     "category": "Répertoire",
     "style": ["Pop", "Italo", "Variété"],
     "ambiance": "dansant",
@@ -98,6 +112,7 @@
     "chanteur": ["Nemo", "Estelle"]
   },
   "Tu - Umberto Tozzi.pro": {
+    "title": "Tu",
     "category": "Répertoire",
     "style": ["Pop", "Italo"],
     "ambiance": "dansant",
@@ -105,6 +120,7 @@
     "chanteur": ["Nemo"]
   },
   "Shape Of You - Ed Sheeran.pro": {
+    "title": "Shape Of You",
     "category": "Répertoire",
     "style": ["Pop", "Dance"],
     "ambiance": "medium",
@@ -112,6 +128,7 @@
     "chanteur": ["Nemo"]
   },
   "Baby One More Time - Britney Spears.pro": {
+    "title": "Baby One More Time",
     "category": "Répertoire",
     "style": ["Pop", "Rock"],
     "ambiance": "très dansant",
@@ -119,6 +136,7 @@
     "chanteur": ["Estelle"]
   },
   "I’m Yours - Jason Mraz.pro": {
+    "title": "I’m Yours",
     "category": "Répertoire",
     "style": ["Pop", "Reggae"],
     "ambiance": "calme",
@@ -126,6 +144,7 @@
     "chanteur": ["Nemo"]
   },
   "Physical - Dua Lipa.pro": {
+    "title": "Physical",
     "category": "Répertoire",
     "style": ["Pop", "Disco"],
     "ambiance": "très dansant",
@@ -133,6 +152,7 @@
     "chanteur": ["Estelle"]
   },
   "Island In The Sun - Weezer.pro": {
+    "title": "Island In The Sun",
     "category": "Répertoire",
     "style": ["Pop Rock", "Indie"],
     "ambiance": "medium",
@@ -140,6 +160,7 @@
     "chanteur": ["Nemo"]
   },
   "A Sky Full Of Stars - Coldplay.pro": {
+    "title": "A Sky Full Of Stars",
     "category": "Répertoire",
     "style": ["Pop", "Electro"],
     "ambiance": "très dansant",
@@ -147,6 +168,7 @@
     "chanteur": ["Estelle"]
   },
   "Wake Me Up - Avicii.pro": {
+    "title": "Wake Me Up",
     "category": "Répertoire",
     "style": ["Folk", "EDM"],
     "ambiance": "très dansant",
@@ -154,6 +176,7 @@
     "chanteur": ["Nemo", "Estelle"]
   },
   "Smoke On The Water - Deep Purple.pro": {
+    "title": "Smoke On The Water",
     "category": "Répertoire",
     "style": ["Rock"],
     "ambiance": "medium",
@@ -161,13 +184,15 @@
     "chanteur": ["Estelle"]
   },
   "Another Brick In The Wall - Pink Floyd.pro": {
+    "title": "Another Brick In The Wall",
     "category": "Répertoire",
     "style": ["Rock Progressif"],
     "ambiance": "medium",
     "audience": ["intergénération"],
     "chanteur": ["Nemo", "Gillou", "Estelle"]
   },
-    "Another Brick In The Wall X - Pink Floyd.pro": {
+  "Another Brick In The Wall X - Pink Floyd.pro": {
+    "title": "Another Brick In The Wall X",
     "category": "1 minute",
     "style": ["Rock Progressif"],
     "ambiance": "medium",
@@ -175,6 +200,7 @@
     "chanteur": ["Nemo", "Gillou", "Estelle"]
   },
   "Sweet Home Alabama - Lynyrd Skynyrd.pro": {
+    "title": "Sweet Home Alabama",
     "category": "Répertoire",
     "style": ["Rock Sudiste", "Country"],
     "ambiance": "dansant",
@@ -182,6 +208,7 @@
     "chanteur": ["Nemo"]
   },
   "I Love Rock_N Roll - Joan Jett.pro": {
+    "title": "I Love Rock_N Roll",
     "category": "Répertoire",
     "style": ["Rock"],
     "ambiance": "dansant",
@@ -189,6 +216,7 @@
     "chanteur": ["Estelle"]
   },
   "I Want To Break Free - Queen.pro": {
+    "title": "I Want To Break Free",
     "category": "Répertoire",
     "style": ["Rock", "Pop"],
     "ambiance": "dansant",
@@ -196,6 +224,7 @@
     "chanteur": ["Estelle"]
   },
   "Hotel California - Eagles.pro": {
+    "title": "Hotel California",
     "category": "Répertoire",
     "style": ["Rock", "Folk"],
     "ambiance": "calme",
@@ -203,6 +232,7 @@
     "chanteur": ["Nemo"]
   },
   "Knockin_ On Heaven_s Door - Gun’s n’ Roses.pro": {
+    "title": "Knockin_ On Heaven_s Door",
     "category": "Répertoire",
     "style": ["Rock", "Ballade"],
     "ambiance": "calme",
@@ -210,6 +240,7 @@
     "chanteur": ["Nemo"]
   },
   "Get Lucky - Daft Punk.pro": {
+    "title": "Get Lucky",
     "category": "Répertoire",
     "style": ["Funk", "Pop", "Disco"],
     "ambiance": "très dansant",
@@ -217,13 +248,15 @@
     "chanteur": ["Estelle"]
   },
   "La Bamba - Los Lobos.pro": {
+    "title": "La Bamba",
     "category": "Répertoire",
     "style": ["Latino", "Rock'n'Roll"],
     "ambiance": "très dansant",
     "audience": ["festif", "intergénération"],
     "chanteur": ["Bubu"]
   },
-    "La Bamba X - Los Lobos.pro": {
+  "La Bamba X - Los Lobos.pro": {
+    "title": "La Bamba X",
     "category": "1 minute",
     "style": ["Latino", "Rock'n'Roll"],
     "ambiance": "très dansant",
@@ -231,6 +264,7 @@
     "chanteur": ["Bubu"]
   },
   "Despacito - Luis Fonsi.pro": {
+    "title": "Despacito",
     "category": "Répertoire",
     "style": ["Latino", "Reggaeton"],
     "ambiance": "très dansant",
@@ -238,6 +272,7 @@
     "chanteur": ["Nemo"]
   },
   "Ai Se Eu Te Pego - Michel Telo.pro": {
+    "title": "Ai Se Eu Te Pego",
     "category": "Répertoire",
     "style": ["Latino", "Pop"],
     "ambiance": "très dansant",
@@ -245,6 +280,7 @@
     "chanteur": ["Nemo"]
   },
   "Bara Bere - Michel Telo.pro": {
+    "title": "Bara Bere",
     "category": "Répertoire",
     "style": ["Latino", "Pop"],
     "ambiance": "très dansant",
@@ -252,6 +288,7 @@
     "chanteur": ["Nemo"]
   },
   "La Colegiala - Rodolfo Y Su Tipica.pro": {
+    "title": "La Colegiala",
     "category": "Répertoire",
     "style": ["Latino", "Cumbia"],
     "ambiance": "dansant",
@@ -259,6 +296,7 @@
     "chanteur": ["Nemo"]
   },
   "Si Antes Te Hubiera Conocido - Karol G.pro": {
+    "title": "Si Antes Te Hubiera Conocido",
     "category": "Répertoire",
     "style": ["Latino", "Merengue"],
     "ambiance": "très dansant",
@@ -266,6 +304,7 @@
     "chanteur": ["Estelle"]
   },
   "La Bachata - Manuel Turizo.pro": {
+    "title": "La Bachata",
     "category": "Répertoire",
     "style": ["Latino", "Bachata"],
     "ambiance": "dansant",
@@ -273,6 +312,7 @@
     "chanteur": ["Nemo"]
   },
   "Perfect - Ed Sheeran.pro": {
+    "title": "Perfect",
     "category": "Répertoire",
     "style": ["Pop", "Ballade", "Slow"],
     "ambiance": "calme",
@@ -280,6 +320,7 @@
     "chanteur": ["Nemo"]
   },
   "Purple Rain - Prince.pro": {
+    "title": "Purple Rain",
     "category": "Répertoire",
     "style": ["Pop", "Rock", "Slow"],
     "ambiance": "calme",
@@ -287,6 +328,7 @@
     "chanteur": ["Nemo"]
   },
   "L_Italiano - Toto Cutogno.pro": {
+    "title": "L_Italiano",
     "category": "Répertoire",
     "style": ["Pop", "Italo"],
     "ambiance": "medium",
@@ -294,6 +336,7 @@
     "chanteur": ["Nemo"]
   },
   "The Final Countdown - Europe.pro": {
+    "title": "The Final Countdown",
     "category": "Répertoire",
     "style": ["Rock", "Pop"],
     "ambiance": "dansant",
@@ -301,6 +344,7 @@
     "chanteur": ["Nemo"]
   },
   "A Nos Souvenirs - Trois Cafés Gourmands.pro": {
+    "title": "A Nos Souvenirs",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "dansant",
@@ -308,6 +352,7 @@
     "chanteur": ["Nemo", "Bubu", "Gillou"]
   },
   "Tout Le Bonheur Du Monde - Sinsemilia.pro": {
+    "title": "Tout Le Bonheur Du Monde",
     "category": "Répertoire",
     "style": ["Reggae", "Pop"],
     "ambiance": "medium",
@@ -315,6 +360,7 @@
     "chanteur": ["Nemo", "Estelle"]
   },
   "Celebration - Kool & The Gang.pro": {
+    "title": "Celebration",
     "category": "En travail",
     "style": ["Funk", "Disco"],
     "ambiance": "très dansant",
@@ -322,6 +368,7 @@
     "chanteur": ["Estelle"]
   },
   "Casser La Voix - Patrick Bruel.pro": {
+    "title": "Casser La Voix",
     "category": "Répertoire",
     "style": ["Variété Française", "Rock"],
     "ambiance": "medium",
@@ -329,6 +376,7 @@
     "chanteur": ["Bubu"]
   },
   "L_Aventurier - Indochine.pro": {
+    "title": "L_Aventurier",
     "category": "Répertoire",
     "style": ["Rock", "New Wave"],
     "ambiance": "très dansant",
@@ -336,6 +384,7 @@
     "chanteur": ["Nemo"]
   },
   "Long Train Running - Doobie Brothers.pro": {
+    "title": "Long Train Running",
     "category": "Répertoire",
     "style": ["Funk", "Rock"],
     "ambiance": "très dansant",
@@ -343,6 +392,7 @@
     "chanteur": ["Estelle"]
   },
   "Les démons de minuit - Images.pro": {
+    "title": "Les démons de minuit",
     "category": "En travail",
     "style": ["Variété Française", "Disco"],
     "ambiance": "très dansant",
@@ -350,6 +400,7 @@
     "chanteur": ["Nemo"]
   },
   "Take Me Home Country Roads - John Denver.pro": {
+    "title": "Take Me Home Country Roads",
     "category": "Répertoire",
     "style": ["Country", "Folk"],
     "ambiance": "medium",
@@ -357,6 +408,7 @@
     "chanteur": ["Nemo"]
   },
   "Trois Nuits Par Semaine - Indochine.pro": {
+    "title": "Trois Nuits Par Semaine",
     "category": "En travail",
     "style": ["Rock New Wave"],
     "ambiance": "dansant",
@@ -364,6 +416,7 @@
     "chanteur": ["Estelle"]
   },
   "Every Breath You Take - The Police.pro": {
+    "title": "Every Breath You Take",
     "category": "Répertoire",
     "style": ["Pop", "New Wave"],
     "ambiance": "calme",
@@ -371,6 +424,7 @@
     "chanteur": ["Estelle"]
   },
   "Plus Près Des Étoiles - Gold.pro": {
+    "title": "Plus Près Des Étoiles",
     "category": "Répertoire",
     "style": ["Variété Française", "Pop"],
     "ambiance": "dansant",
@@ -378,6 +432,7 @@
     "chanteur": ["Bubu"]
   },
   "I Still Haven_t Found What I_m Looking For - U2.pro": {
+    "title": "I Still Haven_t Found What I_m Looking For",
     "category": "Répertoire",
     "style": ["Pop", "Rock"],
     "ambiance": "medium",
@@ -385,6 +440,7 @@
     "chanteur": ["Nemo"]
   },
   "Je Ne Suis Pas Un Héros - Daniel Balavoine.pro": {
+    "title": "Je Ne Suis Pas Un Héros",
     "category": "Répertoire",
     "style": ["Variété Française", "Rock"],
     "ambiance": "medium",
@@ -392,6 +448,7 @@
     "chanteur": ["Bubu"]
   },
   "Eyes Of The Tiger - Survivor.pro": {
+    "title": "Eyes Of The Tiger",
     "category": "Répertoire",
     "style": ["Rock"],
     "ambiance": "dansant",
@@ -399,6 +456,7 @@
     "chanteur": ["Estelle"]
   },
   "September - Earth, Wind and Fire.pro": {
+    "title": "September",
     "category": "En travail",
     "style": ["Disco", "Funk"],
     "ambiance": "très dansant",
@@ -406,6 +464,7 @@
     "chanteur": ["Estelle"]
   },
   "Mamma Mia - ABBA.pro": {
+    "title": "Mamma Mia",
     "category": "Répertoire",
     "style": ["Pop", "Disco"],
     "ambiance": "très dansant",
@@ -413,6 +472,7 @@
     "chanteur": ["Estelle"]
   },
   "Blue Suede Shoes - Carl Perkins.pro": {
+    "title": "Blue Suede Shoes",
     "category": "Répertoire",
     "style": ["Rock'n'Roll"],
     "ambiance": "dansant",
@@ -420,6 +480,7 @@
     "chanteur": ["Nemo"]
   },
   "Chante - Les Forbans.pro": {
+    "title": "Chante",
     "category": "Répertoire",
     "style": ["Rock", "Variété"],
     "ambiance": "très dansant",
@@ -427,6 +488,7 @@
     "chanteur": ["Bubu"]
   },
   "I’m Still Standing - Elton John.pro": {
+    "title": "I’m Still Standing",
     "category": "Répertoire",
     "style": ["Pop", "Rock"],
     "ambiance": "dansant",
@@ -434,6 +496,7 @@
     "chanteur": ["Nemo"]
   },
   "It_s My Life - Bon Jovi.pro": {
+    "title": "It_s My Life",
     "category": "En travail",
     "style": ["Hard Rock", "Pop"],
     "ambiance": "dansant",
@@ -441,6 +504,7 @@
     "chanteur": ["Estelle"]
   },
   "74_75 - The Connels.pro": {
+    "title": "74_75",
     "category": "Répertoire",
     "style": ["Pop", "Rock", "Ballade"],
     "ambiance": "calme",
@@ -448,6 +512,7 @@
     "chanteur": ["Nemo"]
   },
   "I_ll Be There For You (Friend_s Theme) - The Rembrandts.pro": {
+    "title": "I_ll Be There For You (Friend_s Theme)",
     "category": "Répertoire",
     "style": ["Pop", "Rock"],
     "ambiance": "dansant",
@@ -455,6 +520,7 @@
     "chanteur": ["Estelle"]
   },
   "Blinding Lights - The Weeknd.pro": {
+    "title": "Blinding Lights",
     "category": "En travail",
     "style": ["Synthwave", "Pop"],
     "ambiance": "très dansant",
@@ -462,6 +528,7 @@
     "chanteur": ["Estelle"]
   },
   "Allumer Le Feu - Johnny Hallyday.pro": {
+    "title": "Allumer Le Feu",
     "category": "Répertoire",
     "style": ["Rock", "Variété Française"],
     "ambiance": "très dansant",
@@ -469,13 +536,15 @@
     "chanteur": ["Bubu"]
   },
   "Hallelujah - Jeff Buckley.pro": {
+    "title": "Hallelujah",
     "category": "Répertoire",
     "style": ["Folk", "Ballade", "Slow"],
     "ambiance": "calme",
     "audience": ["mixte", "intergénération"],
     "chanteur": ["Nemo"]
   },
-    "Hallelujah X - Jeff Buckley.pro": {
+  "Hallelujah X - Jeff Buckley.pro": {
+    "title": "Hallelujah X",
     "category": "1 minute",
     "style": ["Folk", "Ballade", "Slow"],
     "ambiance": "calme",
@@ -483,6 +552,7 @@
     "chanteur": ["Nemo"]
   },
   "Call Me - Blondie.pro": {
+    "title": "Call Me",
     "category": "Répertoire",
     "style": ["New Wave", "Rock"],
     "ambiance": "dansant",
@@ -490,6 +560,7 @@
     "chanteur": ["Estelle"]
   },
   "Uprising - Muse.pro": {
+    "title": "Uprising",
     "category": "Répertoire",
     "style": ["Rock Alternatif"],
     "ambiance": "dansant",
@@ -497,6 +568,7 @@
     "chanteur": ["Nemo"]
   },
   "Le Chemin - Kyo.pro": {
+    "title": "Le Chemin",
     "category": "Répertoire",
     "style": ["Pop", "Rock", "Variété Française"],
     "ambiance": "medium",
@@ -504,6 +576,7 @@
     "chanteur": ["Nemo", "Estelle"]
   },
   "Uptown Funk - Bruno Mars.pro": {
+    "title": "Uptown Funk",
     "category": "Répertoire",
     "style": ["Funk", "Pop"],
     "ambiance": "très dansant",
@@ -511,6 +584,7 @@
     "chanteur": ["Estelle"]
   },
   "Il Changeait La Vie - Jean-Jacques Goldman.pro": {
+    "title": "Il Changeait La Vie",
     "category": "Répertoire",
     "style": ["Variété Française", "Pop Rock"],
     "ambiance": "medium",
@@ -518,6 +592,7 @@
     "chanteur": ["Bubu"]
   },
   "Gabrielle - Johnny Hallyday.pro": {
+    "title": "Gabrielle",
     "category": "Répertoire",
     "style": ["Rock", "Variété Française"],
     "ambiance": "dansant",
@@ -525,6 +600,7 @@
     "chanteur": ["Bubu"]
   },
   "I Was Made For Lovin_ You - Kiss.pro": {
+    "title": "I Was Made For Lovin_ You",
     "category": "Répertoire",
     "style": ["Rock", "Disco"],
     "ambiance": "très dansant",
@@ -532,6 +608,7 @@
     "chanteur": ["Nemo"]
   },
   "We Will Rock You - Queen.pro": {
+    "title": "We Will Rock You",
     "category": "En travail",
     "style": ["Rock"],
     "ambiance": "dansant",
@@ -539,6 +616,7 @@
     "chanteur": ["Estelle"]
   },
   "Les lacs du Connemara - Michel Sardou.pro": {
+    "title": "Les lacs du Connemara",
     "category": "En travail",
     "style": ["Variété Française"],
     "ambiance": "dansant",
@@ -546,6 +624,7 @@
     "chanteur": ["Gillou"]
   },
   "Cinderella - Dick Rivers.pro": {
+    "title": "Cinderella",
     "category": "Répertoire",
     "style": ["Rock Ballade"],
     "ambiance": "calme",
@@ -553,6 +632,7 @@
     "chanteur": ["Bubu"]
   },
   "Couleur Menthe A L_eau - Eddy Mitchell.pro": {
+    "title": "Couleur Menthe A L_eau",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "calme",
@@ -560,6 +640,7 @@
     "chanteur": ["Bubu"]
   },
   "Faire Un Pont - Dick Rivers (1945-2019).pro": {
+    "title": "Faire Un Pont",
     "category": "Répertoire",
     "style": ["Country Rock"],
     "ambiance": "medium",
@@ -567,6 +648,7 @@
     "chanteur": ["Bubu"]
   },
   "J_y Vais - Patrick Fiori - Florent Pagny.pro": {
+    "title": "J_y Vais",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "calme",
@@ -574,6 +656,7 @@
     "chanteur": ["Bubu", "Nemo"]
   },
   "L_aigle Noir - version Florent Pagny.pro": {
+    "title": "L_aigle Noir",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "calme",
@@ -581,6 +664,7 @@
     "chanteur": ["Bubu"]
   },
   "L_important C_est La Rose - Gilbert Bécaud.pro": {
+    "title": "L_important C_est La Rose",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "calme",
@@ -588,6 +672,7 @@
     "chanteur": ["Bubu"]
   },
   "Les Yeux D_une Femme - Dick Rivers.pro": {
+    "title": "Les Yeux D_une Femme",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "calme",
@@ -595,6 +680,7 @@
     "chanteur": ["Bubu"]
   },
   "Mademoiselle Chante Le Blues - Patricia Kass.pro": {
+    "title": "Mademoiselle Chante Le Blues",
     "category": "Répertoire",
     "style": ["Blues", "Variété Française"],
     "ambiance": "calme",
@@ -602,6 +688,7 @@
     "chanteur": ["Estelle"]
   },
   "Marie - Johnny Hallyday.pro": {
+    "title": "Marie",
     "category": "Répertoire",
     "style": ["Variété Française", "Rock Ballade"],
     "ambiance": "calme",
@@ -609,6 +696,7 @@
     "chanteur": ["Bubu"]
   },
   "My Way - Frank Sinatra.pro": {
+    "title": "My Way",
     "category": "Répertoire",
     "style": ["Jazz", "Pop"],
     "ambiance": "calme",
@@ -616,6 +704,7 @@
     "chanteur": ["Nemo"]
   },
   "Petite Marie - Francis Cabrel.pro": {
+    "title": "Petite Marie",
     "category": "Répertoire",
     "style": ["Variété Française", "Folk"],
     "ambiance": "calme",
@@ -623,6 +712,7 @@
     "chanteur": ["Bubu"]
   },
   "Qui A Le Droit - Patric Bruel.pro": {
+    "title": "Qui A Le Droit",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "calme",
@@ -630,13 +720,15 @@
     "chanteur": ["Bubu"]
   },
   "Sur La Route De Memphis - Eddy Mitchell.pro": {
+    "title": "Sur La Route De Memphis",
     "category": "Répertoire",
     "style": ["Country Rock"],
     "ambiance": "medium",
     "audience": ["senior", "intergénération"],
     "chanteur": ["Gillou"]
   },
-    "Sur La Route De Memphis X - Eddy Mitchell.pro": {
+  "Sur La Route De Memphis X - Eddy Mitchell.pro": {
+    "title": "Sur La Route De Memphis X",
     "category": "1 minute",
     "style": ["Country Rock"],
     "ambiance": "medium",
@@ -644,6 +736,7 @@
     "chanteur": ["Gillou"]
   },
   "What a Wonderful World - Louis Armstrong.pro": {
+    "title": "What a Wonderful World",
     "category": "Répertoire",
     "style": ["Jazz", "Classique"],
     "ambiance": "calme",
@@ -651,6 +744,7 @@
     "chanteur": ["Nemo"]
   },
   "Sweet Home Chicago - The Blues Brothers.pro": {
+    "title": "Sweet Home Chicago",
     "category": "Répertoire",
     "style": ["Blues"],
     "ambiance": "dansant",
@@ -658,6 +752,7 @@
     "chanteur": ["Nemo"]
   },
   "Toute La Musique Que J_aime - Johnny Hallyday.pro": {
+    "title": "Toute La Musique Que J_aime",
     "category": "Répertoire",
     "style": ["Blues Rock", "Variété Française"],
     "ambiance": "medium",
@@ -665,6 +760,7 @@
     "chanteur": ["Bubu"]
   },
   "City Of New Orleans - Steve Goodman.pro": {
+    "title": "City Of New Orleans",
     "category": "Répertoire",
     "style": ["Country", "Folk"],
     "ambiance": "calme",
@@ -672,6 +768,7 @@
     "chanteur": ["Nemo"]
   },
   "Tequila Sunrise - The Eagles.pro": {
+    "title": "Tequila Sunrise",
     "category": "Répertoire",
     "style": ["Country Rock"],
     "ambiance": "calme",
@@ -679,6 +776,7 @@
     "chanteur": ["Nemo"]
   },
   "Everybody_s Talking - Harry Nilsson.pro": {
+    "title": "Everybody_s Talking",
     "category": "Répertoire",
     "style": ["Folk", "Country"],
     "ambiance": "calme",
@@ -686,13 +784,15 @@
     "chanteur": ["Nemo"]
   },
   "Apache - Shadows.pro": {
+    "title": "Apache",
     "category": "Répertoire",
     "style": ["Rock", "Instrumental"],
     "ambiance": "medium",
     "audience": ["senior"],
     "chanteur": ["Bubu"]
   },
-    "Apache X - Shadows.pro": {
+  "Apache X - Shadows.pro": {
+    "title": "Apache X",
     "category": "1 minute",
     "style": ["Rock", "Instrumental"],
     "ambiance": "medium",
@@ -700,6 +800,7 @@
     "chanteur": ["Bubu"]
   },
   "Proud Mary - Creedence.pro": {
+    "title": "Proud Mary",
     "category": "Répertoire",
     "style": ["Country", "Rock"],
     "ambiance": "dansant",
@@ -707,6 +808,7 @@
     "chanteur": ["Nemo"]
   },
   "Chef Un P_tit Verre On A Soif - Grand Jojo.pro": {
+    "title": "Chef Un P_tit Verre On A Soif",
     "category": "Répertoire",
     "style": ["Festif", "Ambiance"],
     "ambiance": "très dansant",
@@ -714,6 +816,7 @@
     "chanteur": ["Bubu"]
   },
   "J_entends Siffler le Train - Richard Anthony.pro": {
+    "title": "J_entends Siffler le Train",
     "category": "Répertoire",
     "style": ["Variété Française", "Slow"],
     "ambiance": "calme",
@@ -721,6 +824,7 @@
     "chanteur": ["Bubu"]
   },
   "La Bonne Humeur - Sacha Distel.pro": {
+    "title": "La Bonne Humeur",
     "category": "Répertoire",
     "style": ["Variété Française", "Jazz Pop"],
     "ambiance": "dansant",
@@ -728,6 +832,7 @@
     "chanteur": ["Bubu"]
   },
   "La Chenille - La Bande A Basile.pro": {
+    "title": "La Chenille",
     "category": "Répertoire",
     "style": ["Festif", "Ambiance"],
     "ambiance": "très dansant",
@@ -735,6 +840,7 @@
     "chanteur": ["Bubu"]
   },
   "Pas De Boogie Woogie - Eddy Mitchel.pro": {
+    "title": "Pas De Boogie Woogie",
     "category": "Répertoire",
     "style": ["Rock'n'Roll", "Variété Française"],
     "ambiance": "très dansant",
@@ -742,6 +848,7 @@
     "chanteur": ["Bubu"]
   },
   "Respire Encore - Clara Luciani.pro": {
+    "title": "Respire Encore",
     "category": "En travail",
     "style": ["Pop", "Disco"],
     "ambiance": "très dansant",
@@ -749,6 +856,7 @@
     "chanteur": ["Estelle"]
   },
   "DISCO - Ottawan.pro": {
+    "title": "DISCO",
     "category": "Répertoire",
     "style": ["Disco"],
     "ambiance": "très dansant",
@@ -756,6 +864,7 @@
     "chanteur": ["Bubu"]
   },
   "T_es OK - Ottawan.pro": {
+    "title": "T_es OK",
     "category": "Répertoire",
     "style": ["Disco"],
     "ambiance": "très dansant",
@@ -763,6 +872,7 @@
     "chanteur": ["Bubu"]
   },
   "Haut Les Mains - Ottawan.pro": {
+    "title": "Haut Les Mains",
     "category": "Répertoire",
     "style": ["Disco"],
     "ambiance": "très dansant",
@@ -770,6 +880,7 @@
     "chanteur": ["Bubu"]
   },
   "Café Moulu - Magic music party.pro": {
+    "title": "Café Moulu",
     "category": "Archives",
     "style": ["Disco", "Festif"],
     "ambiance": "très dansant",
@@ -777,6 +888,7 @@
     "chanteur": ["Bubu"]
   },
   "A-I-E - Black Blood.pro": {
+    "title": "A-I-E",
     "category": "Archives",
     "style": ["Disco", "Afro-Pop"],
     "ambiance": "très dansant",
@@ -784,6 +896,7 @@
     "chanteur": ["Bubu"]
   },
   "L_Amérique - Joe Dassin.pro": {
+    "title": "L_Amérique",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "dansant",
@@ -791,6 +904,7 @@
     "chanteur": ["Bubu"]
   },
   "Scandale Dans La Famille - Sacha Distel.pro": {
+    "title": "Scandale Dans La Famille",
     "category": "Répertoire",
     "style": ["Variété Française", "Calypso"],
     "ambiance": "dansant",
@@ -798,6 +912,7 @@
     "chanteur": ["Bubu"]
   },
   "Si Seulement - Les Chaussettes Noires.pro": {
+    "title": "Si Seulement",
     "category": "Répertoire",
     "style": ["Rock'n'Roll Français"],
     "ambiance": "dansant",
@@ -805,6 +920,7 @@
     "chanteur": ["Bubu"]
   },
   "Suzette - Dany Brillant.pro": {
+    "title": "Suzette",
     "category": "Répertoire",
     "style": ["Swing", "Variété"],
     "ambiance": "dansant",
@@ -812,6 +928,7 @@
     "chanteur": ["Bubu"]
   },
   "Le Plus Beau Tango Du Monde - Tino Rossi.pro": {
+    "title": "Le Plus Beau Tango Du Monde",
     "category": "Répertoire",
     "style": ["Tango"],
     "ambiance": "dansant",
@@ -819,6 +936,7 @@
     "chanteur": ["Bubu"]
   },
   "Vous Permettez Monsieur - Salvatore Adamo.pro": {
+    "title": "Vous Permettez Monsieur",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "medium",
@@ -826,6 +944,7 @@
     "chanteur": ["Bubu"]
   },
   "Domino - André Claveau.pro": {
+    "title": "Domino",
     "category": "Répertoire",
     "style": ["Valse", "Chanson"],
     "ambiance": "dansant",
@@ -833,6 +952,7 @@
     "chanteur": ["Bubu"]
   },
   "Germaine - Renaud.pro": {
+    "title": "Germaine",
     "category": "Répertoire",
     "style": ["Variété Française", "Valse"],
     "ambiance": "medium",
@@ -840,6 +960,7 @@
     "chanteur": ["Bubu"]
   },
   "Le Café Des Trois Colombes - Joe Dassin.pro": {
+    "title": "Le Café Des Trois Colombes",
     "category": "Répertoire",
     "style": ["Variété Française", "Valse"],
     "ambiance": "medium",
@@ -847,6 +968,7 @@
     "chanteur": ["Bubu"]
   },
   "Mademoiselle De Paris - Jacqueline François.pro": {
+    "title": "Mademoiselle De Paris",
     "category": "Répertoire",
     "style": ["Valse", "Classique"],
     "ambiance": "medium",
@@ -854,6 +976,7 @@
     "chanteur": ["Bubu"]
   },
   "Mon Amante De Saint-Jean - Patrick Bruel.pro": {
+    "title": "Mon Amante De Saint-Jean",
     "category": "Répertoire",
     "style": ["Valse", "Variété"],
     "ambiance": "dansant",
@@ -861,6 +984,7 @@
     "chanteur": ["Bubu"]
   },
   "Noël Interdit - Johnny Hallyday.pro": {
+    "title": "Noël Interdit",
     "category": "Répertoire",
     "style": ["Variété Française", "Valse"],
     "ambiance": "calme",
@@ -868,6 +992,7 @@
     "chanteur": ["Bubu"]
   },
   "Tes Tendres Années - Johnny Hallyday.pro": {
+    "title": "Tes Tendres Années",
     "category": "Répertoire",
     "style": ["Rock Ballade", "Valse"],
     "ambiance": "calme",
@@ -875,6 +1000,7 @@
     "chanteur": ["Bubu"]
   },
   "Un Petit Air D_accordéon - C Jérôme.pro": {
+    "title": "Un Petit Air D_accordéon",
     "category": "Répertoire",
     "style": ["Variété Française", "Valse"],
     "ambiance": "dansant",
@@ -882,6 +1008,7 @@
     "chanteur": ["Bubu"]
   },
   "Valse de Vienne - François Feldmann.pro": {
+    "title": "Valse de Vienne",
     "category": "Répertoire",
     "style": ["Variété Française", "Valse"],
     "ambiance": "calme",
@@ -889,6 +1016,7 @@
     "chanteur": ["Bubu"]
   },
   "Voulez-vous Danser Grand-Mère - Lina Margy 1946.pro": {
+    "title": "Voulez-vous Danser Grand-Mère",
     "category": "Répertoire",
     "style": ["Valse", "Traditionnel"],
     "ambiance": "dansant",
@@ -896,6 +1024,7 @@
     "chanteur": ["Bubu"]
   },
   "It_s Not Unsual - Tom Jones.pro": {
+    "title": "It_s Not Unsual",
     "category": "Répertoire",
     "style": ["Jazz", "Pop", "Soul"],
     "ambiance": "dansant",
@@ -903,6 +1032,7 @@
     "chanteur": ["Nemo"]
   },
   "Duele El Corazon - Enrique Iglesias.pro": {
+    "title": "Duele El Corazon",
     "category": "Répertoire",
     "style": ["Latino", "Pop"],
     "ambiance": "très dansant",
@@ -910,6 +1040,7 @@
     "chanteur": ["Nemo"]
   },
   "La Lambada - Kaoma.pro": {
+    "title": "La Lambada",
     "category": "Répertoire",
     "style": ["Latino"],
     "ambiance": "très dansant",
@@ -917,6 +1048,7 @@
     "chanteur": ["Nemo"]
   },
   "Por Que Te Vas - José Luis.pro": {
+    "title": "Por Que Te Vas",
     "category": "Répertoire",
     "style": ["Latino", "Pop"],
     "ambiance": "medium",
@@ -924,6 +1056,7 @@
     "chanteur": ["Estelle"]
   },
   "La Cintura - Alvaro Soler.pro": {
+    "title": "La Cintura",
     "category": "Répertoire",
     "style": ["Latino", "Pop"],
     "ambiance": "très dansant",
@@ -931,13 +1064,15 @@
     "chanteur": ["Nemo"]
   },
   "Samba Pa Ti - Carlos Santana.pro": {
+    "title": "Samba Pa Ti",
     "category": "Répertoire",
     "style": ["Latin", "Rock", "Instrumental"],
     "ambiance": "calme",
     "audience": ["mixte", "senior"],
     "chanteur": ["Nemo"]
   },
-    "Samba Pa Ti X - Carlos Santana.pro": {
+  "Samba Pa Ti X - Carlos Santana.pro": {
+    "title": "Samba Pa Ti X",
     "category": "1 minute",
     "style": ["Latin", "Rock", "Instrumental"],
     "ambiance": "calme",
@@ -945,13 +1080,15 @@
     "chanteur": ["Nemo"]
   },
   "Blue Bossa - Kenny Dorham.pro": {
+    "title": "Blue Bossa",
     "category": "Répertoire",
     "style": ["Bossa Nova", "Instrumental"],
     "ambiance": "calme",
     "audience": ["senior", "mixte"],
     "chanteur": ["Nemo"]
   },
-    "Blue Bossa X - Kenny Dorham.pro": {
+  "Blue Bossa X - Kenny Dorham.pro": {
+    "title": "Blue Bossa X",
     "category": "1 minute",
     "style": ["Bossa Nova", "Instrumental"],
     "ambiance": "calme",
@@ -959,6 +1096,7 @@
     "chanteur": ["Nemo"]
   },
   "APT - Rosé - Bruno Mars.pro": {
+    "title": "APT",
     "category": "En travail",
     "style": ["Pop", "Punk Pop"],
     "ambiance": "très dansant",
@@ -966,6 +1104,7 @@
     "chanteur": ["Nemo", "Estelle"]
   },
   "J_irai Ou Tu Iras - Celine Dion - Jean-Jacques Goldman.pro": {
+    "title": "J_irai Ou Tu Iras",
     "category": "En travail",
     "style": ["Pop", "Rock", "Variété Française"],
     "ambiance": "très dansant",
@@ -973,13 +1112,15 @@
     "chanteur": ["Estelle", "Nemo"]
   },
   "Up In The Sky - 77 Bombay Street.pro": {
+    "title": "Up In The Sky",
     "category": "Répertoire",
     "style": ["Folk", "Pop"],
     "ambiance": "dansant",
     "audience": ["jeune", "mixte"],
     "chanteur": ["Nemo"]
   },
-    "Up In The Sky X - 77 Bombay Street.pro": {
+  "Up In The Sky X - 77 Bombay Street.pro": {
+    "title": "Up In The Sky X",
     "category": "1 minute",
     "style": ["Folk", "Pop"],
     "ambiance": "dansant",
@@ -987,6 +1128,7 @@
     "chanteur": ["Nemo"]
   },
   "Can_t Stop The Feeling - Justin Timberlake.pro": {
+    "title": "Can_t Stop The Feeling",
     "category": "Répertoire",
     "style": ["Pop", "Funk"],
     "ambiance": "très dansant",
@@ -994,6 +1136,7 @@
     "chanteur": ["Nemo", "Estelle"]
   },
   "Wonderwall - Oasis.pro": {
+    "title": "Wonderwall",
     "category": "Répertoire",
     "style": ["Pop"],
     "ambiance": "medium",
@@ -1001,6 +1144,7 @@
     "chanteur": ["Nemo"]
   },
   "Rue Des Etoiles - Grégoire.pro": {
+    "title": "Rue Des Etoiles",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "medium",
@@ -1008,6 +1152,7 @@
     "chanteur": ["Nemo"]
   },
   "Toi + Moi - Gregoire.pro": {
+    "title": "Toi + Moi",
     "category": "Répertoire",
     "style": ["Variété Française", "Pop"],
     "ambiance": "dansant",
@@ -1015,6 +1160,7 @@
     "chanteur": ["Nemo"]
   },
   "Je Pourrais Etre - Jouez-Cool.pro": {
+    "title": "Je Pourrais Etre",
     "category": "En travail",
     "style": ["Pop"],
     "ambiance": "medium",
@@ -1022,6 +1168,7 @@
     "chanteur": ["Nemo"]
   },
   "Bye Bye Johnny - Chuck Berry.pro": {
+    "title": "Bye Bye Johnny",
     "category": "Répertoire",
     "style": ["Rock"],
     "ambiance": "très dansant",
@@ -1029,6 +1176,7 @@
     "chanteur": ["Nemo"]
   },
   "Caroline - Status Quo.pro": {
+    "title": "Caroline",
     "category": "Répertoire",
     "style": ["Rock", "Boogie"],
     "ambiance": "très dansant",
@@ -1036,6 +1184,7 @@
     "chanteur": ["Nemo"]
   },
   "Narcotic - Liquido.pro": {
+    "title": "Narcotic",
     "category": "Répertoire",
     "style": ["Rock Alternatif"],
     "ambiance": "très dansant",
@@ -1043,6 +1192,7 @@
     "chanteur": ["Estelle"]
   },
   "Blue Hotel - Chris Isaak.pro": {
+    "title": "Blue Hotel",
     "category": "Répertoire",
     "style": ["Rock", "Pop"],
     "ambiance": "medium",
@@ -1050,6 +1200,7 @@
     "chanteur": ["Nemo"]
   },
   "Cocaine - Eric Clapton.pro": {
+    "title": "Cocaine",
     "category": "Répertoire",
     "style": ["Blues", "Rock"],
     "ambiance": "medium",
@@ -1057,6 +1208,7 @@
     "chanteur": ["Estelle"]
   },
   "Don_t Bring Me Down - Electric Light Orchestra.pro": {
+    "title": "Don_t Bring Me Down",
     "category": "Répertoire",
     "style": ["Pop", "Rock"],
     "ambiance": "dansant",
@@ -1064,6 +1216,7 @@
     "chanteur": ["Nemo"]
   },
   "Eye In The Sky - The Alan Parsons Project.pro": {
+    "title": "Eye In The Sky",
     "category": "Répertoire",
     "style": ["Rock"],
     "ambiance": "medium",
@@ -1071,6 +1224,7 @@
     "chanteur": ["Nemo"]
   },
   "Jumping Jack-Flash - Version Motorhead.pro": {
+    "title": "Jumping Jack-Flash",
     "category": "Répertoire",
     "style": ["Rock"],
     "ambiance": "très dansant",
@@ -1078,6 +1232,7 @@
     "chanteur": ["Estelle"]
   },
   "Walk Of Life - Dire Strait.pro": {
+    "title": "Walk Of Life",
     "category": "Répertoire",
     "style": ["Rock"],
     "ambiance": "très dansant",
@@ -1085,6 +1240,7 @@
     "chanteur": ["Nemo"]
   },
   "Wind of Change - Scorpions.pro": {
+    "title": "Wind of Change",
     "category": "Répertoire",
     "style": ["Rock", "Ballade"],
     "ambiance": "calme",
@@ -1092,6 +1248,7 @@
     "chanteur": ["Nemo"]
   },
   "Wish You Were Here - Pink Floyd.pro": {
+    "title": "Wish You Were Here",
     "category": "En travail",
     "style": ["Rock", "Folk"],
     "ambiance": "calme",
@@ -1099,6 +1256,7 @@
     "chanteur": ["Nemo"]
   },
   "3ème SEX - Indochine.pro": {
+    "title": "3ème SEX",
     "category": "Archives",
     "style": ["New Wave"],
     "ambiance": "dansant",
@@ -1106,6 +1264,7 @@
     "chanteur": ["Nemo"]
   },
   "Cendrillon - Telephone.pro": {
+    "title": "Cendrillon",
     "category": "Répertoire",
     "style": ["Rock", "Variété Française"],
     "ambiance": "dansant",
@@ -1113,6 +1272,7 @@
     "chanteur": ["Nemo"]
   },
   "Partenaire Particulier - Partenaire Particulier.pro": {
+    "title": "Partenaire Particulier",
     "category": "En travail",
     "style": ["Pop", "Variété Française"],
     "ambiance": "très dansant",
@@ -1120,6 +1280,7 @@
     "chanteur": ["Nemo"]
   },
   "Da Dou Ron Ron - Johnny Hallyday.pro": {
+    "title": "Da Dou Ron Ron",
     "category": "Répertoire",
     "style": ["Rock"],
     "ambiance": "très dansant",
@@ -1127,6 +1288,7 @@
     "chanteur": ["Bubu"]
   },
   "Fils De Personne - Johnny Hallyday.pro": {
+    "title": "Fils De Personne",
     "category": "Répertoire",
     "style": ["Rock"],
     "ambiance": "dansant",
@@ -1134,6 +1296,7 @@
     "chanteur": ["Bubu"]
   },
   "La Terre Promise - Johnny Hallyday1.pro": {
+    "title": "La Terre Promise",
     "category": "Répertoire",
     "style": ["Country", "Rock"],
     "ambiance": "medium",
@@ -1141,6 +1304,7 @@
     "chanteur": ["Bubu"]
   },
   "Memphis Tennessee - Johnny Hallyday.pro": {
+    "title": "Memphis Tennessee",
     "category": "Répertoire",
     "style": ["Rock"],
     "ambiance": "dansant",
@@ -1148,6 +1312,7 @@
     "chanteur": ["Bubu"]
   },
   "Musique - France Gall.pro": {
+    "title": "Musique",
     "category": "Répertoire",
     "style": ["Pop", "Disco"],
     "ambiance": "très dansant",
@@ -1155,6 +1320,7 @@
     "chanteur": ["Estelle"]
   },
   "Oh Sally - Johnny Hallyday1.pro": {
+    "title": "Oh Sally",
     "category": "Répertoire",
     "style": ["Rock"],
     "ambiance": "très dansant",
@@ -1162,6 +1328,7 @@
     "chanteur": ["Bubu"]
   },
   "On Veut Des Légendes - Johnny HallydayEddy Mitchel.pro": {
+    "title": "On Veut Des Légendes",
     "category": "Répertoire",
     "style": ["Rock", "Variété Française"],
     "ambiance": "dansant",
@@ -1169,6 +1336,7 @@
     "chanteur": ["Bubu", "Gillou"]
   },
   "Parc_que J_ai Revu Linda - Johnny Hallyday.pro": {
+    "title": "Parc_que J_ai Revu Linda",
     "category": "Répertoire",
     "style": ["Rock", "Variété Française"],
     "ambiance": "très dansant",
@@ -1176,6 +1344,7 @@
     "chanteur": ["Bubu"]
   },
   "Quand T_es Dans Le Désert - Jean-Patrick Capdevielle.pro": {
+    "title": "Quand T_es Dans Le Désert",
     "category": "Répertoire",
     "style": ["Rock", "Variété Française"],
     "ambiance": "dansant",
@@ -1183,6 +1352,7 @@
     "chanteur": ["Bubu"]
   },
   "Seul - Garou.pro": {
+    "title": "Seul",
     "category": "Répertoire",
     "style": ["Variété Française", "Pop", "Rock"],
     "ambiance": "medium",
@@ -1190,6 +1360,7 @@
     "chanteur": ["Bubu"]
   },
   "Un Garçon Sur La Route - Johnny Hallyday.pro": {
+    "title": "Un Garçon Sur La Route",
     "category": "Répertoire",
     "style": ["Rock"],
     "ambiance": "medium",
@@ -1197,6 +1368,7 @@
     "chanteur": ["Bubu"]
   },
   "Vivre Pour Le Meilleur - Johnny Hallyday1.pro": {
+    "title": "Vivre Pour Le Meilleur",
     "category": "Répertoire",
     "style": ["Variété Française", "Rock", "Ballade"],
     "ambiance": "medium",
@@ -1204,13 +1376,15 @@
     "chanteur": ["Bubu"]
   },
   "Ama - Eros Ramazotti.pro": {
+    "title": "Ama",
     "category": "Répertoire",
     "style": ["Pop", "Rock", "Italo"],
     "ambiance": "medium",
     "audience": ["mixte"],
     "chanteur": ["Nemo"]
   },
-    "Ama X - Eros Ramazotti.pro": {
+  "Ama X - Eros Ramazotti.pro": {
+    "title": "Ama X",
     "category": "1 minute",
     "style": ["Pop", "Rock", "Italo"],
     "ambiance": "medium",
@@ -1218,6 +1392,7 @@
     "chanteur": ["Nemo"]
   },
   "I_m a Believer - Smash Mouth.pro": {
+    "title": "I_m a Believer",
     "category": "Répertoire",
     "style": ["Rock Alternatif"],
     "ambiance": "très dansant",
@@ -1225,6 +1400,7 @@
     "chanteur": ["Nemo"]
   },
   "You_re Gonna Go Far, Kid - The Offspring.pro": {
+    "title": "You_re Gonna Go Far, Kid",
     "category": "Répertoire",
     "style": ["Rock Alternatif"],
     "ambiance": "très dansant",
@@ -1232,6 +1408,7 @@
     "chanteur": ["Nemo"]
   },
   "J_en Parlerai Au Diable - Johnny Hallyday.pro": {
+    "title": "J_en Parlerai Au Diable",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "calme",
@@ -1239,6 +1416,7 @@
     "chanteur": ["Bubu"]
   },
   "Pardonne Moi - Johnny Hallyday.pro": {
+    "title": "Pardonne Moi",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "calme",
@@ -1246,6 +1424,7 @@
     "chanteur": ["Bubu"]
   },
   "Runaway - Bon Jovi1.pro": {
+    "title": "Runaway",
     "category": "En travail",
     "style": ["Hard Rock"],
     "ambiance": "dansant",
@@ -1253,6 +1432,7 @@
     "chanteur": ["Bubu"]
   },
   "Seven Nation Army - The White Stripes.pro": {
+    "title": "Seven Nation Army",
     "category": "Répertoire",
     "style": ["Rock"],
     "ambiance": "très dansant",
@@ -1260,6 +1440,7 @@
     "chanteur": ["Nemo"]
   },
   "Adieu Jolie Candy - Jean-François Michaël.pro": {
+    "title": "Adieu Jolie Candy",
     "category": "Répertoire",
     "style": ["Slow", "Variété"],
     "ambiance": "calme",
@@ -1267,13 +1448,15 @@
     "chanteur": ["Gillou"]
   },
   "Besame Mucho - Carlos Valazquez.pro": {
+    "title": "Besame Mucho",
     "category": "Répertoire",
     "style": ["Latino", "Slow"],
     "ambiance": "calme",
     "audience": ["senior", "intergénération"],
     "chanteur": ["Nemo"]
   },
-    "Besame Mucho X - Carlos Valazquez.pro": {
+  "Besame Mucho X - Carlos Valazquez.pro": {
+    "title": "Besame Mucho X",
     "category": "1 minute",
     "style": ["Latino"],
     "ambiance": "calme",
@@ -1281,6 +1464,7 @@
     "chanteur": ["Nemo"]
   },
   "Diego Libre Dans Sa Tete - Johnny Hallyday.pro": {
+    "title": "Diego Libre Dans Sa Tete",
     "category": "Répertoire",
     "style": ["Variété Française"],
     "ambiance": "calme",
@@ -1288,6 +1472,7 @@
     "chanteur": ["Bubu"]
   },
   "Europa - Carlos Santana.pro": {
+    "title": "Europa",
     "category": "Répertoire",
     "style": ["Rock", "Instrumental"],
     "ambiance": "calme",
@@ -1295,6 +1480,7 @@
     "chanteur": ["Bubu"]
   },
   "Les Portes Du Pénitencier - Johnny Hallyday.pro": {
+    "title": "Les Portes Du Pénitencier",
     "category": "Répertoire",
     "style": ["Rock", "Ballade"],
     "ambiance": "calme",
@@ -1302,6 +1488,7 @@
     "chanteur": ["Bubu"]
   },
   "Ti Amo - Umberto Tozzi.pro": {
+    "title": "Ti Amo",
     "category": "Répertoire",
     "style": ["Pop", "Italo", "Slow"],
     "ambiance": "calme",
@@ -1309,6 +1496,7 @@
     "chanteur": ["Nemo"]
   },
   "Il Tape Sur Des Bambous - Philippe Lavil.pro": {
+    "title": "Il Tape Sur Des Bambous",
     "category": "En travail",
     "style": ["Variété Française", "Zouk"],
     "ambiance": "dansant",
@@ -1316,6 +1504,7 @@
     "chanteur": ["Bubu"]
   },
   "Le Temps Des Yéyés - Les Vagabonds.pro": {
+    "title": "Le Temps Des Yéyés",
     "category": "En travail",
     "style": ["Rock'n'Roll"],
     "ambiance": "très dansant",
@@ -1323,6 +1512,7 @@
     "chanteur": ["Bubu"]
   },
   "A Bailar Calypso - Elie Medeiros.pro": {
+    "title": "A Bailar Calypso",
     "category": "En travail",
     "style": ["Latino", "Pop"],
     "ambiance": "très dansant",
@@ -1330,13 +1520,15 @@
     "chanteur": ["Estelle"]
   },
   "Flor D_luna - Carlos Santana.pro": {
+    "title": "Flor D_luna",
     "category": "En travail",
-    "style": ["Rock" "Instrumental"],
+    "style": ["Rock", "Instrumental"],
     "ambiance": "calme",
     "audience": ["mixte", "senior"],
     "chanteur": ["Bubu"]
   },
   "Obsesion - Lucenzo ft Kenza.pro": {
+    "title": "Obsesion",
     "category": "En travail",
     "style": ["Latino"],
     "ambiance": "très dansant",
@@ -1344,6 +1536,7 @@
     "chanteur": ["Nemo", "Estelle"]
   },
   "Aller Plus Haut - Lara Fabian.pro": {
+    "title": "Aller Plus Haut",
     "category": "En travail",
     "style": ["Variété Française"],
     "ambiance": "medium",
@@ -1351,6 +1544,7 @@
     "chanteur": ["Estelle"]
   },
   "I Want It That Way - Backstreet Boys.pro": {
+    "title": "I Want It That Way",
     "category": "En travail",
     "style": ["Teen Pop"],
     "ambiance": "medium",
@@ -1358,6 +1552,7 @@
     "chanteur": ["Nemo", "Estelle"]
   },
   "Je Veux - Zaz.pro": {
+    "title": "Je Veux",
     "category": "En travail",
     "style": ["Jazz", "Variété Française"],
     "ambiance": "dansant",
@@ -1365,6 +1560,7 @@
     "chanteur": ["Estelle"]
   },
   "Ma Muse - Jouez Cool.pro": {
+    "title": "Ma Muse",
     "category": "En travail",
     "style": ["Pop"],
     "ambiance": "medium",
@@ -1372,6 +1568,7 @@
     "chanteur": ["Nemo"]
   },
   "Our Place - Jouez Cool.pro": {
+    "title": "Our Place",
     "category": "En travail",
     "style": ["Pop"],
     "ambiance": "medium",
@@ -1379,6 +1576,7 @@
     "chanteur": ["Nemo"]
   },
   "Wake Up - Fialta.pro": {
+    "title": "Wake Up",
     "category": "En travail",
     "style": ["Indie Pop"],
     "ambiance": "dansant",
@@ -1386,6 +1584,7 @@
     "chanteur": ["Nemo", "Estelle"]
   },
   "Si Tu M_aimes - Lara Fabian.pro": {
+    "title": "Si Tu M_aimes",
     "category": "En travail",
     "style": ["Variété Française"],
     "ambiance": "calme",
@@ -1393,6 +1592,7 @@
     "chanteur": ["Estelle"]
   },
   "Baila Morena - Zucchero.pro": {
+    "title": "Baila Morena",
     "category": "En travail",
     "style": ["Blues", "Rock", "Italo"],
     "ambiance": "très dansant",
@@ -1400,6 +1600,7 @@
     "chanteur": ["Nemo"]
   },
   "L_incendie A Rio - Sacha Distel.pro": {
+    "title": "L_incendie A Rio",
     "category": "Archives",
     "style": ["Samba", "Variété Française"],
     "ambiance": "très dansant",
@@ -1407,6 +1608,7 @@
     "chanteur": ["Bubu"]
   },
   "Mon Plus Beau Noel - Johnny Hallyday.pro": {
+    "title": "Mon Plus Beau Noel",
     "category": "Archives",
     "style": ["Variété Française"],
     "ambiance": "calme",
@@ -1414,6 +1616,7 @@
     "chanteur": ["Bubu"]
   },
   "On Écrit Sur Les Murs - version Kids United.pro": {
+    "title": "On Écrit Sur Les Murs",
     "category": "Archives",
     "style": ["Pop", "Variété"],
     "ambiance": "medium",
@@ -1421,6 +1624,7 @@
     "chanteur": ["Nemo"]
   },
   "L_Oiseau et l’Enfant - Version Kids United.pro": {
+    "title": "L_Oiseau et l’Enfant",
     "category": "Archives",
     "style": ["Variété Française"],
     "ambiance": "medium",
@@ -1428,6 +1632,7 @@
     "chanteur": ["Nemo"]
   },
   "Des Milliers De Je T_aime - Slimane.pro": {
+    "title": "Des Milliers De Je T_aime",
     "category": "Archives",
     "style": ["Variété Française"],
     "ambiance": "calme",
@@ -1435,6 +1640,7 @@
     "chanteur": ["Nemo"]
   },
   "Sous Le Vent - Garou.pro": {
+    "title": "Sous Le Vent",
     "category": "Archives",
     "style": ["Variété Française"],
     "ambiance": "calme",
@@ -1442,6 +1648,7 @@
     "chanteur": ["Nemo"]
   },
   "Joyeux Anniversaire": {
+    "title": "Joyeux Anniversaire",
     "category": "Archives",
     "style": ["Célébration"],
     "ambiance": "dansant",
