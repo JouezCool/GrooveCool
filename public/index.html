@@ -759,6 +759,7 @@ nav{
 
 <button class="btn" onclick="toggleNotes()">NOTES</button>
 <button class="btn" onclick="openHistoryModal()">V1</button>
+<button class="btn" onclick="openEditSongMetaModal()">INFOS</button>
 <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
     </nav>
 	
@@ -822,6 +823,7 @@ nav{
         <button class="btn" id="settingsLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
         <button class="btn" id="settingsChordBtn" onclick="toggleChordStyle()">Accords: Do</button>
         <button class="btn" id="settingsThemeBtn" onclick="toggleTheme()">Thème: Sombre</button>
+		<button class="btn" onclick="openCreateSongModal()">➕ Nouveau morceau</button>
         <button class="btn" onclick="exportBackup()">⬇️ Exporter sauvegarde</button>
         <button class="btn" onclick="triggerImport()">⬆️ Importer sauvegarde</button>
         <input id="importFile" type="file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
@@ -856,6 +858,58 @@ nav{
   </div>
 </div>
 
+<div id="songMetaBackdrop" style="
+  position:fixed; inset:0; display:none; z-index:6700;
+  background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:18px;">
+  <div style="width:min(680px,100%); background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden;">
+    <header style="padding:14px 16px; border-bottom:1px solid #2a2a2a; background:#161616;">
+      <h3 id="songMetaTitle" style="margin:0; font-size:14px; color:#fff;">Morceau</h3>
+    </header>
+
+    <div style="padding:14px 16px; display:grid; gap:10px;">
+      <label>
+        <div style="margin-bottom:6px;">Nom du fichier</div>
+        <input id="songMetaFileName" type="text" style="width:100%; padding:10px; box-sizing:border-box;">
+      </label>
+
+      <label>
+        <div style="margin-bottom:6px;">Catégorie</div>
+        <input id="songMetaCategory" type="text" style="width:100%; padding:10px; box-sizing:border-box;">
+      </label>
+
+      <label>
+        <div style="margin-bottom:6px;">Style(s) — séparés par virgule</div>
+        <input id="songMetaStyle" type="text" style="width:100%; padding:10px; box-sizing:border-box;">
+      </label>
+
+      <label>
+        <div style="margin-bottom:6px;">Ambiance</div>
+        <input id="songMetaAmbiance" type="text" style="width:100%; padding:10px; box-sizing:border-box;">
+      </label>
+
+      <label>
+        <div style="margin-bottom:6px;">Audience(s) — séparées par virgule</div>
+        <input id="songMetaAudience" type="text" style="width:100%; padding:10px; box-sizing:border-box;">
+      </label>
+
+      <label>
+        <div style="margin-bottom:6px;">Chanteur(s) — séparés par virgule</div>
+        <input id="songMetaChanteur" type="text" style="width:100%; padding:10px; box-sizing:border-box;">
+      </label>
+
+      <label id="songMetaContentWrap">
+        <div style="margin-bottom:6px;">Contenu initial du morceau</div>
+        <textarea id="songMetaContent" style="width:100%; min-height:140px; padding:10px; box-sizing:border-box;"></textarea>
+      </label>
+    </div>
+
+    <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end; gap:10px;">
+      <button class="btn" onclick="closeSongMetaModal()">ANNULER</button>
+      <button class="btn btn-blue" onclick="saveSongMetaModal()">ENREGISTRER</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const socket = io();
 
@@ -874,6 +928,7 @@ nav{
   let lastConnectedUsers = [];
   let songMeta = {};
   let concertMode = false;
+  let songMetaMode = 'edit';
 let currentSongOpenedAt = 0;
 let playedTonightSet = new Set();
 let deviceId = localStorage.getItem('bandapp_deviceId') || "";
@@ -914,6 +969,16 @@ const styleFilterEl = document.getElementById('styleFilter');
 const playedFilterEl = document.getElementById('playedFilter');
 const playedToggleBtn = document.getElementById('playedToggleBtn');
 
+const songMetaBackdrop = document.getElementById('songMetaBackdrop');
+const songMetaTitle = document.getElementById('songMetaTitle');
+const songMetaFileName = document.getElementById('songMetaFileName');
+const songMetaCategory = document.getElementById('songMetaCategory');
+const songMetaStyle = document.getElementById('songMetaStyle');
+const songMetaAmbiance = document.getElementById('songMetaAmbiance');
+const songMetaAudience = document.getElementById('songMetaAudience');
+const songMetaChanteur = document.getElementById('songMetaChanteur');
+const songMetaContent = document.getElementById('songMetaContent');
+const songMetaContentWrap = document.getElementById('songMetaContentWrap');
 
   let touchStartX = 0, touchStartY = 0;
   const SWIPE_MIN_X = 110;
@@ -1014,6 +1079,122 @@ function openSettings() {
     const tb = document.getElementById('settingsThemeBtn');
     if (tb) tb.innerText = (themeMode === 'dark') ? "Thème: Sombre" : "Thème: Clair";
   }
+  
+  function joinMetaArray(value) {
+  if (Array.isArray(value)) return value.join(', ');
+  return String(value || '');
+}
+
+function closeSongMetaModal() {
+  if (songMetaBackdrop) songMetaBackdrop.style.display = 'none';
+}
+
+function openCreateSongModal() {
+  songMetaMode = 'create';
+
+  songMetaTitle.textContent = "Nouveau morceau";
+  songMetaFileName.value = "";
+  songMetaCategory.value = "Répertoire";
+  songMetaStyle.value = "";
+  songMetaAmbiance.value = "";
+  songMetaAudience.value = "";
+  songMetaChanteur.value = "";
+  songMetaContent.value = "{title: Nouveau morceau}\n\n";
+  songMetaFileName.disabled = false;
+  songMetaContentWrap.style.display = 'block';
+
+  songMetaBackdrop.style.display = 'flex';
+}
+
+async function openEditSongMetaModal() {
+  if (!currentFileName) return;
+
+  songMetaMode = 'edit';
+  songMetaTitle.textContent = "Modifier les infos du morceau";
+
+  try {
+    const res = await fetch('/song-meta-entry?fileName=' + encodeURIComponent(currentFileName), { cache: 'no-store' });
+    const data = await res.json();
+
+    songMetaFileName.value = currentFileName;
+    songMetaCategory.value = data?.category || "Répertoire";
+    songMetaStyle.value = joinMetaArray(data?.style);
+    songMetaAmbiance.value = data?.ambiance || "";
+    songMetaAudience.value = joinMetaArray(data?.audience);
+    songMetaChanteur.value = joinMetaArray(data?.chanteur);
+    songMetaFileName.disabled = true;
+    songMetaContentWrap.style.display = 'none';
+
+    songMetaBackdrop.style.display = 'flex';
+  } catch (err) {
+    console.error(err);
+    alert("Erreur de chargement des infos morceau");
+  }
+}
+
+async function saveSongMetaModal() {
+  const fileName = String(songMetaFileName.value || "").trim();
+  if (!fileName) {
+    alert("Nom du fichier requis");
+    return;
+  }
+
+  const pin = prompt("PIN requis") || "";
+  const cleanPin = String(pin).trim();
+  if (!cleanPin) return;
+
+  const payload = {
+    fileName,
+    pin: cleanPin,
+    category: songMetaCategory.value,
+    style: songMetaStyle.value,
+    ambiance: songMetaAmbiance.value,
+    audience: songMetaAudience.value,
+    chanteur: songMetaChanteur.value
+  };
+
+  try {
+    let res;
+
+    if (songMetaMode === 'create') {
+      payload.content = songMetaContent.value || `{title: ${fileName.replace(/\.(pro|cho)$/i, '')}}\n\n`;
+
+      res = await fetch('/create-song', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } else {
+      res = await fetch('/save-song-meta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+
+    if (res.ok) {
+      closeSongMetaModal();
+      await fetchSongMeta();
+      await fetchSongs();
+      filterSongList(songSearchInput?.value || "");
+
+      if (songMetaMode === 'create') {
+        showToast("Morceau créé ✅");
+      } else {
+        showToast("Infos morceau enregistrées ✅");
+      }
+    } else if (res.status === 403) {
+      alert("PIN invalide");
+    } else if (res.status === 409) {
+      alert("Le morceau existe déjà");
+    } else {
+      alert("Erreur d'enregistrement");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Erreur d'enregistrement");
+  }
+}
 
 function renderConnectedUsers(usersList) {
   const el = document.getElementById('connectedUsersList');
@@ -1148,6 +1329,12 @@ socket.emit('register-user', {
       openUserPicker(true);
     }
   }
+  
+  socket.on('song-created', async () => {
+  await fetchSongMeta();
+  await fetchSongs();
+  filterSongList(songSearchInput?.value || "");
+});
 
   socket.on('connect', () => {
     settingsBtnFixed.style.borderColor = "#4CAF50";
