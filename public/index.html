@@ -694,6 +694,17 @@ nav{
     ">
       <option value="">Toutes les audiences</option>
     </select>
+	
+	<select id="styleFilter" style="
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.15);
+  background:rgba(0,0,0,0.25);
+  color:var(--nav-text);
+  outline:none;
+">
+  <option value="">Tous les styles</option>
+</select>
 
     <select id="playedFilter" style="
       padding:10px 12px;
@@ -891,6 +902,7 @@ const historyList = document.getElementById('historyList');
 const categoryFilterEl = document.getElementById('categoryFilter');
 const ambianceFilterEl = document.getElementById('ambianceFilter');
 const audienceFilterEl = document.getElementById('audienceFilter');
+const styleFilterEl = document.getElementById('styleFilter');
 const playedFilterEl = document.getElementById('playedFilter');
 const playedToggleBtn = document.getElementById('playedToggleBtn');
 
@@ -1198,20 +1210,42 @@ socket.on('connected-users', (data) => {
     showToast(`Leader déjà pris par ${data?.leaderUserName || 'un autre appareil'}`);
   });
   
- function populateSongFilters() {
-  if (!ambianceFilterEl || !audienceFilterEl) return;
+function populateSongFilters() {
+  if (!styleFilterEl || !ambianceFilterEl || !audienceFilterEl) return;
 
+  const styles = new Set();
   const ambiances = new Set();
   const audiences = new Set();
 
   allSongs.forEach(song => {
     const meta = songMeta[song] || {};
-    if (meta.ambiance) ambiances.add(String(meta.ambiance).trim());
-    if (meta.audience) audiences.add(String(meta.audience).trim());
+
+    if (meta.style) {
+      styles.add(String(meta.style).trim());
+    }
+
+    if (meta.ambiance) {
+      ambiances.add(String(meta.ambiance).trim());
+    }
+
+    const aud = meta.audience;
+    if (Array.isArray(aud)) {
+      aud.forEach(v => {
+        const clean = String(v || "").trim();
+        if (clean) audiences.add(clean);
+      });
+    } else if (aud) {
+      audiences.add(String(aud).trim());
+    }
   });
 
+  const sortedStyles = [...styles].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   const sortedAmbiances = [...ambiances].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   const sortedAudiences = [...audiences].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+
+  styleFilterEl.innerHTML =
+    `<option value="">Tous les styles</option>` +
+    sortedStyles.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
 
   ambianceFilterEl.innerHTML =
     `<option value="">Toutes les ambiances</option>` +
@@ -1277,13 +1311,14 @@ function renderSongList() {
     const played = isPlayedTonight(s);
 
     return `
-      <div class="song-item ${played ? 'played' : ''}"
-           data-name="${s.toLowerCase()}"
-           data-category="${((meta.category || 'Répertoire') + '').toLowerCase()}"
-           data-ambiance="${((meta.ambiance || '') + '').toLowerCase()}"
-           data-audience="${((meta.audience || '') + '').toLowerCase()}"
-           data-played="${played ? 'played' : 'unplayed'}"
-           onclick="openSong(${idx})">
+<div class="song-item ${played ? 'played' : ''}"
+     data-name="${s.toLowerCase()}"
+     data-category="${((meta.category || 'Répertoire') + '').toLowerCase()}"
+     data-style="${((meta.style || '') + '').toLowerCase()}"
+     data-ambiance="${((meta.ambiance || '') + '').toLowerCase()}"
+     data-audience="${(Array.isArray(meta.audience) ? meta.audience.join('|') : (meta.audience || '')).toLowerCase()}"
+     data-played="${played ? 'played' : 'unplayed'}"
+     onclick="openSong(${idx})">
         <div class="song-left">
           <span class="song-badge ${played ? 'played' : ''}">
             ${played ? 'Joué' : 'À jouer'}
@@ -1299,9 +1334,10 @@ function renderSongList() {
 function getFilteredSongIndexes() {
   const query = String(songSearchInput?.value || "").toLowerCase().trim();
   const selectedCategory = String(categoryFilterEl?.value || "Répertoire").toLowerCase().trim();
-  const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
-  const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
-  const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
+const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
+const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
+const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
+const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
 
   const indexes = [];
 
@@ -1310,17 +1346,23 @@ function getFilteredSongIndexes() {
 
     const name = String(song || "").toLowerCase();
     const category = String(meta.category || "Répertoire").toLowerCase();
-    const ambiance = String(meta.ambiance || "").toLowerCase();
-    const audience = String(meta.audience || "").toLowerCase();
-    const played = isPlayedTonight(song) ? "played" : "unplayed";
+const style = String(meta.style || "").toLowerCase();
+const ambiance = String(meta.ambiance || "").toLowerCase();
 
-    const matchQuery = !query || name.includes(query);
-    const matchCategory = !selectedCategory || category === selectedCategory;
-    const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
-    const matchAudience = !selectedAudience || audience === selectedAudience;
-    const matchPlayed = !selectedPlayed || played === selectedPlayed;
+const audienceValues = Array.isArray(meta.audience)
+  ? meta.audience.map(v => String(v || "").toLowerCase().trim())
+  : [String(meta.audience || "").toLowerCase().trim()];
 
-    if (matchQuery && matchCategory && matchAmbiance && matchAudience && matchPlayed) {
+const played = isPlayedTonight(song) ? "played" : "unplayed";
+
+const matchQuery = !query || name.includes(query);
+const matchCategory = !selectedCategory || category === selectedCategory;
+const matchStyle = !selectedStyle || style === selectedStyle;
+const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
+const matchAudience = !selectedAudience || audienceValues.includes(selectedAudience);
+const matchPlayed = !selectedPlayed || played === selectedPlayed;
+
+    if (matchQuery && matchCategory && matchStyle && matchAmbiance && matchAudience && matchPlayed) {
       indexes.push(idx);
     }
   });
@@ -1354,9 +1396,10 @@ autoMarkCurrentSongAsPlayed();
 function filterSongList(q) {
   const query = String(q || "").toLowerCase().trim();
   const selectedCategory = String(categoryFilterEl?.value || "Répertoire").toLowerCase().trim();
-  const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
-  const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
-  const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
+const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
+const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
+const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
+const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
 
   const items = document.querySelectorAll('#songList .song-item');
   let shown = 0;
@@ -1364,17 +1407,21 @@ function filterSongList(q) {
   items.forEach(item => {
     const name = item.dataset.name || "";
     const category = item.dataset.category || "répertoire";
-    const ambiance = item.dataset.ambiance || "";
-    const audience = item.dataset.audience || "";
-    const played = item.dataset.played || "unplayed";
+const style = item.dataset.style || "";
+const ambiance = item.dataset.ambiance || "";
+const audience = item.dataset.audience || "";
+const played = item.dataset.played || "unplayed";
 
-    const matchQuery = !query || name.includes(query);
-    const matchCategory = !selectedCategory || category === selectedCategory;
-    const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
-    const matchAudience = !selectedAudience || audience === selectedAudience;
-    const matchPlayed = !selectedPlayed || played === selectedPlayed;
+const audienceValues = audience ? audience.split('|') : [];
 
-    const ok = matchQuery && matchCategory && matchAmbiance && matchAudience && matchPlayed;
+const matchQuery = !query || name.includes(query);
+const matchCategory = !selectedCategory || category === selectedCategory;
+const matchStyle = !selectedStyle || style === selectedStyle;
+const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
+const matchAudience = !selectedAudience || audienceValues.includes(selectedAudience);
+const matchPlayed = !selectedPlayed || played === selectedPlayed;
+
+const ok = matchQuery && matchCategory && matchStyle && matchAmbiance && matchAudience && matchPlayed;
 
     item.style.display = ok ? "flex" : "none";
     if (ok) shown++;
@@ -1385,10 +1432,11 @@ function filterSongList(q) {
 
 function resetSongFilters() {
   if (songSearchInput) songSearchInput.value = "";
-  if (categoryFilterEl) categoryFilterEl.value = "Répertoire";
-  if (ambianceFilterEl) ambianceFilterEl.value = "";
-  if (audienceFilterEl) audienceFilterEl.value = "";
-  if (playedFilterEl) playedFilterEl.value = "";
+if (categoryFilterEl) categoryFilterEl.value = "Répertoire";
+if (styleFilterEl) styleFilterEl.value = "";
+if (ambianceFilterEl) ambianceFilterEl.value = "";
+if (audienceFilterEl) audienceFilterEl.value = "";
+if (playedFilterEl) playedFilterEl.value = "";
   filterSongList("");
 }
 
@@ -2450,6 +2498,10 @@ if (ambianceFilterEl) {
 
 if (audienceFilterEl) {
   audienceFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
+}
+
+if (styleFilterEl) {
+  styleFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
 }
 
 if (playedFilterEl) {
