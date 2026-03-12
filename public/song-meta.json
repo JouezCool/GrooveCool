@@ -1,1514 +1,1451 @@
 {
-  "AA1 - Rolling in the Deep - Adele.pro": {
-    "style": "Pop",
-    "decade": "2010",
+  "Rolling in the Deep - Adele.pro": {
     "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "AA2 - Losing My Religion - REM.pro": {
-    "style": "Pop",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "AA3 - En Apesenteur - Calogero.pro": {
-    "style": "Pop",
-    "decade": "2000",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "AA4 - A Nos Actes Manqués - Jean-Jacques Goldman.pro": {
-    "style": "Pop",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "AA5 - Si Tu Veux M_essayer - Florent Pagny.pro": {
-    "style": "Pop",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "AA6E - Let it Be - John LennonPaul McCartney.pro": {
-    "style": "Pop",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "intergénération"
-  },
-  "AA6N - Let it Be - John LennonPaul McCartney.pro": {
-    "style": "Pop",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "intergénération"
-  },
-  "AA7 - Zombie - Cranberries.pro": {
-    "style": "Pop",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "AB1 - La Dernière Séance - Eddy Mitchell.pro": {
-    "style": "Pop",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "senior"
-  },
-  "AB2 - Quelque Chose De Tenessee - Johnny Hallyday.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "senior"
-  },
-  "AB3 - Mon Mec À Moi - Patricia Kass.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "AB4 - Je Te Donne - Jean-Jacques Goldman.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "AB5 - La Dame De Haute Savoie - Francis Cabrel.pro": {
-    "style": "Pop",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "senior"
-  },
-  "AB6 - Sara Perche Ti Amo - Richi E Poveri.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
+    "style": ["Pop", "Soul"],
     "ambiance": "dansant",
-    "audience": "intergénération"
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Estelle"]
   },
-  "AB7 - Tu - Umberto Tozzi.pro": {
-    "style": "Pop",
-    "decade": "1970",
+  "Losing My Religion - REM.pro": {
     "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "AC1 - Shape Of You - Ed Sheeran.pro": {
-    "style": "Pop",
-    "decade": "2010",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "jeune"
-  },
-  "AC2 - Baby One More Time - Britney Spears.pro": {
-    "style": "Pop",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "jeune"
-  },
-  "AC3 - I’m Yours - Jason Mraz.pro": {
-    "style": "Pop",
-    "decade": "2000",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "AC4 - Physical - Dua Lipa.pro": {
-    "style": "Pop",
-    "decade": "2020",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "jeune"
-  },
-  "AC5 - Island In The Sun - Weezer.pro": {
-    "style": "Pop",
-    "decade": "2000",
-    "category": "Répertoire",
+    "style": ["Pop Rock", "Alternatif"],
     "ambiance": "medium",
-    "audience": "mixte"
+    "audience": ["mixte"],
+    "chanteur": ["Nemo"]
   },
-  "AC6 - A Sky Full Of Stars - Coldplay.pro": {
-    "style": "Pop",
-    "decade": "2010",
+  "En Apesenteur - Calogero.pro": {
     "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "mixte"
-  },
-  "AC7 - Wake Me Up - Avicii.pro": {
-    "style": "Pop",
-    "decade": "2010",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "mixte"
-  },
-  "AD1 - Smoke On The Water - Deep Purple.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
+    "style": ["Pop", "Variété Française"],
     "ambiance": "medium",
-    "audience": "intergénération"
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Nemo"]
   },
-  "AD2 - Another Brick In The Wall - Pink Floyd.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "AD3 - Sweet Home Alabama - Lynyrd Skynyrd.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "AD4 - I Love Rock_N Roll - Joan Jett.pro": {
-    "style": "Rock",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "AD5 - I Want To Break Free - Queen.pro": {
-    "style": "Rock",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "AD6 - Hotel California - Eagles.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "intergénération"
-  },
-  "AD7 - Knockin_ On Heaven_s Door - Gun’s n’ Roses.pro": {
-    "style": "Rock",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "AD8 - Get Lucky - Daft Punk.pro": {
-    "style": "Rock",
-    "decade": "2010",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "intergénération"
-  },
-  "AE1 - La Bamba - Los Lobos.pro": {
-    "style": "Latino",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "AE2 - Despacito - Luis Fonsi.pro": {
-    "style": "Latino",
-    "decade": "2010",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "AE3 - Ai Se Eu Te Pego - Michel Telo.pro": {
-    "style": "Latino",
-    "decade": "2010",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "AE4 - Bara Bere - Michel Telo.pro": {
-    "style": "Latino",
-    "decade": "2010",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "AE5 - La Colegiala - Rodolfo Y Su Tipica.pro": {
-    "style": "Latino",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "AE7 - Si Antes Te Hubiera Conocido - Karol G.pro": {
-    "style": "Latino",
-    "decade": "2020",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "jeune"
-  },
-  "AE8 - La Bachata - Manuel Turizo.pro": {
-    "style": "Latino",
-    "decade": "2020",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "jeune"
-  },
-  "AF1 - Perfect - Ed Sheeran.pro": {
-    "style": "Pop",
-    "decade": "2010",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "AF2 - Purple Rain - Prince.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "intergénération"
-  },
-  "AF3 - L_Italiano - Toto Cutogno.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "AF4 - The Final Countdown - Europe.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "AF5 - A Nos Souvenirs - Trois Cafés Gourmands.pro": {
-    "style": "Pop",
-    "decade": "2010",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "AF6 - Tout Le Bonheur Du Monde - Sinsemilia.pro": {
-    "style": "Pop",
-    "decade": "2000",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "AF7 - Celebration - Kool & The Gang.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "AG1 - Casser La Voix - Patrick Bruel.pro": {
-    "style": "Rock",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "AG2 - L_Aventurier - Indochine.pro": {
-    "style": "Rock",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "AG3 - Long Train Running - Doobie Brothers.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "intergénération"
-  },
-  "AG4 - Les démons de minuit - Images.pro": {
-    "style": "Rock",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "intergénération"
-  },
-  "AG5 - Take Me Home Country Roads - John Denver.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "AG6 - Trois Nuits Par Semaine - Indochine.pro": {
-    "style": "Rock",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "AH1 - Every Breath You Take - The Police.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "intergénération"
-  },
-  "AH2 - Plus Près Des Étoiles - Gold.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "AH3 - I Still Haven_t Found What I_m Looking For - U2.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "AH4 - Je Ne Suis Pas Un Héros - Daniel Balavoine.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "AH5 - Eyes Of The Tiger - Survivor.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "AH6 - September - Earth, Wind and Fire.pro": {
-    "style": "Pop",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "intergénération"
-  },
-  "AH7 - Mamma Mia - ABBA.pro": {
-    "style": "Pop",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "intergénération"
-  },
-  "AI1 - Blue Suede Shoes - Carl Perkins.pro": {
-    "style": "Pop",
-    "decade": "1950",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "AI2 - Chante - Les Forbans.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "AI3 - I’m Still Standing - Elton John.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "AI4 - It_s My Life - Bon Jovi.pro": {
-    "style": "Pop",
-    "decade": "2000",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "mixte"
-  },
-  "AI5 - 74_75.pro": {
-    "style": "Pop",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "AI6 - I_ll Be There For You (Friend_s Theme) - The Rembrandts.pro": {
-    "style": "Pop",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "AI7 - Blinding Lights - The Weeknd.pro": {
-    "style": "Pop",
-    "decade": "2010",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "jeune"
-  },
-  "AJ1 - Allumer Le Feu - Johnny Hallyday.pro": {
-    "style": "Rock",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "AJ3 - Hallelujah - Jeff Buckley.pro": {
-    "style": "Rock",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "AJ4 - Call Me - Blondie.pro": {
-    "style": "Rock",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "AJ5 - Uprising - Muse.pro": {
-    "style": "Rock",
-    "decade": "2000",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "mixte"
-  },
-  "AJ7 - Le Chemin - Kyo.pro": {
-    "style": "Rock",
-    "decade": "2000",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "AK1 - Uptown Funk - Bruno Mars.pro": {
-    "style": "Rock",
-    "decade": "2010",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "AK3 - Il Changeait La Vie - Jean-Jacques Goldman.pro": {
-    "style": "Rock",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "AK4 - Gabrielle - Johnny Hallyday.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "AK5- I Was Made For Lovin_ You - Kiss.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "AK6 - We Will Rock You - Queen.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "festif"
-  },
-  "AK8 - Les lacs du Connemara - Michel Sardou.pro": {
-    "style": "Variété Française",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "Balade - Cinderella - Dick Rivers.pro": {
-    "style": "Rock",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "senior"
-  },
-  "Balade - Couleur Menthe A L_eau - Eddy Mitchell.pro": {
-    "style": "Variété Française",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "senior"
-  },
-  "Balade - Faire Un Pont - Dick Rivers (1945-2019).pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "senior"
-  },
-  "Balade - J_y Vais - Patrick Fiori - Florent Pagny.pro": {
-    "style": "Variété Française",
-    "decade": "2020",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "Balade - L_aigle Noir - version Florent Pagny.pro": {
-    "style": "Variété Française",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "Balade - L_important C_est La Rose - Gilbert Bécaud.pro": {
-    "style": "Variété Française",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "senior"
-  },
-  "Balade - Les Yeux D_une Femme - Dick Rivers.pro": {
-    "style": "Variété Française",
-    "decade": "2000",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "senior"
-  },
-  "Balade - Mademoiselle Chante Le Blues - Patricia Kass.pro": {
-    "style": "Pop",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "Balade - Marie - Johnny Hallyday.pro": {
-    "style": "Variété Française",
-    "decade": "2000",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "Balade - My Way - Frank Sinatra.pro": {
-    "style": "Pop",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "senior"
-  },
-  "Balade - Petite Marie - Francis Cabrel.pro": {
-    "style": "Variété Française",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "intergénération"
-  },
-  "Balade - Qui A Le Droit - Patric Bruel.pro": {
-    "style": "Variété Française",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "Balade - Sur La Route De Memphis - Eddy Mitchell.pro": {
-    "style": "Country",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "Balade - What a Wonderful World - Louis Armstrong.pro": {
-    "style": "Jazz",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "intergénération"
-  },
-  "Blues - Sweet Home Chicago - The Blues Brothers.pro": {
-    "style": "Blues",
-    "decade": "1930",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "senior"
-  },
-  "Blues - Toute La Musique Que J_aime - Johnny Hallyday.pro": {
-    "style": "Blues",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "Country 2 - City Of New Orleans - Steve Goodman.pro": {
-    "style": "Country",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "senior"
-  },
-  "Country 3 - Tequila Sunrise - The Eagles.pro": {
-    "style": "Country",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "Country 4 - Everybody_s Talking - Harry Nilsson.pro": {
-    "style": "Country",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "senior"
-  },
-  "Country 5 - Apache - Shadows.pro": {
-    "style": "Country",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "senior"
-  },
-  "Country 6 - Proud Mary - Creedence.pro": {
-    "style": "Country",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "Dansante - Chef Un P_tit Verre On A Soif - Grand Jojo.pro": {
-    "style": "Festive",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "Dansante - J_entends Siffler le Train - Richard Anthony.pro": {
-    "style": "Variété Française",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante - La Bonne Humeur - Sacha Distel.pro": {
-    "style": "Variété Française",
-    "decade": "1950",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante - La Chenille - La Bande A Basile.pro": {
-    "style": "Festive",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "Dansante Boogie - Pas De Boogie Woogie - Eddy Mitchel.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "Dansante Disco - Respire Encore - Clara Luciani.pro": {
-    "style": "Disco",
-    "decade": "2020",
+  "A Nos Actes Manqués - Jean-Jacques Goldman.pro": {
     "category": "En travail",
-    "ambiance": "très dansant",
-    "audience": "jeune"
-  },
-  "Dansante Disco 1 - DISCO - Ottawan.pro": {
-    "style": "Disco",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "Dansante Disco 2 - T_es OK - Ottawan.pro": {
-    "style": "Disco",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "Dansante Disco 3 - Haut Les Mains - Ottawan.pro": {
-    "style": "Disco",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "Dansante Disco 4 - Café Moulu - Magic music party.pro": {
-    "style": "Disco",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "Dansante Disco 5 - A-I-E - Black Blood.pro": {
-    "style": "Disco",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "Dansante Marche - L_Amérique - Joe Dassin.pro": {
-    "style": "Variété Française",
-    "decade": "1970",
-    "category": "Répertoire",
+    "style": ["Pop", "Variété Française"],
     "ambiance": "dansant",
-    "audience": "intergénération"
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Estelle"]
   },
-  "Dansante Marche - Scandale Dans La Famille - Sacha Distel.pro": {
-    "style": "Variété Française",
-    "decade": "1960",
+  "Si Tu Veux M_essayer - Florent Pagny.pro": {
     "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante Rock - Si Seulement - Les Chaussettes Noires.pro": {
-    "style": "Rock",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante Swing - Suzette - Dany Brillant.pro": {
-    "style": "Variété Française",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "Dansante Tango - Le Plus Beau Tango Du Monde - Tino Rossi (1935).pro": {
-    "style": "Tango",
-    "decade": "1930",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante Tango - Vous Permettez Monsieur - Salvatore Adamo 1965.pro": {
-    "style": "Tango",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante Valse - Domino - André Claveau.pro": {
-    "style": "Valse",
-    "decade": "1950",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante Valse - Germaine - Renaud.pro": {
-    "style": "Valse",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante Valse - Le Café Des Trois Colombes - Joe Dassin.pro": {
-    "style": "Valse",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante Valse - Mademoiselle De Paris - Jacqueline François.pro": {
-    "style": "Valse",
-    "decade": "1940",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante Valse - Mon Amante De Saint-Jean - Patrick Bruel.pro": {
-    "style": "Valse",
-    "decade": "1940",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "Dansante Valse - Noël Interdit - Johnny Hallyday.pro": {
-    "style": "Valse",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante Valse - Tes Tendres Années - Johnny Hallyday.pro": {
-    "style": "Valse",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante Valse - Un Petit Air D_accordéon - C Jérôme.pro": {
-    "style": "Valse",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante Valse - Valse de Vienne - François Feldmann.pro": {
-    "style": "Valse",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Dansante Valse - Voulez-vous Danser Grand-Mère - Lina Margy 1946.pro": {
-    "style": "Valse",
-    "decade": "1940",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Jazz - It_s Not Unsual - Tom Jones.pro": {
-    "style": "Jazz",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Latino 1 - Duele El Corazon - Enrique Iglesias.pro": {
-    "style": "Latino",
-    "decade": "2010",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "Latino 10 - La Lambada - Kaoma.pro": {
-    "style": "Latino",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "Latino 11 -Por Que Te Vas - José Luis.pro": {
-    "style": "Latino",
-    "decade": "1970",
-    "category": "Répertoire",
+    "style": ["Variété Française"],
     "ambiance": "medium",
-    "audience": "mixte"
+    "audience": ["mixte"],
+    "chanteur": ["Bubu"]
   },
-  "Latino 2 - La Cintura - Alvaro Soler.pro": {
-    "style": "Latino",
-    "decade": "2010",
+  "Let it Be Nemo - John LennonPaul McCartney.pro": {
     "category": "Répertoire",
+    "style": ["Pop", "Rock"],
+    "ambiance": "calme",
+    "audience": ["intergénération"],
+    "chanteur": ["Nemo"]
+  },
+    "Let it Be Estelle - John LennonPaul McCartney.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Rock"],
+    "ambiance": "calme",
+    "audience": ["intergénération"],
+    "chanteur": ["Estelle"]
+  },
+  "Zombie - Cranberries.pro": {
+    "category": "Répertoire",
+    "style": ["Rock Alternatif"],
+    "ambiance": "medium",
+    "audience": ["mixte", "jeune"],
+    "chanteur": ["Estelle"]
+  },
+  "La Dernière Séance - Eddy Mitchell.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Country"],
+    "ambiance": "calme",
+    "audience": ["senior"],
+    "chanteur": ["Gillou"]
+  },
+  "Quelque Chose De Tenessee - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Blues"],
+    "ambiance": "calme",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Mon Mec À Moi - Patricia Kass.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Pop"],
+    "ambiance": "medium",
+    "audience": ["mixte", "senior"],
+    "chanteur": ["Estelle"]
+  },
+  "Je Te Donne - Jean-Jacques Goldman.pro": {
+    "category": "Répertoire",
+    "style": ["Pop Rock", "Variété Française"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Estelle", "Gillou"]
+  },
+  "La Dame De Haute Savoie - Francis Cabrel.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Pop"],
+    "ambiance": "medium",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Sara Perche Ti Amo - Richi E Poveri.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Italo", "Variété"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Nemo", "Estelle"]
+  },
+  "Tu - Umberto Tozzi.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Italo"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "Shape Of You - Ed Sheeran.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Dance"],
+    "ambiance": "medium",
+    "audience": ["jeune", "mixte"],
+    "chanteur": ["Nemo"]
+  },
+  "Baby One More Time - Britney Spears.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Rock"],
     "ambiance": "très dansant",
-    "audience": "festif"
+    "audience": ["jeune", "mixte"],
+    "chanteur": ["Estelle"]
   },
-  "Latino 3 - Samba Pa Ti - Carlos Santana.pro": {
-    "style": "Instrumental",
-    "decade": "1970",
+  "I’m Yours - Jason Mraz.pro": {
     "category": "Répertoire",
+    "style": ["Pop", "Reggae"],
     "ambiance": "calme",
-    "audience": "mixte"
+    "audience": ["mixte", "jeune"],
+    "chanteur": ["Nemo"]
   },
-  "Latino 7 - Blue Bossa - Kenny Dorham.pro": {
-    "style": "Instrumental",
-    "decade": "1960",
+  "Physical - Dua Lipa.pro": {
     "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
+    "style": ["Pop", "Disco"],
+    "ambiance": "très dansant",
+    "audience": ["jeune"],
+    "chanteur": ["Estelle"]
   },
-  "New - APT - Rosé - Bruno Mars.pro": {
-    "style": "Pop",
-    "decade": "2020",
+  "Island In The Sun - Weezer.pro": {
+    "category": "Répertoire",
+    "style": ["Pop Rock", "Indie"],
+    "ambiance": "medium",
+    "audience": ["mixte", "jeune"],
+    "chanteur": ["Nemo"]
+  },
+  "A Sky Full Of Stars - Coldplay.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Electro"],
+    "ambiance": "très dansant",
+    "audience": ["mixte", "jeune"],
+    "chanteur": ["Estelle"]
+  },
+  "Wake Me Up - Avicii.pro": {
+    "category": "Répertoire",
+    "style": ["Folk", "EDM"],
+    "ambiance": "très dansant",
+    "audience": ["mixte", "jeune", "festif"],
+    "chanteur": ["Nemo", "Estelle"]
+  },
+  "Smoke On The Water - Deep Purple.pro": {
+    "category": "Répertoire",
+    "style": ["Rock"],
+    "ambiance": "medium",
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Estelle"]
+  },
+  "Another Brick In The Wall - Pink Floyd.pro": {
+    "category": "Répertoire",
+    "style": ["Rock Progressif"],
+    "ambiance": "medium",
+    "audience": ["intergénération"],
+    "chanteur": ["Nemo", "Gillou", "Estelle"]
+  },
+    "Another Brick In The Wall X - Pink Floyd.pro": {
+    "category": "1 minute",
+    "style": ["Rock Progressif"],
+    "ambiance": "medium",
+    "audience": ["intergénération"],
+    "chanteur": ["Nemo", "Gillou", "Estelle"]
+  },
+  "Sweet Home Alabama - Lynyrd Skynyrd.pro": {
+    "category": "Répertoire",
+    "style": ["Rock Sudiste", "Country"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "I Love Rock_N Roll - Joan Jett.pro": {
+    "category": "Répertoire",
+    "style": ["Rock"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Estelle"]
+  },
+  "I Want To Break Free - Queen.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Pop"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Estelle"]
+  },
+  "Hotel California - Eagles.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Folk"],
+    "ambiance": "calme",
+    "audience": ["intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "Knockin_ On Heaven_s Door - Gun’s n’ Roses.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Ballade"],
+    "ambiance": "calme",
+    "audience": ["intergénération", "mixte"],
+    "chanteur": ["Nemo"]
+  },
+  "Get Lucky - Daft Punk.pro": {
+    "category": "Répertoire",
+    "style": ["Funk", "Pop", "Disco"],
+    "ambiance": "très dansant",
+    "audience": ["intergénération", "jeune", "festif"],
+    "chanteur": ["Estelle"]
+  },
+  "La Bamba - Los Lobos.pro": {
+    "category": "Répertoire",
+    "style": ["Latino", "Rock'n'Roll"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+    "La Bamba X - Los Lobos.pro": {
+    "category": "1 minute",
+    "style": ["Latino", "Rock'n'Roll"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Despacito - Luis Fonsi.pro": {
+    "category": "Répertoire",
+    "style": ["Latino", "Reggaeton"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "jeune"],
+    "chanteur": ["Nemo"]
+  },
+  "Ai Se Eu Te Pego - Michel Telo.pro": {
+    "category": "Répertoire",
+    "style": ["Latino", "Pop"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "Bara Bere - Michel Telo.pro": {
+    "category": "Répertoire",
+    "style": ["Latino", "Pop"],
+    "ambiance": "très dansant",
+    "audience": ["festif"],
+    "chanteur": ["Nemo"]
+  },
+  "La Colegiala - Rodolfo Y Su Tipica.pro": {
+    "category": "Répertoire",
+    "style": ["Latino", "Cumbia"],
+    "ambiance": "dansant",
+    "audience": ["festif", "senior"],
+    "chanteur": ["Nemo"]
+  },
+  "Si Antes Te Hubiera Conocido - Karol G.pro": {
+    "category": "Répertoire",
+    "style": ["Latino", "Merengue"],
+    "ambiance": "très dansant",
+    "audience": ["jeune", "festif"],
+    "chanteur": ["Estelle"]
+  },
+  "La Bachata - Manuel Turizo.pro": {
+    "category": "Répertoire",
+    "style": ["Latino", "Bachata"],
+    "ambiance": "dansant",
+    "audience": ["jeune", "mixte"],
+    "chanteur": ["Nemo"]
+  },
+  "Perfect - Ed Sheeran.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Ballade", "Slow"],
+    "ambiance": "calme",
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "Purple Rain - Prince.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Rock", "Slow"],
+    "ambiance": "calme",
+    "audience": ["intergénération", "mixte"],
+    "chanteur": ["Nemo"]
+  },
+  "L_Italiano - Toto Cutogno.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Italo"],
+    "ambiance": "medium",
+    "audience": ["intergénération", "senior"],
+    "chanteur": ["Nemo"]
+  },
+  "The Final Countdown - Europe.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Pop"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "A Nos Souvenirs - Trois Cafés Gourmands.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Nemo", "Bubu", "Gillou"]
+  },
+  "Tout Le Bonheur Du Monde - Sinsemilia.pro": {
+    "category": "Répertoire",
+    "style": ["Reggae", "Pop"],
+    "ambiance": "medium",
+    "audience": ["intergénération", "mixte"],
+    "chanteur": ["Nemo", "Estelle"]
+  },
+  "Celebration - Kool & The Gang.pro": {
     "category": "En travail",
+    "style": ["Funk", "Disco"],
     "ambiance": "très dansant",
-    "audience": "jeune"
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Estelle"]
   },
-  "New - J_irai Ou Tu Iras - Celine Dion - Jean-Jacques Goldman.pro": {
-    "style": "Rock",
-    "decade": "1990",
+  "Casser La Voix - Patrick Bruel.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Rock"],
+    "ambiance": "medium",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Bubu"]
+  },
+  "L_Aventurier - Indochine.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "New Wave"],
+    "ambiance": "très dansant",
+    "audience": ["intergénération", "festif", "jeune"],
+    "chanteur": ["Nemo"]
+  },
+  "Long Train Running - Doobie Brothers.pro": {
+    "category": "Répertoire",
+    "style": ["Funk", "Rock"],
+    "ambiance": "très dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Estelle"]
+  },
+  "Les démons de minuit - Images.pro": {
     "category": "En travail",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "Pop 10 - Up In The Sky - 77 Bombay Street.pro": {
-    "style": "Pop",
-    "decade": "2000",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "jeune"
-  },
-  "Pop 12 - Can_t Stop The Feeling - Justin Timberlake.pro": {
-    "style": "Pop",
-    "decade": "2010",
-    "category": "Répertoire",
+    "style": ["Variété Française", "Disco"],
     "ambiance": "très dansant",
-    "audience": "festif"
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Nemo"]
   },
-  "Pop 3 - Wonderwall - Oasis.pro": {
-    "style": "Pop",
-    "decade": "1990",
+  "Take Me Home Country Roads - John Denver.pro": {
     "category": "Répertoire",
+    "style": ["Country", "Folk"],
     "ambiance": "medium",
-    "audience": "mixte"
+    "audience": ["intergénération"],
+    "chanteur": ["Nemo"]
   },
-  "Pop 4 - Rue Des Etoiles - Grégoire.pro": {
-    "style": "Pop",
-    "decade": "2000",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "Pop 5 - Toi + Moi - Gregoire.pro": {
-    "style": "Pop",
-    "decade": "2000",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "Pop 6 - Je Pourrais Etre - Jouez-Cool.pro": {
-    "style": "Pop",
-    "decade": "2020",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "Rock - Bye Bye Johnny - Chuck Berry.pro": {
-    "style": "Rock",
-    "decade": "1960",
-    "category": "Répertoire",
+  "Trois Nuits Par Semaine - Indochine.pro": {
+    "category": "En travail",
+    "style": ["Rock New Wave"],
     "ambiance": "dansant",
-    "audience": "senior"
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Estelle"]
   },
-  "Rock - Caroline - Status Quo.pro": {
-    "style": "Rock",
-    "decade": "1970",
+  "Every Breath You Take - The Police.pro": {
     "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "mixte"
-  },
-  "Rock - Narcotic - Liquido.pro": {
-    "style": "Rock",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "mixte"
-  },
-  "Rock 80 - Blue Hotel - Chris Isaak.pro": {
-    "style": "Rock",
-    "decade": "1980",
-    "category": "Répertoire",
+    "style": ["Pop", "New Wave"],
     "ambiance": "calme",
-    "audience": "mixte"
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Estelle"]
   },
-  "Rock 80 - Cocaine - Eric Clapton.pro": {
-    "style": "Rock",
-    "decade": "1970",
+  "Plus Près Des Étoiles - Gold.pro": {
     "category": "Répertoire",
+    "style": ["Variété Française", "Pop"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Bubu"]
+  },
+  "I Still Haven_t Found What I_m Looking For - U2.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Rock"],
     "ambiance": "medium",
-    "audience": "intergénération"
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Nemo"]
   },
-  "Rock 80 - Don_t Bring Me Down - Electric Light Orchestra.pro": {
-    "style": "Rock",
-    "decade": "1970",
+  "Je Ne Suis Pas Un Héros - Daniel Balavoine.pro": {
     "category": "Répertoire",
+    "style": ["Variété Française", "Rock"],
+    "ambiance": "medium",
+    "audience": ["intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Eyes Of The Tiger - Survivor.pro": {
+    "category": "Répertoire",
+    "style": ["Rock"],
     "ambiance": "dansant",
-    "audience": "intergénération"
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Estelle"]
   },
-  "Rock 80 - Eye In The Sky - The Alan Parsons Project.pro": {
-    "style": "Rock",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
+  "September - Earth, Wind and Fire.pro": {
+    "category": "En travail",
+    "style": ["Disco", "Funk"],
+    "ambiance": "très dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Estelle"]
   },
-  "Rock 80 - Jumping Jack-Flash - Version Motorhead.pro": {
-    "style": "Rock",
-    "decade": "2000",
+  "Mamma Mia - ABBA.pro": {
     "category": "Répertoire",
+    "style": ["Pop", "Disco"],
+    "ambiance": "très dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Estelle"]
+  },
+  "Blue Suede Shoes - Carl Perkins.pro": {
+    "category": "Répertoire",
+    "style": ["Rock'n'Roll"],
     "ambiance": "dansant",
-    "audience": "mixte"
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Nemo"]
   },
-  "Rock 80 - Walk Of Life - Dire Strait.pro": {
-    "style": "Rock",
-    "decade": "1980",
+  "Chante - Les Forbans.pro": {
     "category": "Répertoire",
+    "style": ["Rock", "Variété"],
+    "ambiance": "très dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Bubu"]
+  },
+  "I’m Still Standing - Elton John.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Rock"],
     "ambiance": "dansant",
-    "audience": "intergénération"
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Nemo"]
   },
-  "Rock 80 - Wind of Change - Scorpions.pro": {
-    "style": "Rock",
-    "decade": "1990",
+  "It_s My Life - Bon Jovi.pro": {
+    "category": "En travail",
+    "style": ["Hard Rock", "Pop"],
+    "ambiance": "dansant",
+    "audience": ["mixte", "jeune"],
+    "chanteur": ["Estelle"]
+  },
+  "74_75 - The Connels.pro": {
     "category": "Répertoire",
+    "style": ["Pop", "Rock", "Ballade"],
     "ambiance": "calme",
-    "audience": "intergénération"
+    "audience": ["mixte"],
+    "chanteur": ["Nemo"]
   },
-  "Rock 80 - Wish You Were Here - Pink Floyd.pro": {
-    "style": "Rock",
-    "decade": "1970",
+  "I_ll Be There For You (Friend_s Theme) - The Rembrandts.pro": {
     "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "intergénération"
+    "style": ["Pop", "Rock"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "jeune"],
+    "chanteur": ["Estelle"]
   },
-  "Rock 80 FR - 3ème SEX - Indochine.pro": {
-    "style": "Variété Française",
-    "decade": "1980",
+  "Blinding Lights - The Weeknd.pro": {
+    "category": "En travail",
+    "style": ["Synthwave", "Pop"],
+    "ambiance": "très dansant",
+    "audience": ["jeune", "mixte"],
+    "chanteur": ["Estelle"]
+  },
+  "Allumer Le Feu - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Variété Française"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Hallelujah - Jeff Buckley.pro": {
+    "category": "Répertoire",
+    "style": ["Folk", "Ballade", "Slow"],
+    "ambiance": "calme",
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+    "Hallelujah X - Jeff Buckley.pro": {
+    "category": "1 minute",
+    "style": ["Folk", "Ballade", "Slow"],
+    "ambiance": "calme",
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "Call Me - Blondie.pro": {
+    "category": "Répertoire",
+    "style": ["New Wave", "Rock"],
+    "ambiance": "dansant",
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Estelle"]
+  },
+  "Uprising - Muse.pro": {
+    "category": "Répertoire",
+    "style": ["Rock Alternatif"],
+    "ambiance": "dansant",
+    "audience": ["jeune", "mixte"],
+    "chanteur": ["Nemo"]
+  },
+  "Le Chemin - Kyo.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Rock", "Variété Française"],
+    "ambiance": "medium",
+    "audience": ["jeune", "mixte"],
+    "chanteur": ["Nemo", "Estelle"]
+  },
+  "Uptown Funk - Bruno Mars.pro": {
+    "category": "Répertoire",
+    "style": ["Funk", "Pop"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "jeune", "intergénération"],
+    "chanteur": ["Estelle"]
+  },
+  "Il Changeait La Vie - Jean-Jacques Goldman.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Pop Rock"],
+    "ambiance": "medium",
+    "audience": ["intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Gabrielle - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Variété Française"],
+    "ambiance": "dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "I Was Made For Lovin_ You - Kiss.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Disco"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "We Will Rock You - Queen.pro": {
+    "category": "En travail",
+    "style": ["Rock"],
+    "ambiance": "dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Estelle"]
+  },
+  "Les lacs du Connemara - Michel Sardou.pro": {
+    "category": "En travail",
+    "style": ["Variété Française"],
+    "ambiance": "dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Gillou"]
+  },
+  "Cinderella - Dick Rivers.pro": {
+    "category": "Répertoire",
+    "style": ["Rock Ballade"],
+    "ambiance": "calme",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Couleur Menthe A L_eau - Eddy Mitchell.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française"],
+    "ambiance": "calme",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Faire Un Pont - Dick Rivers (1945-2019).pro": {
+    "category": "Répertoire",
+    "style": ["Country Rock"],
+    "ambiance": "medium",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "J_y Vais - Patrick Fiori - Florent Pagny.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française"],
+    "ambiance": "calme",
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Bubu", "Nemo"]
+  },
+  "L_aigle Noir - version Florent Pagny.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française"],
+    "ambiance": "calme",
+    "audience": ["intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "L_important C_est La Rose - Gilbert Bécaud.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française"],
+    "ambiance": "calme",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Les Yeux D_une Femme - Dick Rivers.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française"],
+    "ambiance": "calme",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Mademoiselle Chante Le Blues - Patricia Kass.pro": {
+    "category": "Répertoire",
+    "style": ["Blues", "Variété Française"],
+    "ambiance": "calme",
+    "audience": ["mixte", "senior"],
+    "chanteur": ["Estelle"]
+  },
+  "Marie - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Rock Ballade"],
+    "ambiance": "calme",
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "My Way - Frank Sinatra.pro": {
+    "category": "Répertoire",
+    "style": ["Jazz", "Pop"],
+    "ambiance": "calme",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "Petite Marie - Francis Cabrel.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Folk"],
+    "ambiance": "calme",
+    "audience": ["intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Qui A Le Droit - Patric Bruel.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française"],
+    "ambiance": "calme",
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Sur La Route De Memphis - Eddy Mitchell.pro": {
+    "category": "Répertoire",
+    "style": ["Country Rock"],
+    "ambiance": "medium",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Gillou"]
+  },
+    "Sur La Route De Memphis X - Eddy Mitchell.pro": {
+    "category": "1 minute",
+    "style": ["Country Rock"],
+    "ambiance": "medium",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Gillou"]
+  },
+  "What a Wonderful World - Louis Armstrong.pro": {
+    "category": "Répertoire",
+    "style": ["Jazz", "Classique"],
+    "ambiance": "calme",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "Sweet Home Chicago - The Blues Brothers.pro": {
+    "category": "Répertoire",
+    "style": ["Blues"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "senior"],
+    "chanteur": ["Nemo"]
+  },
+  "Toute La Musique Que J_aime - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Blues Rock", "Variété Française"],
+    "ambiance": "medium",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Bubu"]
+  },
+  "City Of New Orleans - Steve Goodman.pro": {
+    "category": "Répertoire",
+    "style": ["Country", "Folk"],
+    "ambiance": "calme",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "Tequila Sunrise - The Eagles.pro": {
+    "category": "Répertoire",
+    "style": ["Country Rock"],
+    "ambiance": "calme",
+    "audience": ["mixte", "senior"],
+    "chanteur": ["Nemo"]
+  },
+  "Everybody_s Talking - Harry Nilsson.pro": {
+    "category": "Répertoire",
+    "style": ["Folk", "Country"],
+    "ambiance": "calme",
+    "audience": ["senior"],
+    "chanteur": ["Nemo"]
+  },
+  "Apache - Shadows.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Instrumental"],
+    "ambiance": "medium",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+    "Apache X - Shadows.pro": {
+    "category": "1 minute",
+    "style": ["Rock", "Instrumental"],
+    "ambiance": "medium",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Proud Mary - Creedence.pro": {
+    "category": "Répertoire",
+    "style": ["Country", "Rock"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "Chef Un P_tit Verre On A Soif - Grand Jojo.pro": {
+    "category": "Répertoire",
+    "style": ["Festif", "Ambiance"],
+    "ambiance": "très dansant",
+    "audience": ["festif"],
+    "chanteur": ["Bubu"]
+  },
+  "J_entends Siffler le Train - Richard Anthony.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Slow"],
+    "ambiance": "calme",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "La Bonne Humeur - Sacha Distel.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Jazz Pop"],
+    "ambiance": "dansant",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "La Chenille - La Bande A Basile.pro": {
+    "category": "Répertoire",
+    "style": ["Festif", "Ambiance"],
+    "ambiance": "très dansant",
+    "audience": ["festif"],
+    "chanteur": ["Bubu"]
+  },
+  "Pas De Boogie Woogie - Eddy Mitchel.pro": {
+    "category": "Répertoire",
+    "style": ["Rock'n'Roll", "Variété Française"],
+    "ambiance": "très dansant",
+    "audience": ["intergénération", "festif", "senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Respire Encore - Clara Luciani.pro": {
+    "category": "En travail",
+    "style": ["Pop", "Disco"],
+    "ambiance": "très dansant",
+    "audience": ["jeune", "mixte", "festif"],
+    "chanteur": ["Estelle"]
+  },
+  "DISCO - Ottawan.pro": {
+    "category": "Répertoire",
+    "style": ["Disco"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "T_es OK - Ottawan.pro": {
+    "category": "Répertoire",
+    "style": ["Disco"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Haut Les Mains - Ottawan.pro": {
+    "category": "Répertoire",
+    "style": ["Disco"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Café Moulu - Magic music party.pro": {
     "category": "Archives",
-    "ambiance": "dansant",
-    "audience": "intergénération"
+    "style": ["Disco", "Festif"],
+    "ambiance": "très dansant",
+    "audience": ["festif"],
+    "chanteur": ["Bubu"]
   },
-  "Rock 80 FR - Cendrillon - Telephone.pro": {
-    "style": "Rock",
-    "decade": "1980",
+  "A-I-E - Black Blood.pro": {
+    "category": "Archives",
+    "style": ["Disco", "Afro-Pop"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "L_Amérique - Joe Dassin.pro": {
     "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
+    "style": ["Variété Française"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "senior", "festif"],
+    "chanteur": ["Bubu"]
   },
-  "Rock 80 FR - Partenaire Particulier - Partenaire Particulier.pro": {
-    "style": "Variété Française",
-    "decade": "1980",
+  "Scandale Dans La Famille - Sacha Distel.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Calypso"],
+    "ambiance": "dansant",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Si Seulement - Les Chaussettes Noires.pro": {
+    "category": "Répertoire",
+    "style": ["Rock'n'Roll Français"],
+    "ambiance": "dansant",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Suzette - Dany Brillant.pro": {
+    "category": "Répertoire",
+    "style": ["Swing", "Variété"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "mixte"],
+    "chanteur": ["Bubu"]
+  },
+  "Le Plus Beau Tango Du Monde - Tino Rossi.pro": {
+    "category": "Répertoire",
+    "style": ["Tango"],
+    "ambiance": "dansant",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Vous Permettez Monsieur - Salvatore Adamo.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française"],
+    "ambiance": "medium",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Domino - André Claveau.pro": {
+    "category": "Répertoire",
+    "style": ["Valse", "Chanson"],
+    "ambiance": "dansant",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Germaine - Renaud.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Valse"],
+    "ambiance": "medium",
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Le Café Des Trois Colombes - Joe Dassin.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Valse"],
+    "ambiance": "medium",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Mademoiselle De Paris - Jacqueline François.pro": {
+    "category": "Répertoire",
+    "style": ["Valse", "Classique"],
+    "ambiance": "medium",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Mon Amante De Saint-Jean - Patrick Bruel.pro": {
+    "category": "Répertoire",
+    "style": ["Valse", "Variété"],
+    "ambiance": "dansant",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Noël Interdit - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Valse"],
+    "ambiance": "calme",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Tes Tendres Années - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Rock Ballade", "Valse"],
+    "ambiance": "calme",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Un Petit Air D_accordéon - C Jérôme.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Valse"],
+    "ambiance": "dansant",
+    "audience": ["senior", "festif"],
+    "chanteur": ["Bubu"]
+  },
+  "Valse de Vienne - François Feldmann.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Valse"],
+    "ambiance": "calme",
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Voulez-vous Danser Grand-Mère - Lina Margy 1946.pro": {
+    "category": "Répertoire",
+    "style": ["Valse", "Traditionnel"],
+    "ambiance": "dansant",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "It_s Not Unsual - Tom Jones.pro": {
+    "category": "Répertoire",
+    "style": ["Jazz", "Pop", "Soul"],
+    "ambiance": "dansant",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "Duele El Corazon - Enrique Iglesias.pro": {
+    "category": "Répertoire",
+    "style": ["Latino", "Pop"],
+    "ambiance": "très dansant",
+    "audience": ["jeune", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "La Lambada - Kaoma.pro": {
+    "category": "Répertoire",
+    "style": ["Latino"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "Por Que Te Vas - José Luis.pro": {
+    "category": "Répertoire",
+    "style": ["Latino", "Pop"],
+    "ambiance": "medium",
+    "audience": ["intergénération", "mixte"],
+    "chanteur": ["Estelle"]
+  },
+  "La Cintura - Alvaro Soler.pro": {
+    "category": "Répertoire",
+    "style": ["Latino", "Pop"],
+    "ambiance": "très dansant",
+    "audience": ["jeune", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "Samba Pa Ti - Carlos Santana.pro": {
+    "category": "Répertoire",
+    "style": ["Latin", "Rock", "Instrumental"],
+    "ambiance": "calme",
+    "audience": ["mixte", "senior"],
+    "chanteur": ["Nemo"]
+  },
+    "Samba Pa Ti X - Carlos Santana.pro": {
+    "category": "1 minute",
+    "style": ["Latin", "Rock", "Instrumental"],
+    "ambiance": "calme",
+    "audience": ["mixte", "senior"],
+    "chanteur": ["Nemo"]
+  },
+  "Blue Bossa - Kenny Dorham.pro": {
+    "category": "Répertoire",
+    "style": ["Bossa Nova", "Instrumental"],
+    "ambiance": "calme",
+    "audience": ["senior", "mixte"],
+    "chanteur": ["Nemo"]
+  },
+    "Blue Bossa X - Kenny Dorham.pro": {
+    "category": "1 minute",
+    "style": ["Bossa Nova", "Instrumental"],
+    "ambiance": "calme",
+    "audience": ["senior", "mixte"],
+    "chanteur": ["Nemo"]
+  },
+  "APT - Rosé - Bruno Mars.pro": {
     "category": "En travail",
+    "style": ["Pop", "Punk Pop"],
     "ambiance": "très dansant",
-    "audience": "intergénération"
+    "audience": ["jeune"],
+    "chanteur": ["Nemo", "Estelle"]
   },
-  "Rock FR - Da Dou Ron Ron - Johnny Hallyday.pro": {
-    "style": "Rock",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "senior"
-  },
-  "Rock FR - Fils De Personne - Johnny Hallyday.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "Rock FR - La Terre Promise - Johnny Hallyday1.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "Rock FR - Memphis Tennessee - Johnny Hallyday.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "Rock FR - Musique - France Gall.pro": {
-    "style": "Disco",
-    "decade": "1970",
-    "category": "Répertoire",
+  "J_irai Ou Tu Iras - Celine Dion - Jean-Jacques Goldman.pro": {
+    "category": "En travail",
+    "style": ["Pop", "Rock", "Variété Française"],
     "ambiance": "très dansant",
-    "audience": "intergénération"
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Estelle", "Nemo"]
   },
-  "Rock FR - Oh Sally - Johnny Hallyday1.pro": {
-    "style": "Rock",
-    "decade": "1970",
+  "Up In The Sky - 77 Bombay Street.pro": {
     "category": "Répertoire",
+    "style": ["Folk", "Pop"],
     "ambiance": "dansant",
-    "audience": "intergénération"
+    "audience": ["jeune", "mixte"],
+    "chanteur": ["Nemo"]
   },
-  "Rock FR - On Veut Des Légendes - Johnny HallydayEddy Mitchel.pro": {
-    "style": "Rock",
-    "decade": "2000",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "senior"
-  },
-  "Rock FR - Parc_que J_ai Revu Linda - Johnny Hallyday.pro": {
-    "style": "Rock",
-    "decade": "1960",
-    "category": "Répertoire",
+    "Up In The Sky X - 77 Bombay Street.pro": {
+    "category": "1 minute",
+    "style": ["Folk", "Pop"],
     "ambiance": "dansant",
-    "audience": "senior"
+    "audience": ["jeune", "mixte"],
+    "chanteur": ["Nemo"]
   },
-  "Rock FR - Quand T_es Dans Le Désert - Jean-Patrick Capdevielle.pro": {
-    "style": "Rock",
-    "decade": "1970",
+  "Can_t Stop The Feeling - Justin Timberlake.pro": {
     "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "Rock FR - Seul - Garou.pro": {
-    "style": "Rock",
-    "decade": "2000",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "Rock FR - Un Garçon Sur La Route - Johnny Hallyday.pro": {
-    "style": "Rock",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "Rock FR - Vivre Pour Le Meilleur - Johnny Hallyday1.pro": {
-    "style": "Rock",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "Rock IT - Ama - Eros Ramazotti.pro": {
-    "style": "Rock",
-    "decade": "2020",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "Rock Indé - I_m a Believer - The Monkees.pro": {
-    "style": "Rock alternatif",
-    "decade": "2000",
-    "category": "Répertoire",
+    "style": ["Pop", "Funk"],
     "ambiance": "très dansant",
-    "audience": "intergénération"
+    "audience": ["jeune", "intergénération", "festif"],
+    "chanteur": ["Nemo", "Estelle"]
   },
-  "Rock Indé - You_re Gonna Go Far, Kid - The Offspring.pro": {
-    "style": "Rock alternatif",
-    "decade": "2000",
+  "Wonderwall - Oasis.pro": {
     "category": "Répertoire",
+    "style": ["Pop"],
+    "ambiance": "medium",
+    "audience": ["jeune", "mixte", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "Rue Des Etoiles - Grégoire.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française"],
+    "ambiance": "medium",
+    "audience": ["mixte"],
+    "chanteur": ["Nemo"]
+  },
+  "Toi + Moi - Gregoire.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Pop"],
     "ambiance": "dansant",
-    "audience": "jeune"
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Nemo"]
   },
-  "Rock doux - J_en Parlerai Au Diable - Johnny Hallyday.pro": {
-    "style": "Variété Française",
-    "decade": "2010",
+  "Je Pourrais Etre - Jouez-Cool.pro": {
+    "category": "En travail",
+    "style": ["Pop"],
+    "ambiance": "medium",
+    "audience": ["mixte"],
+    "chanteur": ["Nemo"]
+  },
+  "Bye Bye Johnny - Chuck Berry.pro": {
     "category": "Répertoire",
+    "style": ["Rock"],
+    "ambiance": "très dansant",
+    "audience": ["senior", "intergénération", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "Caroline - Status Quo.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Boogie"],
+    "ambiance": "très dansant",
+    "audience": ["mixte", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "Narcotic - Liquido.pro": {
+    "category": "Répertoire",
+    "style": ["Rock Alternatif"],
+    "ambiance": "très dansant",
+    "audience": ["jeune", "festif"],
+    "chanteur": ["Estelle"]
+  },
+  "Blue Hotel - Chris Isaak.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Pop"],
+    "ambiance": "medium",
+    "audience": ["mixte", "senior"],
+    "chanteur": ["Nemo"]
+  },
+  "Cocaine - Eric Clapton.pro": {
+    "category": "Répertoire",
+    "style": ["Blues", "Rock"],
+    "ambiance": "medium",
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Estelle"]
+  },
+  "Don_t Bring Me Down - Electric Light Orchestra.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Rock"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "Eye In The Sky - The Alan Parsons Project.pro": {
+    "category": "Répertoire",
+    "style": ["Rock"],
+    "ambiance": "medium",
+    "audience": ["mixte", "senior"],
+    "chanteur": ["Nemo"]
+  },
+  "Jumping Jack-Flash - Version Motorhead.pro": {
+    "category": "Répertoire",
+    "style": ["Rock"],
+    "ambiance": "très dansant",
+    "audience": ["jeune", "festif"],
+    "chanteur": ["Estelle"]
+  },
+  "Walk Of Life - Dire Strait.pro": {
+    "category": "Répertoire",
+    "style": ["Rock"],
+    "ambiance": "très dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "Wind of Change - Scorpions.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Ballade"],
     "ambiance": "calme",
-    "audience": "mixte"
+    "audience": ["intergénération", "mixte"],
+    "chanteur": ["Nemo"]
   },
-  "Rock doux - Pardonne Moi - Johnny Hallyday.pro": {
-    "style": "Variété Française",
-    "decade": "2000",
-    "category": "Répertoire",
+  "Wish You Were Here - Pink Floyd.pro": {
+    "category": "En travail",
+    "style": ["Rock", "Folk"],
     "ambiance": "calme",
-    "audience": "mixte"
+    "audience": ["intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "3ème SEX - Indochine.pro": {
+    "category": "Archives",
+    "style": ["New Wave"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "jeune"],
+    "chanteur": ["Nemo"]
+  },
+  "Cendrillon - Telephone.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Variété Française"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "Partenaire Particulier - Partenaire Particulier.pro": {
+    "category": "En travail",
+    "style": ["Pop", "Variété Française"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "Da Dou Ron Ron - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Rock"],
+    "ambiance": "très dansant",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Fils De Personne - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Rock"],
+    "ambiance": "dansant",
+    "audience": ["intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "La Terre Promise - Johnny Hallyday1.pro": {
+    "category": "Répertoire",
+    "style": ["Country", "Rock"],
+    "ambiance": "medium",
+    "audience": ["intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Memphis Tennessee - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Rock"],
+    "ambiance": "dansant",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Musique - France Gall.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Disco"],
+    "ambiance": "très dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Estelle"]
+  },
+  "Oh Sally - Johnny Hallyday1.pro": {
+    "category": "Répertoire",
+    "style": ["Rock"],
+    "ambiance": "très dansant",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "On Veut Des Légendes - Johnny HallydayEddy Mitchel.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Variété Française"],
+    "ambiance": "dansant",
+    "audience": ["intergénération", "senior"],
+    "chanteur": ["Bubu", "Gillou"]
+  },
+  "Parc_que J_ai Revu Linda - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Variété Française"],
+    "ambiance": "très dansant",
+    "audience": ["senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Quand T_es Dans Le Désert - Jean-Patrick Capdevielle.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Variété Française"],
+    "ambiance": "dansant",
+    "audience": ["intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Seul - Garou.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Pop", "Rock"],
+    "ambiance": "medium",
+    "audience": ["mixte"],
+    "chanteur": ["Bubu"]
+  },
+  "Un Garçon Sur La Route - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Rock"],
+    "ambiance": "medium",
+    "audience": ["intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Vivre Pour Le Meilleur - Johnny Hallyday1.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française", "Rock", "Ballade"],
+    "ambiance": "medium",
+    "audience": ["intergénération", "mixte"],
+    "chanteur": ["Bubu"]
+  },
+  "Ama - Eros Ramazotti.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Rock", "Italo"],
+    "ambiance": "medium",
+    "audience": ["mixte"],
+    "chanteur": ["Nemo"]
+  },
+    "Ama X - Eros Ramazotti.pro": {
+    "category": "1 minute",
+    "style": ["Pop", "Rock", "Italo"],
+    "ambiance": "medium",
+    "audience": ["mixte"],
+    "chanteur": ["Nemo"]
+  },
+  "I_m a Believer - Smash Mouth.pro": {
+    "category": "Répertoire",
+    "style": ["Rock Alternatif"],
+    "ambiance": "très dansant",
+    "audience": ["intergénération", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "You_re Gonna Go Far, Kid - The Offspring.pro": {
+    "category": "Répertoire",
+    "style": ["Rock Alternatif"],
+    "ambiance": "très dansant",
+    "audience": ["jeune", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "J_en Parlerai Au Diable - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française"],
+    "ambiance": "calme",
+    "audience": ["intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Pardonne Moi - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française"],
+    "ambiance": "calme",
+    "audience": ["intergénération"],
+    "chanteur": ["Bubu"]
   },
   "Runaway - Bon Jovi1.pro": {
-    "style": "Rock",
-    "decade": "1980",
-    "category": "Répertoire",
+    "category": "En travail",
+    "style": ["Hard Rock"],
     "ambiance": "dansant",
-    "audience": "intergénération"
+    "audience": ["jeune", "mixte"],
+    "chanteur": ["Bubu"]
   },
   "Seven Nation Army - The White Stripes.pro": {
-    "style": "Rock",
-    "decade": "2000",
     "category": "Répertoire",
+    "style": ["Rock"],
+    "ambiance": "très dansant",
+    "audience": ["jeune", "festif"],
+    "chanteur": ["Nemo"]
+  },
+  "Adieu Jolie Candy - Jean-François Michaël.pro": {
+    "category": "Répertoire",
+    "style": ["Slow", "Variété"],
+    "ambiance": "calme",
+    "audience": ["senior"],
+    "chanteur": ["Gillou"]
+  },
+  "Besame Mucho - Carlos Valazquez.pro": {
+    "category": "Répertoire",
+    "style": ["Latino", "Slow"],
+    "ambiance": "calme",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+    "Besame Mucho X - Carlos Valazquez.pro": {
+    "category": "1 minute",
+    "style": ["Latino"],
+    "ambiance": "calme",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "Diego Libre Dans Sa Tete - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Variété Française"],
+    "ambiance": "calme",
+    "audience": ["intergénération", "senior"],
+    "chanteur": ["Bubu"]
+  },
+  "Europa - Carlos Santana.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Instrumental"],
+    "ambiance": "calme",
+    "audience": ["senior", "mixte"],
+    "chanteur": ["Bubu"]
+  },
+  "Les Portes Du Pénitencier - Johnny Hallyday.pro": {
+    "category": "Répertoire",
+    "style": ["Rock", "Ballade"],
+    "ambiance": "calme",
+    "audience": ["senior", "intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "Ti Amo - Umberto Tozzi.pro": {
+    "category": "Répertoire",
+    "style": ["Pop", "Italo", "Slow"],
+    "ambiance": "calme",
+    "audience": ["intergénération", "senior"],
+    "chanteur": ["Nemo"]
+  },
+  "Il Tape Sur Des Bambous - Philippe Lavil.pro": {
+    "category": "En travail",
+    "style": ["Variété Française", "Zouk"],
     "ambiance": "dansant",
-    "audience": "jeune"
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Bubu"]
   },
-  "Slow - Adieu Jolie Candy - Jean-François Michaël.pro": {
-    "style": "Slow",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "senior"
-  },
-  "Slow - Besame Mucho - Carlos Valazquez.pro": {
-    "style": "Slow",
-    "decade": "1940",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "intergénération"
-  },
-  "Slow - Casser La Voix - Patrick Bruel.pro": {
-    "style": "Slow",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "Slow - Diego Libre Dans Sa Tete - Johnny Hallyday.pro": {
-    "style": "Slow",
-    "decade": "1990",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "Slow - Europa - Carlos Santana.pro": {
-    "style": "Slow",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "Slow - Les Portes Du Pénitencier - Johnny Hallyday.pro": {
-    "style": "Slow",
-    "decade": "1960",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "intergénération"
-  },
-  "Slow - Ti Amo - Umberto Tozzi.pro": {
-    "style": "Slow",
-    "decade": "1970",
-    "category": "Répertoire",
-    "ambiance": "calme",
-    "audience": "intergénération"
-  },
-  "X1 -Mon Mec A Moi - Patricia Kass.pro": {
-    "style": "Divers",
-    "decade": "1980",
-    "category": "Répertoire",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "X1 Minute - Besame Mucho - Carlos Valazquez.pro": {
-    "style": "Divers",
-    "decade": "1940",
-    "category": "1 minute",
-    "ambiance": "calme",
-    "audience": "intergénération"
-  },
-  "X1 Minute - Hallelujah - Jeff Buckley.pro": {
-    "style": "Divers",
-    "decade": "1990",
-    "category": "1 minute",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "X1 minute - Ama - Eros Ramazzotti.pro": {
-    "style": "Divers",
-    "decade": "1980",
-    "category": "1 minute",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "X1 minute - Another Brick In The Wall - Pink Floyd.pro": {
-    "style": "Divers",
-    "decade": "1970",
-    "category": "1 minute",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "X1 minute - Apache - Shadows.pro": {
-    "style": "Divers",
-    "decade": "1960",
-    "category": "1 minute",
-    "ambiance": "medium",
-    "audience": "senior"
-  },
-  "X1 minute - Blue Bossa.pro": {
-    "style": "Divers",
-    "decade": "1960",
-    "category": "1 minute",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "X1 minute - Flor De luna - Carlos Santana.pro": {
-    "style": "Divers",
-    "decade": "1970",
-    "category": "1 minute",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "X1 minute - La Bamba - Los Lobos.pro": {
-    "style": "Divers",
-    "decade": "1980",
-    "category": "1 minute",
+  "Le Temps Des Yéyés - Les Vagabonds.pro": {
+    "category": "En travail",
+    "style": ["Rock'n'Roll"],
     "ambiance": "très dansant",
-    "audience": "festif"
+    "audience": ["senior", "festif"],
+    "chanteur": ["Bubu"]
   },
-  "X1 minute - Samba Pa Ti - Carlos Santana.pro": {
-    "style": "Divers",
-    "decade": "1970",
-    "category": "1 minute",
+  "A Bailar Calypso - Elie Medeiros.pro": {
+    "category": "En travail",
+    "style": ["Latino", "Pop"],
+    "ambiance": "très dansant",
+    "audience": ["festif"],
+    "chanteur": ["Estelle"]
+  },
+  "Flor D_luna - Carlos Santana.pro": {
+    "category": "En travail",
+    "style": ["Rock" "Instrumental"],
     "ambiance": "calme",
-    "audience": "mixte"
+    "audience": ["mixte", "senior"],
+    "chanteur": ["Bubu"]
   },
-  "X1 minute - Sur La Route De Memphis - Eddy Mitchell.pro": {
-    "style": "Divers",
-    "decade": "1970",
-    "category": "1 minute",
+  "Obsesion - Lucenzo ft Kenza.pro": {
+    "category": "En travail",
+    "style": ["Latino"],
+    "ambiance": "très dansant",
+    "audience": ["jeune", "festif"],
+    "chanteur": ["Nemo", "Estelle"]
+  },
+  "Aller Plus Haut - Lara Fabian.pro": {
+    "category": "En travail",
+    "style": ["Variété Française"],
     "ambiance": "medium",
-    "audience": "intergénération"
+    "audience": ["mixte"],
+    "chanteur": ["Estelle"]
   },
-  "X1 minute - Up In The Sky - 77 Bombay Street.pro": {
-    "style": "Divers",
-    "decade": "2000",
-    "category": "1 minute",
+  "I Want It That Way - Backstreet Boys.pro": {
+    "category": "En travail",
+    "style": ["Teen Pop"],
+    "ambiance": "medium",
+    "audience": ["jeune", "mixte"],
+    "chanteur": ["Nemo", "Estelle"]
+  },
+  "Je Veux - Zaz.pro": {
+    "category": "En travail",
+    "style": ["Jazz", "Variété Française"],
     "ambiance": "dansant",
-    "audience": "jeune"
+    "audience": ["intergénération", "mixte"],
+    "chanteur": ["Estelle"]
   },
-  "ZArchives - Balade - Il Tape Sur Des Bambous - Philippe Lavil.pro": {
-    "style": "Variété Française",
-    "decade": "",
+  "Ma Muse - Jouez Cool.pro": {
     "category": "En travail",
+    "style": ["Pop"],
+    "ambiance": "medium",
+    "audience": ["mixte"],
+    "chanteur": ["Nemo"]
+  },
+  "Our Place - Jouez Cool.pro": {
+    "category": "En travail",
+    "style": ["Pop"],
+    "ambiance": "medium",
+    "audience": ["mixte"],
+    "chanteur": ["Nemo"]
+  },
+  "Wake Up - Fialta.pro": {
+    "category": "En travail",
+    "style": ["Indie Pop"],
     "ambiance": "dansant",
-    "audience": "festif"
+    "audience": ["jeune"],
+    "chanteur": ["Nemo", "Estelle"]
   },
-  "ZDansante - Le Temps Des Yéyés - Les Vagabonds.pro": {
-    "style": "Rock",
-    "decade": "",
+  "Si Tu M_aimes - Lara Fabian.pro": {
     "category": "En travail",
+    "style": ["Variété Française"],
+    "ambiance": "calme",
+    "audience": ["mixte"],
+    "chanteur": ["Estelle"]
+  },
+  "Baila Morena - Zucchero.pro": {
+    "category": "En travail",
+    "style": ["Blues", "Rock", "Italo"],
+    "ambiance": "très dansant",
+    "audience": ["festif", "mixte"],
+    "chanteur": ["Nemo"]
+  },
+  "L_incendie A Rio - Sacha Distel.pro": {
+    "category": "Archives",
+    "style": ["Samba", "Variété Française"],
+    "ambiance": "très dansant",
+    "audience": ["senior", "festif"],
+    "chanteur": ["Bubu"]
+  },
+  "Mon Plus Beau Noel - Johnny Hallyday.pro": {
+    "category": "Archives",
+    "style": ["Variété Française"],
+    "ambiance": "calme",
+    "audience": ["intergénération"],
+    "chanteur": ["Bubu"]
+  },
+  "On Écrit Sur Les Murs - version Kids United.pro": {
+    "category": "Archives",
+    "style": ["Pop", "Variété"],
+    "ambiance": "medium",
+    "audience": ["intergénération", "jeune"],
+    "chanteur": ["Nemo"]
+  },
+  "L_Oiseau et l’Enfant - Version Kids United.pro": {
+    "category": "Archives",
+    "style": ["Variété Française"],
+    "ambiance": "medium",
+    "audience": ["intergénération", "senior"],
+    "chanteur": ["Nemo"]
+  },
+  "Des Milliers De Je T_aime - Slimane.pro": {
+    "category": "Archives",
+    "style": ["Variété Française"],
+    "ambiance": "calme",
+    "audience": ["mixte", "jeune"],
+    "chanteur": ["Nemo"]
+  },
+  "Sous Le Vent - Garou.pro": {
+    "category": "Archives",
+    "style": ["Variété Française"],
+    "ambiance": "calme",
+    "audience": ["mixte", "intergénération"],
+    "chanteur": ["Nemo"]
+  },
+  "Joyeux Anniversaire": {
+    "category": "Archives",
+    "style": ["Célébration"],
     "ambiance": "dansant",
-    "audience": "intergénération"
-  },
-  "ZLatino - A Bailar Calypso - Elie Medeiros.pro": {
-    "style": "Latino",
-    "decade": "",
-    "category": "En travail",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "ZLatino - Flor D_luna - Carlos Santana.pro": {
-    "style": "Latino",
-    "decade": "1970",
-    "category": "En travail",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "ZLatino - Obsesion - Lucenzo ft Kenza.pro": {
-    "style": "Latino",
-    "decade": "2000",
-    "category": "En travail",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "ZPop - Aller Plus Haut - Lara Fabian.pro": {
-    "style": "Variété Française",
-    "decade": "1990",
-    "category": "En travail",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "ZPop - I Want It That Way - Backstreet Boys.pro": {
-    "style": "Pop",
-    "decade": "1990",
-    "category": "En travail",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "ZPop - Je Veux - Zaz.pro": {
-    "style": "Variété Française",
-    "decade": "2010",
-    "category": "En travail",
-    "ambiance": "dansant",
-    "audience": "mixte"
-  },
-  "ZPop - Ma Muse - Jouez Cool.pro": {
-    "style": "Pop",
-    "decade": "2020",
-    "category": "En travail",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "ZPop - Our Place - Jouez Cool.pro": {
-    "style": "Pop",
-    "decade": "2020",
-    "category": "En travail",
-    "ambiance": "medium",
-    "audience": "mixte"
-  },
-  "ZPop - Wake Up - Fialta.pro": {
-    "style": "Pop",
-    "decade": "2010",
-    "category": "En travail",
-    "ambiance": "medium",
-    "audience": "jeune"
-  },
-  "ZPop -Si Tu M_aimes - Lara Fabian.pro": {
-    "style": "Variété Française",
-    "decade": "1990",
-    "category": "En travail",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "ZRock - Baila Morena - Zucchero.pro": {
-    "style": "Rock",
-    "decade": "2000",
-    "category": "En travail",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "ZRock FR - L_incendie A Rio - Sacha Distel.pro": {
-    "style": "Variété Française",
-    "decade": "1980",
-    "category": "Archives",
-    "ambiance": "dansant",
-    "audience": "festif"
-  },
-  "ZRock FR - Mon Plus Beau Noel - Johnny Hallyday.pro": {
-    "style": "Rock",
-    "decade": "1990",
-    "category": "Archives",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "Z_Archives - Kids A - Another Brick In The Wall - Pink Floyd.pro": {
-    "style": "Archives",
-    "decade": "1970",
-    "category": "Archives",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "Z_Archives - Kids B - On Écrit Sur Les Murs - version Kids United.pro": {
-    "style": "Archives",
-    "decade": "1980",
-    "category": "Archives",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "Z_Archives - Kids C - L_Oiseau et l’Enfant - Version Kids United.pro": {
-    "style": "Archives",
-    "decade": "1970",
-    "category": "Archives",
-    "ambiance": "calme",
-    "audience": "intergénération"
-  },
-  "Z_Archives - Kids D - Des Milliers De Je T_aime - Slimane.pro": {
-    "style": "Archives",
-    "decade": "2020",
-    "category": "Archives",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "Z_Archives - Kids E - A Nos Souvenirs - Trois Cafés Gourmands.pro": {
-    "style": "Archives",
-    "decade": "2010",
-    "category": "Archives",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "Z_Archives - Kids F - Tout Le Bonheur Du Monde - Sinsemilia.pro": {
-    "style": "Archives",
-    "decade": "2000",
-    "category": "Archives",
-    "ambiance": "medium",
-    "audience": "intergénération"
-  },
-  "Z_Archives - Kids H - Despacito - Luis Fonsi.pro": {
-    "style": "Archives",
-    "decade": "2010",
-    "category": "Archives",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "Z_Archives - Kids I - Sous Le Vent - Garou.pro": {
-    "style": "Archives",
-    "decade": "2000",
-    "category": "Archives",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "Z_Archives - Kids J - Hallelujah - Jeff Buckley.pro": {
-    "style": "Archives",
-    "decade": "1990",
-    "category": "Archives",
-    "ambiance": "calme",
-    "audience": "mixte"
-  },
-  "Z_Archives - Kids K - Allumer Le Feu - Johnny Hallyday.pro": {
-    "style": "Archives",
-    "decade": "1990",
-    "category": "Archives",
-    "ambiance": "très dansant",
-    "audience": "festif"
-  },
-  "Z_Archives - Kids L - Joyeux Anniv": {
-    "style": "Archives",
-    "decade": "2020",
-    "category": "Archives",
-    "ambiance": "très dansant",
-    "audience": "festif"
+    "audience": ["festif", "intergénération"],
+    "chanteur": ["Nemo"]
   }
 }
