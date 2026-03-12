@@ -43,6 +43,33 @@
       --comment-text:#000;
     }
 	
+	.meta-form{
+  color: var(--text);
+}
+
+.meta-form label{
+  display:grid;
+  gap:6px;
+  color: var(--text);
+}
+
+.meta-form .meta-label{
+  color: #eee;
+  font-weight: 700;
+}
+
+.meta-form input,
+.meta-form select,
+.meta-form textarea{
+  width:100%;
+  padding:10px;
+  box-sizing:border-box;
+  background:#0b0b0b;
+  color:#eee;
+  border:1px solid #444;
+  border-radius:8px;
+}
+	
 	#leaderFloatingActions{
   display:none;
   position:fixed;
@@ -702,6 +729,17 @@ nav{
       <option value="">Toutes les audiences</option>
     </select>
 	
+	<select id="singerFilter" style="
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.15);
+  background:rgba(0,0,0,0.25);
+  color:var(--nav-text);
+  outline:none;
+">
+  <option value="">Tous les chanteurs</option>
+</select>
+	
 	<select id="styleFilter" style="
   padding:10px 12px;
   border-radius:10px;
@@ -865,46 +903,46 @@ nav{
       <h3 id="songMetaTitle" style="margin:0; font-size:14px; color:#fff;">Morceau</h3>
     </header>
 
-<div style="padding:14px 16px; display:grid; gap:12px; color:var(--text);">
-  <label style="display:grid; gap:6px; color:var(--text);">
-    <div style="color:var(--text); font-weight:700;">Nom du fichier</div>
-    <input id="songMetaFileName" type="text" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;">
+<div class="meta-form" style="padding:14px 16px; display:grid; gap:12px;">
+  <label>
+    <div class="meta-label">Nom du fichier</div>
+    <input id="songMetaFileName" type="text" placeholder="Ex: Rolling in the Deep - Adele.pro">
   </label>
 
-  <label style="display:grid; gap:6px; color:var(--text);">
-    <div style="color:var(--text); font-weight:700;">Titre affiché</div>
-    <input id="songMetaTitleInput" type="text" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;">
+  <label>
+    <div class="meta-label">Titre affiché</div>
+    <input id="songMetaTitleInput" type="text" placeholder="Ex: Rolling in the Deep">
   </label>
 
-  <label style="display:grid; gap:6px; color:var(--text);">
-    <div style="color:var(--text); font-weight:700;">Catégorie</div>
-    <select id="songMetaCategory" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;"></select>
+  <label>
+    <div class="meta-label">Catégorie</div>
+    <select id="songMetaCategory"></select>
   </label>
 
-  <label style="display:grid; gap:6px; color:var(--text);">
-    <div style="color:var(--text); font-weight:700;">Style(s)</div>
-    <select id="songMetaStyle" multiple size="6" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;"></select>
+  <label>
+    <div class="meta-label">Style(s)</div>
+    <select id="songMetaStyle" multiple size="6"></select>
   </label>
 
-  <label style="display:grid; gap:6px; color:var(--text);">
-    <div style="color:var(--text); font-weight:700;">Ambiance</div>
-    <select id="songMetaAmbiance" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;"></select>
+  <label>
+    <div class="meta-label">Ambiance</div>
+    <select id="songMetaAmbiance"></select>
   </label>
 
-  <label style="display:grid; gap:6px; color:var(--text);">
-    <div style="color:var(--text); font-weight:700;">Audience(s)</div>
-    <select id="songMetaAudience" multiple size="6" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;"></select>
+  <label>
+    <div class="meta-label">Audience(s)</div>
+    <select id="songMetaAudience" multiple size="6"></select>
   </label>
 
-  <label style="display:grid; gap:6px; color:var(--text);">
-    <div style="color:var(--text); font-weight:700;">Chanteur(s)</div>
-    <select id="songMetaChanteur" multiple size="6" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;"></select>
+  <label>
+    <div class="meta-label">Chanteur(s)</div>
+    <select id="songMetaChanteur" multiple size="6"></select>
   </label>
 
-  <label id="songMetaContentWrap" style="display:grid; gap:6px; color:var(--text);">
-    <div style="color:var(--text); font-weight:700;">Contenu initial du morceau</div>
-    <textarea id="songMetaContent" style="width:100%; min-height:140px; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;"></textarea>
-  </label>
+  <div id="songMetaContentWrap" style="display:none;">
+    <div class="meta-label" style="margin-bottom:6px;">Contenu initial du morceau</div>
+    <textarea id="songMetaContent"></textarea>
+  </div>
 </div>
 
     <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end; gap:10px;">
@@ -969,6 +1007,7 @@ const historyList = document.getElementById('historyList');
 const categoryFilterEl = document.getElementById('categoryFilter');
 const ambianceFilterEl = document.getElementById('ambianceFilter');
 const audienceFilterEl = document.getElementById('audienceFilter');
+const singerFilterEl = document.getElementById('singerFilter');
 const styleFilterEl = document.getElementById('styleFilter');
 const playedFilterEl = document.getElementById('playedFilter');
 const playedToggleBtn = document.getElementById('playedToggleBtn');
@@ -1100,9 +1139,8 @@ function openCreateSongModal() {
   songMetaTitle.textContent = "Nouveau morceau";
   songMetaFileName.value = "";
   songMetaTitleInput.value = "";
-  songMetaContent.value = "{title: Nouveau morceau}\n\n";
   songMetaFileName.disabled = false;
-  songMetaContentWrap.style.display = 'block';
+  songMetaContentWrap.style.display = 'none';
 
   prepareSongMetaFormSelections({
     category: 'Répertoire',
@@ -1244,21 +1282,16 @@ const payload = {
   try {
     let res;
 
-    if (songMetaMode === 'create') {
-      payload.content = songMetaContent.value || `{title: ${fileName.replace(/\.(pro|cho)$/i, '')}}\n\n`;
+if (songMetaMode === 'create') {
+  const displayTitle = String(songMetaTitleInput.value || '').trim();
+  payload.content = `{title: ${displayTitle || fileName.replace(/\.(pro|cho)$/i, '')}}\n\n`;
 
-      res = await fetch('/create-song', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    } else {
-      res = await fetch('/save-song-meta', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    }
+  res = await fetch('/create-song', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
 
     if (res.ok) {
       closeSongMetaModal();
@@ -1494,37 +1527,45 @@ socket.on('connected-users', (data) => {
   });
   
 function populateSongFilters() {
-  if (!styleFilterEl || !ambianceFilterEl || !audienceFilterEl) return;
+  if (!styleFilterEl || !ambianceFilterEl || !audienceFilterEl || !singerFilterEl) return;
 
   const styles = new Set();
   const ambiances = new Set();
   const audiences = new Set();
+  const chanteurs = new Set();
 
   allSongs.forEach(song => {
     const meta = songMeta[song] || {};
 
-    if (meta.style) {
-      styles.add(String(meta.style).trim());
-    }
+    const styleValues = Array.isArray(meta.style) ? meta.style : [];
+    const audienceValues = Array.isArray(meta.audience) ? meta.audience : [];
+    const singerValues = Array.isArray(meta.chanteur) ? meta.chanteur : [];
+
+    styleValues.forEach(v => {
+      const clean = String(v || "").trim();
+      if (clean) styles.add(clean);
+    });
 
     if (meta.ambiance) {
-      ambiances.add(String(meta.ambiance).trim());
+      const clean = String(meta.ambiance || "").trim();
+      if (clean) ambiances.add(clean);
     }
 
-    const aud = meta.audience;
-    if (Array.isArray(aud)) {
-      aud.forEach(v => {
-        const clean = String(v || "").trim();
-        if (clean) audiences.add(clean);
-      });
-    } else if (aud) {
-      audiences.add(String(aud).trim());
-    }
+    audienceValues.forEach(v => {
+      const clean = String(v || "").trim();
+      if (clean) audiences.add(clean);
+    });
+
+    singerValues.forEach(v => {
+      const clean = String(v || "").trim();
+      if (clean) chanteurs.add(clean);
+    });
   });
 
   const sortedStyles = [...styles].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   const sortedAmbiances = [...ambiances].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   const sortedAudiences = [...audiences].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  const sortedChanteurs = [...chanteurs].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
 
   styleFilterEl.innerHTML =
     `<option value="">Tous les styles</option>` +
@@ -1537,6 +1578,10 @@ function populateSongFilters() {
   audienceFilterEl.innerHTML =
     `<option value="">Toutes les audiences</option>` +
     sortedAudiences.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+
+  singerFilterEl.innerHTML =
+    `<option value="">Tous les chanteurs</option>` +
+    sortedChanteurs.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
 }
 
 async function fetchSongMeta() {
@@ -1593,15 +1638,20 @@ function renderSongList() {
     const meta = songMeta[s] || {};
     const played = isPlayedTonight(s);
 
+    const styleValues = Array.isArray(meta.style) ? meta.style : [];
+    const audienceValues = Array.isArray(meta.audience) ? meta.audience : [];
+    const singerValues = Array.isArray(meta.chanteur) ? meta.chanteur : [];
+
     return `
-<div class="song-item ${played ? 'played' : ''}"
-     data-name="${s.toLowerCase()}"
-     data-category="${((meta.category || 'Répertoire') + '').toLowerCase()}"
-     data-style="${((meta.style || '') + '').toLowerCase()}"
-     data-ambiance="${((meta.ambiance || '') + '').toLowerCase()}"
-     data-audience="${(Array.isArray(meta.audience) ? meta.audience.join('|') : (meta.audience || '')).toLowerCase()}"
-     data-played="${played ? 'played' : 'unplayed'}"
-     onclick="openSong(${idx})">
+      <div class="song-item ${played ? 'played' : ''}"
+           data-name="${s.toLowerCase()}"
+           data-category="${String(meta.category || 'Répertoire').toLowerCase()}"
+           data-style="${styleValues.map(v => String(v).toLowerCase()).join('|')}"
+           data-ambiance="${String(meta.ambiance || '').toLowerCase()}"
+           data-audience="${audienceValues.map(v => String(v).toLowerCase()).join('|')}"
+           data-singer="${singerValues.map(v => String(v).toLowerCase()).join('|')}"
+           data-played="${played ? 'played' : 'unplayed'}"
+           onclick="openSong(${idx})">
         <div class="song-left">
           <span class="song-badge ${played ? 'played' : ''}">
             ${played ? 'Joué' : 'À jouer'}
@@ -1617,10 +1667,11 @@ function renderSongList() {
 function getFilteredSongIndexes() {
   const query = String(songSearchInput?.value || "").toLowerCase().trim();
   const selectedCategory = String(categoryFilterEl?.value || "Répertoire").toLowerCase().trim();
-const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
-const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
-const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
-const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
+  const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
+  const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
+  const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
+  const selectedSinger = String(singerFilterEl?.value || "").toLowerCase().trim();
+  const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
 
   const indexes = [];
 
@@ -1629,23 +1680,31 @@ const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
 
     const name = String(song || "").toLowerCase();
     const category = String(meta.category || "Répertoire").toLowerCase();
-const style = String(meta.style || "").toLowerCase();
-const ambiance = String(meta.ambiance || "").toLowerCase();
+    const ambiance = String(meta.ambiance || "").toLowerCase();
 
-const audienceValues = Array.isArray(meta.audience)
-  ? meta.audience.map(v => String(v || "").toLowerCase().trim())
-  : [String(meta.audience || "").toLowerCase().trim()];
+    const styleValues = Array.isArray(meta.style)
+      ? meta.style.map(v => String(v || "").toLowerCase().trim())
+      : [];
 
-const played = isPlayedTonight(song) ? "played" : "unplayed";
+    const audienceValues = Array.isArray(meta.audience)
+      ? meta.audience.map(v => String(v || "").toLowerCase().trim())
+      : [];
 
-const matchQuery = !query || name.includes(query);
-const matchCategory = !selectedCategory || category === selectedCategory;
-const matchStyle = !selectedStyle || style === selectedStyle;
-const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
-const matchAudience = !selectedAudience || audienceValues.includes(selectedAudience);
-const matchPlayed = !selectedPlayed || played === selectedPlayed;
+    const singerValues = Array.isArray(meta.chanteur)
+      ? meta.chanteur.map(v => String(v || "").toLowerCase().trim())
+      : [];
 
-    if (matchQuery && matchCategory && matchStyle && matchAmbiance && matchAudience && matchPlayed) {
+    const played = isPlayedTonight(song) ? "played" : "unplayed";
+
+    const matchQuery = !query || name.includes(query);
+    const matchCategory = !selectedCategory || category === selectedCategory;
+    const matchStyle = !selectedStyle || styleValues.includes(selectedStyle);
+    const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
+    const matchAudience = !selectedAudience || audienceValues.includes(selectedAudience);
+    const matchSinger = !selectedSinger || singerValues.includes(selectedSinger);
+    const matchPlayed = !selectedPlayed || played === selectedPlayed;
+
+    if (matchQuery && matchCategory && matchStyle && matchAmbiance && matchAudience && matchSinger && matchPlayed) {
       indexes.push(idx);
     }
   });
@@ -1679,10 +1738,11 @@ autoMarkCurrentSongAsPlayed();
 function filterSongList(q) {
   const query = String(q || "").toLowerCase().trim();
   const selectedCategory = String(categoryFilterEl?.value || "Répertoire").toLowerCase().trim();
-const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
-const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
-const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
-const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
+  const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
+  const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
+  const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
+  const selectedSinger = String(singerFilterEl?.value || "").toLowerCase().trim();
+  const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
 
   const items = document.querySelectorAll('#songList .song-item');
   let shown = 0;
@@ -1690,21 +1750,25 @@ const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
   items.forEach(item => {
     const name = item.dataset.name || "";
     const category = item.dataset.category || "répertoire";
-const style = item.dataset.style || "";
-const ambiance = item.dataset.ambiance || "";
-const audience = item.dataset.audience || "";
-const played = item.dataset.played || "unplayed";
+    const style = item.dataset.style || "";
+    const ambiance = item.dataset.ambiance || "";
+    const audience = item.dataset.audience || "";
+    const singer = item.dataset.singer || "";
+    const played = item.dataset.played || "unplayed";
 
-const audienceValues = audience ? audience.split('|') : [];
+    const styleValues = style ? style.split('|') : [];
+    const audienceValues = audience ? audience.split('|') : [];
+    const singerValues = singer ? singer.split('|') : [];
 
-const matchQuery = !query || name.includes(query);
-const matchCategory = !selectedCategory || category === selectedCategory;
-const matchStyle = !selectedStyle || style === selectedStyle;
-const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
-const matchAudience = !selectedAudience || audienceValues.includes(selectedAudience);
-const matchPlayed = !selectedPlayed || played === selectedPlayed;
+    const matchQuery = !query || name.includes(query);
+    const matchCategory = !selectedCategory || category === selectedCategory;
+    const matchStyle = !selectedStyle || styleValues.includes(selectedStyle);
+    const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
+    const matchAudience = !selectedAudience || audienceValues.includes(selectedAudience);
+    const matchSinger = !selectedSinger || singerValues.includes(selectedSinger);
+    const matchPlayed = !selectedPlayed || played === selectedPlayed;
 
-const ok = matchQuery && matchCategory && matchStyle && matchAmbiance && matchAudience && matchPlayed;
+    const ok = matchQuery && matchCategory && matchStyle && matchAmbiance && matchAudience && matchSinger && matchPlayed;
 
     item.style.display = ok ? "flex" : "none";
     if (ok) shown++;
@@ -1715,11 +1779,12 @@ const ok = matchQuery && matchCategory && matchStyle && matchAmbiance && matchAu
 
 function resetSongFilters() {
   if (songSearchInput) songSearchInput.value = "";
-if (categoryFilterEl) categoryFilterEl.value = "Répertoire";
-if (styleFilterEl) styleFilterEl.value = "";
-if (ambianceFilterEl) ambianceFilterEl.value = "";
-if (audienceFilterEl) audienceFilterEl.value = "";
-if (playedFilterEl) playedFilterEl.value = "";
+  if (categoryFilterEl) categoryFilterEl.value = "Répertoire";
+  if (styleFilterEl) styleFilterEl.value = "";
+  if (ambianceFilterEl) ambianceFilterEl.value = "";
+  if (audienceFilterEl) audienceFilterEl.value = "";
+  if (singerFilterEl) singerFilterEl.value = "";
+  if (playedFilterEl) playedFilterEl.value = "";
   filterSongList("");
 }
 
@@ -2820,6 +2885,10 @@ if (ambianceFilterEl) {
 
 if (audienceFilterEl) {
   audienceFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
+}
+
+if (singerFilterEl) {
+  singerFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
 }
 
 if (styleFilterEl) {
