@@ -400,7 +400,11 @@ app.post('/create-song', (req, res) => {
       return res.status(409).send("Le morceau existe déjà");
     }
 
-    const defaultContent = String(content || `{title: ${fileName.replace(/\.(pro|cho)$/i, '')}}\n\n`);
+    const defaultContent = String(
+  content ||
+  `{t:${String(req.body?.title || fileName.replace(/\.(pro|cho)$/i, '')).trim()}}\n` +
+  `{st:${String(req.body?.artist || '').trim()}}\n\n`
+);
     fs.writeFileSync(filePath, defaultContent, 'utf8');
 
     const meta = readSongMeta();
