@@ -5,6 +5,7 @@ const io = require('socket.io')(http);
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const SONG_META_FILE = path.join(__dirname, 'public', 'song-meta.json');
 
 const playedTonight = new Set();
 
@@ -25,6 +26,9 @@ const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
 fs.mkdirSync(PARTITIONS_DIR, { recursive: true });
 fs.mkdirSync(HISTORY_DIR, { recursive: true });
 fs.mkdirSync(SONG_SETTINGS_DIR, { recursive: true });
+if (!fs.existsSync(SONG_META_FILE)) {
+  fs.writeFileSync(SONG_META_FILE, '{}', 'utf8');
+}
 
 let leaderSocketId = null;
 let leaderUserName = null;
@@ -137,6 +141,44 @@ function writeSongSettings(fileName, settings) {
   return clean;
 }
 
+function readSongMeta() {
+  try {
+    if (!fs.existsSync(SONG_META_FILE)) return {};
+    const raw = fs.readFileSync(SONG_META_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSongMeta(meta) {
+  fs.writeFileSync(SONG_META_FILE, JSON.stringify(meta, null, 2), 'utf8');
+}
+
+function normalizeStringArray(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map(v => String(v || '').trim())
+      .filter(Boolean);
+  }
+
+  return String(value || '')
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+
+function normalizeSongMetaEntry(payload) {
+  return {
+    category: String(payload?.category || 'Répertoire').trim() || 'Répertoire',
+    style: normalizeStringArray(payload?.style),
+    ambiance: String(payload?.ambiance || '').trim(),
+    audience: normalizeStringArray(payload?.audience),
+    chanteur: normalizeStringArray(payload?.chanteur)
+  };
+}
+
 function broadcastConnectedUsers() {
   const uniqueUsers = [...new Set(
     [...connectedUsers.values()]
@@ -214,6 +256,21 @@ app.get('/song-settings', (req, res) => {
       speed: 50,
       transpose: 0
     });
+  }
+});
+
+app.get('/song-meta-entry', (req, res) => {
+  try {
+    const fileName = String(req.query.fileName || '');
+    if (!isValidSongName(fileName)) {
+      return res.status(400).json({});
+    }
+
+    const meta = readSongMeta();
+    res.json(meta[fileName] || {});
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({});
   }
 });
 
@@ -305,6 +362,52 @@ app.post('/save-song', (req, res) => {
       io.emit('song-updated', { fileName, at: Date.now() });
       res.send("OK");
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur");
+  }
+});
+
+app.post('/save-song-meta', (req, res) => {
+  try {
+    const { fileName, pin } = req.body || {};
+
+    if (!pinOk(pin)) return res.status(403).send("PIN invalide");
+    if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
+
+    const meta = readSongMeta();
+    meta[fileName] = normalizeSongMetaEntry(req.body || {});
+    writeSongMeta(meta);
+
+    res.send("OK");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur");
+  }
+});
+
+app.post('/create-song', (req, res) => {
+  try {
+    const { fileName, pin, content } = req.body || {};
+
+    if (!pinOk(pin)) return res.status(403).send("PIN invalide");
+    if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
+
+    const filePath = getSongPath(fileName);
+
+    if (fs.existsSync(filePath)) {
+      return res.status(409).send("Le morceau existe déjà");
+    }
+
+    const defaultContent = String(content || `{title: ${fileName.replace(/\.(pro|cho)$/i, '')}}\n\n`);
+    fs.writeFileSync(filePath, defaultContent, 'utf8');
+
+    const meta = readSongMeta();
+    meta[fileName] = normalizeSongMetaEntry(req.body || {});
+    writeSongMeta(meta);
+
+    io.emit('song-created', { fileName, at: Date.now() });
+    res.send("OK");
   } catch (err) {
     console.error(err);
     res.status(500).send("Erreur");
