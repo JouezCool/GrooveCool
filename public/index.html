@@ -737,10 +737,9 @@ nav{
     <nav>
       <button class="btn" onclick="closeViewer()">⬅</button>
 
-      <div class="controls-group leader-only">
-        <button class="btn" id="playBtn" onclick="toggleAutoScroll(true)">▶</button>
-        <input type="range" id="scrollSpeed" min="1" max="95" value="50" oninput="handleSpeedChange()">
-      </div>
+<div class="controls-group leader-only">
+  <input type="range" id="scrollSpeed" min="1" max="95" value="50" oninput="handleSpeedChange()">
+</div>
 
       <div class="controls-group leader-only">
         <button class="btn" onclick="updateFontSize(-2)">A-</button>
@@ -866,42 +865,47 @@ nav{
       <h3 id="songMetaTitle" style="margin:0; font-size:14px; color:#fff;">Morceau</h3>
     </header>
 
-    <div style="padding:14px 16px; display:grid; gap:10px;">
-      <label>
-        <div style="margin-bottom:6px;">Nom du fichier</div>
-        <input id="songMetaFileName" type="text" style="width:100%; padding:10px; box-sizing:border-box;">
-      </label>
+<div style="padding:14px 16px; display:grid; gap:12px; color:var(--text);">
+  <label style="display:grid; gap:6px; color:var(--text);">
+    <div style="color:var(--text); font-weight:700;">Nom du fichier</div>
+    <input id="songMetaFileName" type="text" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;">
+  </label>
 
-      <label>
-        <div style="margin-bottom:6px;">Catégorie</div>
-        <input id="songMetaCategory" type="text" style="width:100%; padding:10px; box-sizing:border-box;">
-      </label>
+  <label style="display:grid; gap:6px; color:var(--text);">
+    <div style="color:var(--text); font-weight:700;">Titre affiché</div>
+    <input id="songMetaTitleInput" type="text" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;">
+  </label>
 
-      <label>
-        <div style="margin-bottom:6px;">Style(s) — séparés par virgule</div>
-        <input id="songMetaStyle" type="text" style="width:100%; padding:10px; box-sizing:border-box;">
-      </label>
+  <label style="display:grid; gap:6px; color:var(--text);">
+    <div style="color:var(--text); font-weight:700;">Catégorie</div>
+    <select id="songMetaCategory" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;"></select>
+  </label>
 
-      <label>
-        <div style="margin-bottom:6px;">Ambiance</div>
-        <input id="songMetaAmbiance" type="text" style="width:100%; padding:10px; box-sizing:border-box;">
-      </label>
+  <label style="display:grid; gap:6px; color:var(--text);">
+    <div style="color:var(--text); font-weight:700;">Style(s)</div>
+    <select id="songMetaStyle" multiple size="6" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;"></select>
+  </label>
 
-      <label>
-        <div style="margin-bottom:6px;">Audience(s) — séparées par virgule</div>
-        <input id="songMetaAudience" type="text" style="width:100%; padding:10px; box-sizing:border-box;">
-      </label>
+  <label style="display:grid; gap:6px; color:var(--text);">
+    <div style="color:var(--text); font-weight:700;">Ambiance</div>
+    <select id="songMetaAmbiance" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;"></select>
+  </label>
 
-      <label>
-        <div style="margin-bottom:6px;">Chanteur(s) — séparés par virgule</div>
-        <input id="songMetaChanteur" type="text" style="width:100%; padding:10px; box-sizing:border-box;">
-      </label>
+  <label style="display:grid; gap:6px; color:var(--text);">
+    <div style="color:var(--text); font-weight:700;">Audience(s)</div>
+    <select id="songMetaAudience" multiple size="6" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;"></select>
+  </label>
 
-      <label id="songMetaContentWrap">
-        <div style="margin-bottom:6px;">Contenu initial du morceau</div>
-        <textarea id="songMetaContent" style="width:100%; min-height:140px; padding:10px; box-sizing:border-box;"></textarea>
-      </label>
-    </div>
+  <label style="display:grid; gap:6px; color:var(--text);">
+    <div style="color:var(--text); font-weight:700;">Chanteur(s)</div>
+    <select id="songMetaChanteur" multiple size="6" style="width:100%; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;"></select>
+  </label>
+
+  <label id="songMetaContentWrap" style="display:grid; gap:6px; color:var(--text);">
+    <div style="color:var(--text); font-weight:700;">Contenu initial du morceau</div>
+    <textarea id="songMetaContent" style="width:100%; min-height:140px; padding:10px; box-sizing:border-box; background:#0b0b0b; color:#eee; border:1px solid #444;"></textarea>
+  </label>
+</div>
 
     <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end; gap:10px;">
       <button class="btn" onclick="closeSongMetaModal()">ANNULER</button>
@@ -968,6 +972,7 @@ const audienceFilterEl = document.getElementById('audienceFilter');
 const styleFilterEl = document.getElementById('styleFilter');
 const playedFilterEl = document.getElementById('playedFilter');
 const playedToggleBtn = document.getElementById('playedToggleBtn');
+const songMetaTitleInput = document.getElementById('songMetaTitleInput');
 
 const songMetaBackdrop = document.getElementById('songMetaBackdrop');
 const songMetaTitle = document.getElementById('songMetaTitle');
@@ -1094,16 +1099,94 @@ function openCreateSongModal() {
 
   songMetaTitle.textContent = "Nouveau morceau";
   songMetaFileName.value = "";
-  songMetaCategory.value = "Répertoire";
-  songMetaStyle.value = "";
-  songMetaAmbiance.value = "";
-  songMetaAudience.value = "";
-  songMetaChanteur.value = "";
+  songMetaTitleInput.value = "";
   songMetaContent.value = "{title: Nouveau morceau}\n\n";
   songMetaFileName.disabled = false;
   songMetaContentWrap.style.display = 'block';
 
+  prepareSongMetaFormSelections({
+    category: 'Répertoire',
+    style: [],
+    ambiance: '',
+    audience: [],
+    chanteur: []
+  });
+
   songMetaBackdrop.style.display = 'flex';
+}
+
+function getMetaValues(fieldName) {
+  const values = new Set();
+
+  Object.values(songMeta || {}).forEach(entry => {
+    const v = entry?.[fieldName];
+
+    if (Array.isArray(v)) {
+      v.forEach(x => {
+        const clean = String(x || '').trim();
+        if (clean) values.add(clean);
+      });
+    } else {
+      const clean = String(v || '').trim();
+      if (clean) values.add(clean);
+    }
+  });
+
+  return [...values].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+}
+
+function fillSelectOptions(selectEl, values, multiple = false) {
+  if (!selectEl) return;
+
+  selectEl.innerHTML = '';
+
+  if (!multiple) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '—';
+    selectEl.appendChild(opt);
+  }
+
+  values.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    selectEl.appendChild(opt);
+  });
+}
+
+function setSelectedValues(selectEl, values) {
+  const arr = Array.isArray(values) ? values.map(v => String(v)) : [String(values || '')];
+
+  [...selectEl.options].forEach(opt => {
+    opt.selected = arr.includes(opt.value);
+  });
+}
+
+function getSelectedValues(selectEl) {
+  return [...selectEl.selectedOptions].map(opt => opt.value).filter(Boolean);
+}
+
+function prepareSongMetaFormSelections(data = {}) {
+  const defaultCategories = ['Répertoire', 'En travail', '1 minute', 'Archives'];
+  const categories = [...new Set([...defaultCategories, ...getMetaValues('category')])];
+  const styles = getMetaValues('style');
+  const ambiances = getMetaValues('ambiance');
+  const audiences = getMetaValues('audience');
+  const chanteurs = getMetaValues('chanteur');
+
+  fillSelectOptions(songMetaCategory, categories, false);
+  fillSelectOptions(songMetaStyle, styles, true);
+  fillSelectOptions(songMetaAmbiance, ambiances, false);
+  fillSelectOptions(songMetaAudience, audiences, true);
+  fillSelectOptions(songMetaChanteur, chanteurs, true);
+
+  songMetaCategory.value = data?.category || 'Répertoire';
+  songMetaAmbiance.value = data?.ambiance || '';
+
+  setSelectedValues(songMetaStyle, Array.isArray(data?.style) ? data.style : []);
+  setSelectedValues(songMetaAudience, Array.isArray(data?.audience) ? data.audience : []);
+  setSelectedValues(songMetaChanteur, Array.isArray(data?.chanteur) ? data.chanteur : []);
 }
 
 async function openEditSongMetaModal() {
@@ -1117,13 +1200,17 @@ async function openEditSongMetaModal() {
     const data = await res.json();
 
     songMetaFileName.value = currentFileName;
-    songMetaCategory.value = data?.category || "Répertoire";
-    songMetaStyle.value = joinMetaArray(data?.style);
-    songMetaAmbiance.value = data?.ambiance || "";
-    songMetaAudience.value = joinMetaArray(data?.audience);
-    songMetaChanteur.value = joinMetaArray(data?.chanteur);
+    songMetaTitleInput.value = data?.title || currentFileName.replace(/\.(pro|cho)$/i, '');
     songMetaFileName.disabled = true;
     songMetaContentWrap.style.display = 'none';
+
+    prepareSongMetaFormSelections({
+      category: data?.category || 'Répertoire',
+      style: Array.isArray(data?.style) ? data.style : [],
+      ambiance: data?.ambiance || '',
+      audience: Array.isArray(data?.audience) ? data.audience : [],
+      chanteur: Array.isArray(data?.chanteur) ? data.chanteur : []
+    });
 
     songMetaBackdrop.style.display = 'flex';
   } catch (err) {
@@ -1143,15 +1230,16 @@ async function saveSongMetaModal() {
   const cleanPin = String(pin).trim();
   if (!cleanPin) return;
 
-  const payload = {
-    fileName,
-    pin: cleanPin,
-    category: songMetaCategory.value,
-    style: songMetaStyle.value,
-    ambiance: songMetaAmbiance.value,
-    audience: songMetaAudience.value,
-    chanteur: songMetaChanteur.value
-  };
+const payload = {
+  fileName,
+  pin: cleanPin,
+  title: songMetaTitleInput.value,
+  category: songMetaCategory.value,
+  style: getSelectedValues(songMetaStyle),
+  ambiance: songMetaAmbiance.value,
+  audience: getSelectedValues(songMetaAudience),
+  chanteur: getSelectedValues(songMetaChanteur)
+};
 
   try {
     let res;
@@ -1518,7 +1606,7 @@ function renderSongList() {
           <span class="song-badge ${played ? 'played' : ''}">
             ${played ? 'Joué' : 'À jouer'}
           </span>
-          <b class="song-title">${s.replace('.pro','').replace('.cho','')}</b>
+          <b class="song-title">${escapeHtml(meta.title || s.replace('.pro','').replace('.cho',''))}</b>
         </div>
         <span>❯</span>
       </div>
