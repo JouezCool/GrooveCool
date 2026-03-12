@@ -2445,14 +2445,23 @@ historyList.innerHTML = items.map((item, idx) => {
       padding:12px;
       margin-bottom:10px;
       background:rgba(255,255,255,0.04);
-      color:var(--text);
     ">
-      <div style="font-weight:900; margin-bottom:6px; color:var(--text);">
+      <div style="
+        font-weight:900;
+        margin-bottom:6px;
+        color:#eee;
+      ">
         ${escapeHtml(item.savedAt || '')}
       </div>
-      <div style="font-size:13px; opacity:.85; margin-bottom:8px; color:var(--text);">
+
+      <div style="
+        font-size:13px;
+        margin-bottom:8px;
+        color:#ddd;
+      ">
         Par ${escapeHtml(item.savedBy || 'Inconnu')}
       </div>
+
       <button class="btn" onclick="restoreHistoryVersion('${item.id}')">${label}</button>
     </div>
   `;
