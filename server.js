@@ -171,6 +171,7 @@ function normalizeStringArray(value) {
 
 function normalizeSongMetaEntry(payload) {
   return {
+    title: String(payload?.title || '').trim(),
     category: String(payload?.category || 'Répertoire').trim() || 'Répertoire',
     style: normalizeStringArray(payload?.style),
     ambiance: String(payload?.ambiance || '').trim(),
