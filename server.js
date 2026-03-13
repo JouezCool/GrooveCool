@@ -124,6 +124,35 @@ async function findDriveFileByName(folderId, fileName) {
   return res.data.files?.[0] || null;
 }
 
+async function listDriveSongs() {
+  const results = [];
+  let pageToken = null;
+
+  do {
+    const res = await drive.files.list({
+      q: [
+        `'${GOOGLE_DRIVE_PARTITIONS_FOLDER_ID}' in parents`,
+        `trashed = false`
+      ].join(' and '),
+      fields: 'nextPageToken, files(id, name)',
+      pageSize: 1000,
+      pageToken
+    });
+
+    const files = res.data.files || [];
+    results.push(...files);
+    pageToken = res.data.nextPageToken || null;
+  } while (pageToken);
+
+  return results
+    .map(f => f.name)
+    .filter(name => {
+      const lower = String(name || '').toLowerCase();
+      return lower.endsWith('.pro') || lower.endsWith('.cho');
+    })
+    .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+}
+
 async function listDriveFiles(folderId) {
   if (!folderId) return [];
 
@@ -342,15 +371,10 @@ function broadcastPlayedTonight() {
 
 app.get('/list-songs', async (req, res) => {
   try {
-    const files = await listDriveFiles(GOOGLE_DRIVE_PARTITIONS_FOLDER_ID);
-    const songs = files
-      .map(f => f.name)
-      .filter(name => String(name || '').toLowerCase().endsWith('.pro'))
-      .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
-
+    const songs = await listDriveSongs();
     res.json(songs);
   } catch (err) {
-    console.error('❌ Erreur /list-songs:', err);
+    console.error('Erreur /list-songs :', err);
     res.status(500).json([]);
   }
 });
@@ -362,14 +386,15 @@ app.get('/partitions/:fileName', async (req, res) => {
       return res.status(400).send('Nom de fichier invalide');
     }
 
-    const content = await readPartition(fileName);
-    if (content === null) {
-      return res.status(404).send('Introuvable');
+    const file = await findDriveFileByName(GOOGLE_DRIVE_PARTITIONS_FOLDER_ID, fileName);
+    if (!file) {
+      return res.status(404).send('Fichier introuvable');
     }
 
-    res.type('text/plain; charset=utf-8').send(content);
+    const content = await readDriveTextFile(file.id);
+    res.type('text/plain').send(content);
   } catch (err) {
-    console.error('❌ Erreur /partitions/:fileName:', err);
+    console.error('Erreur lecture partition Drive :', err);
     res.status(500).send('Erreur');
   }
 });
