@@ -51,7 +51,7 @@ function pinOk(pin) {
 function isValidSongName(name) {
   if (typeof name !== 'string') return false;
   const lower = name.toLowerCase();
-  if (!lower.endsWith('.pro')) return false; // tu m’as dit que tu n’utilises que .pro
+  if (!(lower.endsWith('.pro') || lower.endsWith('.cho'))) return false;
   if (name.includes('..') || name.includes('/') || name.includes('\\')) return false;
   if (name.length > 180) return false;
   return true;
@@ -118,13 +118,17 @@ async function findDriveFileByName(folderId, fileName) {
   const res = await drive.files.list({
     q,
     fields: 'files(id, name, mimeType)',
-    pageSize: 10
+    pageSize: 10,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true
   });
 
   return res.data.files?.[0] || null;
 }
 
 async function listDriveSongs() {
+  if (!GOOGLE_DRIVE_PARTITIONS_FOLDER_ID) return [];
+
   const results = [];
   let pageToken = null;
 
@@ -134,9 +138,11 @@ async function listDriveSongs() {
         `'${GOOGLE_DRIVE_PARTITIONS_FOLDER_ID}' in parents`,
         `trashed = false`
       ].join(' and '),
-      fields: 'nextPageToken, files(id, name)',
+      fields: 'nextPageToken, files(id, name, mimeType)',
       pageSize: 1000,
-      pageToken
+      pageToken,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true
     });
 
     const files = res.data.files || [];
@@ -153,31 +159,16 @@ async function listDriveSongs() {
     .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
 }
 
-async function listDriveFiles(folderId) {
-  if (!folderId) return [];
-
-  let files = [];
-  let pageToken = undefined;
-
-  do {
-    const res = await drive.files.list({
-      q: `'${folderId}' in parents and trashed = false`,
-      fields: 'nextPageToken, files(id, name, mimeType)',
-      pageSize: 1000,
-      pageToken
-    });
-
-    files = files.concat(res.data.files || []);
-    pageToken = res.data.nextPageToken;
-  } while (pageToken);
-
-  return files;
-}
-
 async function readDriveTextFile(fileId) {
   const res = await drive.files.get(
-    { fileId, alt: 'media' },
-    { responseType: 'text' }
+    {
+      fileId,
+      alt: 'media',
+      supportsAllDrives: true
+    },
+    {
+      responseType: 'text'
+    }
   );
 
   return typeof res.data === 'string' ? res.data : String(res.data || '');
@@ -399,6 +390,16 @@ app.get('/partitions/:fileName', async (req, res) => {
   }
 });
 
+app.get('/song-meta.json', async (req, res) => {
+  try {
+    const meta = await readSongMeta();
+    res.json(meta);
+  } catch (err) {
+    console.error('❌ Erreur /song-meta.json:', err);
+    res.status(500).json({});
+  }
+});
+
 app.get('/song-history', async (req, res) => {
   try {
     const fileName = String(req.query.fileName || '');
@@ -453,6 +454,27 @@ app.get('/song-meta-entry', async (req, res) => {
   } catch (err) {
     console.error('❌ Erreur /song-meta-entry:', err);
     res.status(500).json({});
+  }
+});
+
+app.get('/debug/drive', async (req, res) => {
+  try {
+    const files = await listDriveFiles(GOOGLE_DRIVE_PARTITIONS_FOLDER_ID);
+    res.json({
+      partitionsFolderId: GOOGLE_DRIVE_PARTITIONS_FOLDER_ID,
+      count: files.length,
+      files: files.map(f => ({
+        id: f.id,
+        name: f.name,
+        mimeType: f.mimeType
+      }))
+    });
+  } catch (err) {
+    console.error('❌ Erreur debug drive:', err);
+    res.status(500).json({
+      error: err.message,
+      details: String(err)
+    });
   }
 });
 
