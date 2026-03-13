@@ -1,2967 +1,581 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>BandApp Pro - Live Sync</title>
-  
-  <link rel="icon" href="/icon-512.png">
-
-<link rel="apple-touch-icon" href="/icon-512.png">
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-
-<meta name="apple-mobile-web-app-title" content="BandApp">
-
-<link rel="manifest" href="/manifest.json">
-
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-
-  <style>
-    :root{
-      --bg:#000;
-      --text:#eee;
-      --accent:#ff9800;
-      --edit:#2196F3;
-
-      --pu-bg: rgba(168, 85, 247, 0.16);
-      --pu-border: rgba(168, 85, 247, 0.55);
-      --pu-text: var(--text);
-
-      --nav-bg:#1a1a1a;
-      --nav-text:#eee;
-      --panel-bg:#111;
-      --panel-border:#333;
-
-      --chorus-bg:#111827;
-      --chorus-border:#60a5fa;
-      --chorus-text: var(--text);
-
-      --comment-bg:#ffd54f;
-      --comment-text:#000;
-    }
-	
-	.meta-form{
-  color: var(--text);
-}
-
-.meta-form label{
-  display:grid;
-  gap:6px;
-  color: var(--text);
-}
-
-.meta-form .meta-label{
-  color: #eee;
-  font-weight: 700;
-}
-
-.meta-form input,
-.meta-form select,
-.meta-form textarea{
-  width:100%;
-  padding:10px;
-  box-sizing:border-box;
-  background:#0b0b0b;
-  color:#eee;
-  border:1px solid #444;
-  border-radius:8px;
-}
-	
-	#leaderFloatingActions{
-  display:none;
-  position:fixed;
-  top:72px;
-  left:0;
-  right:0;
-  z-index:30;
-  pointer-events:none;
-}
-
-.center-btn{
-  left:50%;
-  transform:translateX(-50%);
-}
-
-#concertFloatingActions{
-  position:fixed;
-  top:72px;
-  left:0;
-  right:0;
-  z-index:29;
-  pointer-events:none;
-}
-
-#concertFloatingActions .concert-float-btn{
-  position:absolute;
-  pointer-events:auto;
-  background:rgba(0,0,0,0.72);
-  backdrop-filter: blur(6px);
-}
-
-.center-btn{
-  left:50%;
-  transform:translateX(-50%);
-}
-
-body.concert-mode nav{
-  display:none !important;
-}
-
-body.concert-mode #viewer{
-  height:100vh;
-  padding-top:20px;
-}
-
-body.concert-mode #notesPanel{
-  display:none !important;
-}
-
-body.concert-mode #leaderFloatingActions{
-  top:12px;
-}
-
-body.concert-mode #concertFloatingActions{
-  top:12px;
-}
-
-body.concert-mode #settingsFixedWrap{
-  display:none !important;
-}
-
-#concertModeBtn.active-btn{
-  background:rgba(255,152,0,0.25);
-  color:#fff;
-}
-
-#leaderFloatingActions .leader-float-btn{
-  position:absolute;
-  pointer-events:auto;
-  background:rgba(0,0,0,0.72);
-  backdrop-filter: blur(6px);
-}
-
-#leaderPlayBtn{
-  left:12px;
-  top:0;
-}
-
-#playedToggleBtn{
-  left:12px;
-  top:52px;
-}
-
-#randomSongBtn{
-  right:12px;
-  top:0;
-}
-
-    body{
-      font-family:sans-serif;
-      background:var(--bg);
-      color:var(--text);
-      margin:0;
-      overflow:hidden;
-      overscroll-behavior-x:none;
-    }
-
-    .version-badge{
-      font-weight:900;
-      font-size:12px;
-      padding:8px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,0.18);
-      background:rgba(255,255,255,0.08);
-      color:var(--text);
-      white-space:nowrap;
-    }
-
-    .version-badge.perso{
-      border-color: rgba(59,130,246,0.55);
-      background: rgba(59,130,246,0.18);
-    }
-
-    .version-badge.off{
-      border-color: rgba(255,152,0,0.55);
-      background: rgba(255,152,0,0.18);
-    }
-
-    #netBadge.off{
-      border-color: rgba(244,67,54,0.55);
-      background: rgba(244,67,54,0.18);
-    }
-
-    #netBadge.on{
-      border-color: rgba(76,175,80,0.55);
-      background: rgba(76,175,80,0.18);
-    }
-
-#settingsFixedWrap{
-  position:fixed;
-  top:10px;
-  right:10px;
-  z-index:6000;
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-    #settingsBtnFixed{
-      border:2px solid var(--accent);
-      border-radius:10px;
-      background:rgba(0,0,0,0.25);
-      color:var(--accent);
-      font-weight:900;
-      padding:10px 12px;
-      cursor:pointer;
-      backdrop-filter: blur(6px);
-    }
-
-    #toast{
-      position:fixed;
-      left:50%;
-      top:18px;
-      transform:translateX(-50%);
-      z-index:7000;
-      background:rgba(0,0,0,0.85);
-      color:#fff;
-      padding:10px 14px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,0.15);
-      display:none;
-      font-size:14px;
-      font-weight:700;
-      max-width:min(92vw, 520px);
-      text-align:center;
-    }
-
-    #userOverlay{
-      position:fixed;
-      inset:0;
-      z-index:5000;
-      display:none;
-      background:rgba(0,0,0,0.92);
-      align-items:center;
-      justify-content:center;
-      padding:18px;
-    }
-
-    #userModal{
-      width:min(560px,100%);
-      background:#111;
-      border:1px solid #2a2a2a;
-      border-radius:14px;
-      overflow:hidden;
-    }
-
-    #userModal header{
-      padding:14px 16px;
-      border-bottom:1px solid #2a2a2a;
-      background:#161616;
-    }
-
-    #userModal header h3{
-      margin:0;
-      font-size:14px;
-      color:#fff;
-    }
-
-    #userModal .content{ padding:14px 16px; }
-
-    #userModal .grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-    }
-
-    .user-choice{
-      border:1px solid #333;
-      background:#0b0b0b;
-      border-radius:12px;
-      padding:12px;
-      cursor:pointer;
-      text-align:center;
-      font-weight:bold;
-      color:#fff;
-      user-select:none;
-    }
-
-    .user-choice:hover{ background:#101010; }
-
-    #userModal .actions{
-      padding:14px 16px;
-      border-top:1px solid #2a2a2a;
-      display:flex;
-      justify-content:flex-start;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-
-    #library{
-      height:100vh;
-      overflow-y:auto;
-      display:block;
-      -webkit-overflow-scrolling:touch;
-    }
-
-    .lib-header{
-      padding:20px;
-      padding-right:420px;
-      background:var(--nav-bg);
-      border-bottom:2px solid var(--accent);
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      position:sticky;
-      top:0;
-      z-index:5;
-      color:var(--nav-text);
-      gap:12px;
-    }
-
-    .song-item{
-      padding:20px;
-      border-bottom:1px solid #222;
-      display:flex;
-      justify-content:space-between;
-      font-size:1.1em;
-      cursor:pointer;
-    }
-
-    #viewer-container{
-      display:none;
-      position:fixed;
-      top:0;
-      left:0;
-      width:100vw;
-      height:100vh;
-      background:var(--bg);
-      z-index:10;
-    }
-	
-	.song-item.played{
-  opacity:0.6;
-}
-
-.song-left{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-width:0;
-}
-
-.song-title{
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.song-badge{
-  font-size:11px;
-  font-weight:900;
-  padding:4px 8px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,0.15);
-  background:rgba(255,255,255,0.08);
-  color:var(--text);
-  white-space:nowrap;
-}
-
-.song-badge.played{
-  border-color: rgba(76,175,80,0.55);
-  background: rgba(76,175,80,0.18);
-}
-
-nav{
-  display:flex;
-  background:var(--nav-bg);
-  color:var(--nav-text);
-  min-height:60px;
-  align-items:center;
-  padding:6px 10px;
-  gap:8px;
-  border-bottom:1px solid var(--panel-border);
-  flex-wrap:wrap;
-}
-
-#viewer-container nav .btn,
-#viewer-container nav input[type="range"]{
-  flex-shrink:0;
-}
-
-    .controls-group{
-      display:flex;
-      align-items:center;
-      gap:5px;
-      background:rgba(255,255,255,0.06);
-      padding:5px;
-      border-radius:8px;
-    }
-
-    #updateBanner{
-      position:sticky;
-      top:0;
-      z-index:999;
-      display:none;
-      background:rgba(255,255,255,0.06);
-      border-bottom:1px solid var(--panel-border);
-      padding:10px 12px;
-      font-size:14px;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      color:var(--text);
-    }
-
-    #updateBanner .msg{ color:var(--text); }
-
-    #updateBanner .btn-small{
-      padding:8px 10px;
-      border-radius:6px;
-      font-size:12px;
-    }
-
-    #notesPanel{
-      display:none;
-      background:var(--panel-bg);
-      border-bottom:1px solid var(--panel-border);
-      padding:12px;
-    }
-
-    #notesTextarea{
-      width:100%;
-      min-height:120px;
-      background:#000;
-      color:#0f0;
-      border:1px solid #333;
-      padding:10px;
-      font-family:monospace;
-      resize:vertical;
-      box-sizing:border-box;
-    }
-
-    #viewer{
-      height:calc(100vh - 65px);
-      overflow-y:scroll;
-      padding:25px;
-      font-family:'Courier New', Courier, monospace;
-      -webkit-overflow-scrolling:touch;
-      scroll-behavior:auto !important;
-      touch-action:pan-y;
-    }
-
-    .block{ margin-bottom:26px; }
-
-    .chordline,.lyricline{
-      white-space:pre-wrap;
-      word-break:break-word;
-      overflow-wrap:anywhere;
-      line-height:1.6;
-      margin:0;
-    }
-
-    .chordline{ color:var(--accent); font-weight:bold; }
-
-    .commentwrap{ margin:12px 0; }
-
-    .commentline{
-      display:inline-block;
-      background:var(--comment-bg);
-      color:var(--comment-text);
-      padding:6px 10px;
-      border-radius:8px;
-      font-family:sans-serif;
-      font-weight:900;
-      font-size:18px;
-      line-height:1.2;
-    }
-
-    .chorus-block{
-      background:var(--chorus-bg);
-      border-left:4px solid var(--chorus-border);
-      padding:12px 12px;
-      border-radius:12px;
-      margin:14px 0;
-      color:var(--chorus-text);
-    }
-
-    .pu-block{
-      margin:14px 0;
-      border-left:4px solid var(--pu-border);
-      padding:10px 12px;
-      border-radius:12px;
-      background: var(--pu-bg);
-      color: var(--pu-text);
-    }
-
-    .pu-label{
-      font-family:sans-serif;
-      font-weight:900;
-      font-size:12px;
-      opacity:.65;
-      margin-bottom:8px;
-    }
-
-    .pu-pre{
-      margin:0;
-      white-space:pre;
-      overflow-x:auto;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
-      font-size: calc(14px * var(--song-zoom, 1));
-      line-height: calc(17.5px * var(--song-zoom, 1));
-    }
-
-    #editor-container{
-      display:none;
-      position:fixed;
-      top:60px;
-      left:0;
-      right:0;
-      bottom:0;
-      background:#111;
-      z-index:20;
-      flex-direction:column;
-    }
-
-    #editor-warning{
-      flex:0 0 auto;
-      background:rgba(255, 87, 34, 0.14);
-      border-bottom:1px solid rgba(255, 87, 34, 0.4);
-      color:#ffd7c7;
-      padding:12px 14px;
-      font-size:13px;
-      font-weight:800;
-      line-height:1.35;
-      text-transform:uppercase;
-    }
-
-    #editor-toolbar{
-      flex:0 0 auto;
-      padding:10px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      border-bottom:1px solid #2a2a2a;
-      background:rgba(255,255,255,0.03);
-    }
-
-    #editor-textarea{
-      flex:1 1 auto;
-      min-height:0;
-      width:100%;
-      background:#000;
-      color:#2196F3;
-      border:none;
-      font-family:monospace;
-      font-size:16px;
-      padding:20px;
-      box-sizing:border-box;
-      resize:none;
-    }
-
-    .editor-footer{
-      position:sticky;
-      bottom:0;
-      z-index:2;
-      flex:0 0 auto;
-      min-height:74px;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      gap:20px;
-      background:var(--nav-bg);
-      padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 8px);
-      border-top:1px solid rgba(255,255,255,0.08);
-    }
-
-    .btn{
-      cursor:pointer;
-      padding:10px 14px;
-      border:2px solid var(--accent);
-      border-radius:6px;
-      color:var(--accent);
-      background:none;
-      font-size:13px;
-      font-weight:bold;
-    }
-
-    .btn-blue{ border-color:var(--edit); color:var(--edit); }
-
-    .active-btn{ background:#444; color:#fff; }
-
-    .leader-only{
-      display:none;
-    }
-
-    #songContent { position: relative; }
-
-    #overlayLayer{
-      position:absolute;
-      inset:0;
-      pointer-events:none;
-      z-index:3;
-    }
-
-    .gridOverlay{
-      position:absolute;
-      left:0;
-      right:0;
-      padding:0 6px;
-      pointer-events:auto;
-    }
-
-    .gridOverlay .box{
-      display:inline-block;
-      max-width:100%;
-      background: rgba(34, 197, 94, 0.18);
-      border: 1px solid rgba(34, 197, 94, 0.45);
-      color: var(--text);
-      padding: 8px 10px;
-      border-radius: 10px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-weight: 800;
-      font-size: 14px;
-      line-height: 1.25;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
-
-#connectedUsersBox{
-  border:1px solid var(--panel-border);
-  background:var(--panel-bg);
-  border-radius:8px;
-  padding:10px;
-  margin-top:10px;
-}
-
-#connectedUsersTitle{
-  color: var(--text);
-  font-weight:600;
-}
-
-#connectedUsersList{
-  white-space:pre-line;
-  line-height:1.5;
-  font-size:14px;
-  color: var(--text);
-}
-
-  </style>
-</head>
-
-<body>
-<div id="settingsFixedWrap">
-  <span id="leaderBadge" class="version-badge off">SUIVEUR</span>
-  <button id="settingsBtnFixed" onclick="openSettings()">⚙️ Utilisateur</button>
-</div>
-
-  <div id="toast"></div>
-
-  <div id="userOverlay">
-    <div id="userModal">
-      <header><h3>Choisir l’utilisateur</h3></header>
-      <div class="content">
-        <div class="grid" id="userGrid"></div>
-      </div>
-      <div class="actions">
-        <button class="btn" style="border-color:#777;color:#777;" onclick="addUser()">+ Ajouter</button>
-      </div>
-    </div>
-  </div>
-
-<div id="library">
-  <div class="lib-header">
-    <h2 style="margin:0; white-space:nowrap;">Répertoire</h2>
-
-    <input id="songSearch" type="search" placeholder="Rechercher un morceau..."
-      style="flex:1; margin:0 12px; padding:10px 12px; border-radius:10px;
-             border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.25);
-             color:var(--nav-text); outline:none; max-width:320px;" />
-
-    <span style="opacity:.8; font-size:12px; white-space:nowrap;" id="songCount"></span>
-  </div>
-
-  <div id="libraryFilters" style="
-    padding:12px 20px;
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    align-items:center;
-    background:var(--nav-bg);
-    border-bottom:1px solid var(--panel-border);
-  ">
-    <select id="categoryFilter" style="
-      padding:10px 12px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,0.15);
-      background:rgba(0,0,0,0.25);
-      color:var(--nav-text);
-      outline:none;
-    ">
-      <option value="Répertoire">Répertoire</option>
-      <option value="En travail">En travail</option>
-      <option value="1 minute">1 minute</option>
-      <option value="Archives">Archives</option>
-      <option value="">Toutes les catégories</option>
-    </select>
-
-    <select id="ambianceFilter" style="
-      padding:10px 12px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,0.15);
-      background:rgba(0,0,0,0.25);
-      color:var(--nav-text);
-      outline:none;
-    ">
-      <option value="">Toutes les ambiances</option>
-    </select>
-
-    <select id="audienceFilter" style="
-      padding:10px 12px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,0.15);
-      background:rgba(0,0,0,0.25);
-      color:var(--nav-text);
-      outline:none;
-    ">
-      <option value="">Toutes les audiences</option>
-    </select>
-	
-<select id="singerFilter" style="
-  padding:10px 12px;
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,0.15);
-  background:rgba(0,0,0,0.25);
-  color:var(--nav-text);
-  outline:none;
-">
-  <option value="">Tous les chanteurs</option>
-</select>
-	
-	<select id="styleFilter" style="
-  padding:10px 12px;
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,0.15);
-  background:rgba(0,0,0,0.25);
-  color:var(--nav-text);
-  outline:none;
-">
-  <option value="">Tous les styles</option>
-</select>
-
-    <select id="playedFilter" style="
-      padding:10px 12px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,0.15);
-      background:rgba(0,0,0,0.25);
-      color:var(--nav-text);
-      outline:none;
-    ">
-      <option value="">Tous</option>
-      <option value="unplayed">Non joués</option>
-      <option value="played">Déjà joués</option>
-    </select>
-
-    <button class="btn" onclick="resetSongFilters()">Rétablir filtres</button>
-    <button class="btn" onclick="resetTonight()">Tous à jouer</button>
-  </div>
-
-  <div id="songList"></div>
-</div>
-
-  <div id="viewer-container">
-    <nav>
-      <button class="btn" onclick="closeViewer()">⬅</button>
-
-<div class="controls-group leader-only">
-  <input type="range" id="scrollSpeed" min="1" max="95" value="50" oninput="handleSpeedChange()">
-</div>
-
-      <div class="controls-group leader-only">
-        <button class="btn" onclick="updateFontSize(-2)">A-</button>
-        <button class="btn" onclick="updateFontSize(2)">A+</button>
-      </div>
-
-      <div class="controls-group leader-only">
-        <button class="btn" onclick="updateTranspose(-1)">-</button>
-        <span id="transposeVal" style="min-width:20px; text-align:center">0</span>
-        <button class="btn" onclick="updateTranspose(1)">+</button>
-      </div>
-	  
-	  <div class="controls-group leader-only">
-  <button class="btn" onclick="saveCurrentSongSettings()">💾</button>
-</div>
-
-<button class="btn" onclick="toggleNotes()">NOTES</button>
-<button class="btn" onclick="openHistoryModal()">V1</button>
-<button class="btn" onclick="openEditSongMetaModal()">INFOS</button>
-<button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
-    </nav>
-	
-<div id="leaderFloatingActions">
-  <button class="btn leader-float-btn" id="leaderPlayBtn" onclick="toggleAutoScroll(true)">▶</button>
-  <button class="btn leader-float-btn" id="playedToggleBtn" onclick="togglePlayedCurrentSong()">JOUÉ</button>
-  <button class="btn leader-float-btn" id="randomSongBtn" onclick="openRandomFilteredSong()">🎲 ALÉATOIRE</button>
-</div>
-
-<div id="concertFloatingActions">
-  <button class="btn concert-float-btn center-btn" id="concertModeBtn" onclick="toggleConcertMode()">MODE CONCERT</button>
-</div>
-
-    <div id="notesPanel">
-      <textarea id="notesTextarea" placeholder="Tes annotations personnelles..."></textarea>
-    </div>
-
-    <div id="viewer">
-      <div id="songContent"></div>
-      <div style="height: 85vh;"></div>
-    </div>
-  </div>
-
-<div id="editor-container">
-  <div id="editor-warning">
-    ATTENTION : LES MODIFICATIONS DE LA VERSION COMMUNE IMPACTENT TOUT LE MONDE.
-  </div>
-
-<div id="editor-toolbar">
-  <button class="btn" onclick="insertTemplatePU()">+ {pu}</button>
-  <button class="btn" onclick="insertAtCursor('{soc}\n')">+ {soc}</button>
-  <button class="btn" onclick="insertAtCursor('\n{eoc}\n')">+ {eoc}</button>
-  <button class="btn" onclick="insertTemplateComment()">+ {c:}</button>
-  <button class="btn" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
-
-  <div style="flex:1"></div>
-
-  <div id="chordBank" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;"></div>
-</div>
-
-  <div id="editor-leader-wrap" style="display:none; flex:1 1 auto; min-height:0; flex-direction:column;">
-    <textarea id="editor-textarea" spellcheck="false"></textarea>
-  </div>
-
-  <div class="editor-footer">
-    <button class="btn" onclick="closeEditor()" style="border-color:#ff5252; color:#ff5252;">ANNULER</button>
-    <button class="btn btn-blue" onclick="saveEditor()">ENREGISTRER</button>
-  </div>
-</div>
-
-  <div id="settingsBackdrop" style="
-    position:fixed; inset:0; display:none; z-index:6500;
-    background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:18px;">
-    <div id="settingsModal" style="width:min(560px,100%); background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden;">
-      <header style="padding:14px 16px; border-bottom:1px solid #2a2a2a; background:#161616;">
-        <h3 style="margin:0; font-size:14px; color:#fff;">Réglages</h3>
-      </header>
-
-      <div style="padding:14px 16px; display:grid; gap:10px;">
-        <button class="btn" onclick="openUserFromSettings()">👤 Utilisateur</button>
-        <button class="btn" id="settingsLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
-        <button class="btn" id="settingsChordBtn" onclick="toggleChordStyle()">Accords: Do</button>
-        <button class="btn" id="settingsThemeBtn" onclick="toggleTheme()">Thème: Sombre</button>
-		<button class="btn" onclick="openCreateSongModal()">➕ Nouveau morceau</button>
-        <button class="btn" onclick="exportBackup()">⬇️ Exporter sauvegarde</button>
-        <button class="btn" onclick="triggerImport()">⬆️ Importer sauvegarde</button>
-        <input id="importFile" type="file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
-
-<div id="connectedUsersBox">
-  <div id="connectedUsersTitle">Connectés</div>
-  <div id="connectedUsersList">Aucun utilisateur connecté</div>
-</div>
-
-      <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end;">
-        <button class="btn btn-blue" onclick="closeSettings()">OK</button>
-      </div>
-    </div>
-  </div>
- </div>
-  
-<div id="historyBackdrop" style="
-  position:fixed; inset:0; display:none; z-index:6600;
-  background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:18px;">
-  <div style="width:min(760px,100%); max-height:85vh; background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden; display:flex; flex-direction:column;">
-    <header style="padding:14px 16px; border-bottom:1px solid #2a2a2a; background:#161616;">
-      <h3 style="margin:0; font-size:14px; color:#fff;">Historique du morceau</h3>
-    </header>
-
-    <div id="historyList" style="padding:14px 16px; overflow:auto; flex:1 1 auto;">
-      Chargement...
-    </div>
-
-    <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end;">
-      <button class="btn btn-blue" onclick="closeHistoryModal()">FERMER</button>
-    </div>
-  </div>
-</div>
-
-<div id="songMetaBackdrop" style="
-  position:fixed; inset:0; display:none; z-index:6700;
-  background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:18px;">
-  <div style="width:min(680px,100%); background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden;">
-    <header style="padding:14px 16px; border-bottom:1px solid #2a2a2a; background:#161616;">
-      <h3 id="songMetaTitle" style="margin:0; font-size:14px; color:#fff;">Morceau</h3>
-    </header>
-
-<div class="meta-form" style="padding:14px 16px; display:grid; gap:12px;">
-  <label>
-    <div class="meta-label">Titre du morceau</div>
-    <input id="songMetaTitleInput" type="text" placeholder="Ex: Rolling in the Deep">
-  </label>
-
-  <label id="songMetaArtistWrap">
-    <div class="meta-label">Artiste</div>
-    <input id="songMetaArtistInput" type="text" placeholder="Ex: Adele">
-  </label>
-
-  <label id="songMetaFileNameWrap">
-    <div class="meta-label">Nom du fichier</div>
-    <input id="songMetaFileName" type="text" placeholder="Ex: Rolling in the Deep - Adele.pro">
-  </label>
-
-  <label>
-    <div class="meta-label">Catégorie</div>
-    <select id="songMetaCategory"></select>
-  </label>
-
-  <label>
-    <div class="meta-label">Style(s)</div>
-    <select id="songMetaStyle" multiple size="6"></select>
-  </label>
-
-  <label>
-    <div class="meta-label">Ambiance</div>
-    <select id="songMetaAmbiance"></select>
-  </label>
-
-  <label>
-    <div class="meta-label">Audience(s)</div>
-    <select id="songMetaAudience" multiple size="6"></select>
-  </label>
-
-  <label>
-    <div class="meta-label">Chanteur(s)</div>
-    <select id="songMetaChanteur" multiple size="6"></select>
-  </label>
-</div>
-
-    <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end; gap:10px;">
-      <button class="btn" onclick="closeSongMetaModal()">ANNULER</button>
-      <button class="btn btn-blue" onclick="saveSongMetaModal()">ENREGISTRER</button>
-    </div>
-  </div>
-</div>
-
-<script>
-  const socket = io();
-
-  let isLeader = false, allSongs = [], currentIndex = -1;
-  let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
-
-  let isRemoteScrolling = false;
-  let isScrolling = false;
-  let rafId = null;
-  let lastRafTime = 0;
-  let scrollCarry = 0;
-  let remoteScrollRaf = null;
-  let pendingRemoteScrollTop = 0;
-  let currentSongZoom = 1;
-  let isLoadingSong = false;
-  let lastConnectedUsers = [];
-  let songMeta = {};
-  let concertMode = false;
-  let songMetaMode = 'edit';
-let currentSongOpenedAt = 0;
-let playedTonightSet = new Set();
-let deviceId = localStorage.getItem('bandapp_deviceId') || "";
-if (!deviceId) {
-  deviceId = (crypto?.randomUUID?.() || ('dev-' + Date.now() + '-' + Math.random().toString(36).slice(2)));
-  localStorage.setItem('bandapp_deviceId', deviceId);
-}
-let currentSongSettings = {
-  fontSize: 26,
-  speed: 50,
-  transpose: 0
-};
-
-  const viewerElement = document.getElementById('viewer');
-  const songContentEl = document.getElementById('songContent');
-  const speedInput = document.getElementById('scrollSpeed');
-  const notesPanel = document.getElementById('notesPanel');
-  const notesTextarea = document.getElementById('notesTextarea');
-  const songSearchInput = document.getElementById('songSearch');
-  const songCountEl = document.getElementById('songCount');
-  const userOverlay = document.getElementById('userOverlay');
-  const userGrid = document.getElementById('userGrid');
-  const settingsBackdrop = document.getElementById('settingsBackdrop');
-  const settingsBtnFixed = document.getElementById('settingsBtnFixed');
-  const netBadge = document.getElementById('netBadge'); // peut être null
-  const connectedUsersList = document.getElementById('connectedUsersList');
-  const toastEl = document.getElementById('toast');
-  const concertModeBtn = document.getElementById('concertModeBtn');
-
-  const editorLeaderWrap = document.getElementById('editor-leader-wrap');
-  const editorTextarea = document.getElementById('editor-textarea');
-const historyBackdrop = document.getElementById('historyBackdrop');
-const historyList = document.getElementById('historyList');
-const categoryFilterEl = document.getElementById('categoryFilter');
-const ambianceFilterEl = document.getElementById('ambianceFilter');
-const audienceFilterEl = document.getElementById('audienceFilter');
-const singerFilterEl = document.getElementById('singerFilter');
-const songMetaArtistInput = document.getElementById('songMetaArtistInput');
-const songMetaArtistWrap = document.getElementById('songMetaArtistWrap');
-const songMetaFileNameWrap = document.getElementById('songMetaFileNameWrap');
-const styleFilterEl = document.getElementById('styleFilter');
-const playedFilterEl = document.getElementById('playedFilter');
-const playedToggleBtn = document.getElementById('playedToggleBtn');
-const songMetaTitleInput = document.getElementById('songMetaTitleInput');
-
-const songMetaBackdrop = document.getElementById('songMetaBackdrop');
-const songMetaTitle = document.getElementById('songMetaTitle');
-const songMetaFileName = document.getElementById('songMetaFileName');
-const songMetaCategory = document.getElementById('songMetaCategory');
-const songMetaStyle = document.getElementById('songMetaStyle');
-const songMetaAmbiance = document.getElementById('songMetaAmbiance');
-const songMetaAudience = document.getElementById('songMetaAudience');
-const songMetaChanteur = document.getElementById('songMetaChanteur');
-const songMetaContent = document.getElementById('songMetaContent');
-const songMetaContentWrap = document.getElementById('songMetaContentWrap');
-
-  let touchStartX = 0, touchStartY = 0;
-  const SWIPE_MIN_X = 110;
-  const SWIPE_RATIO = 1.4;
-
-  const DEFAULT_USERS = ["Nemo","Estelle","Gillou","Bubu","Christian","Christophe"];
-  let currentUser = "";
-  let users = [];
-  let toastTimer = null;
-  let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin';
-  let themeMode = localStorage.getItem('bandapp_theme') || 'dark';
-
-  function showToast(msg) {
-    if (toastTimer) clearTimeout(toastTimer);
-    toastEl.textContent = msg;
-    toastEl.style.display = 'block';
-    toastTimer = setTimeout(() => { toastEl.style.display = 'none'; }, 1700);
-  }
-
-function escapeHtml(s) {
-  return String(s || '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-  function applyTheme() {
-    const root = document.documentElement;
-
-    if (themeMode === 'light') {
-      root.style.setProperty('--bg', '#f7f7f7');
-      root.style.setProperty('--text', '#111');
-      root.style.setProperty('--nav-bg', '#ffffff');
-      root.style.setProperty('--nav-text', '#111');
-      root.style.setProperty('--panel-bg', '#ffffff');
-      root.style.setProperty('--panel-border', '#d6d6d6');
-      root.style.setProperty('--chorus-bg', '#eaf2ff');
-      root.style.setProperty('--chorus-border', '#3b82f6');
-      root.style.setProperty('--chorus-text', '#111');
-      root.style.setProperty('--comment-bg', '#ffe08a');
-      root.style.setProperty('--comment-text', '#111');
-      settingsBtnFixed.style.background = 'rgba(255,255,255,0.7)';
-    } else {
-      root.style.setProperty('--bg', '#000');
-      root.style.setProperty('--text', '#eee');
-      root.style.setProperty('--nav-bg', '#1a1a1a');
-      root.style.setProperty('--nav-text', '#eee');
-      root.style.setProperty('--panel-bg', '#111');
-      root.style.setProperty('--panel-border', '#333');
-      root.style.setProperty('--chorus-bg', '#111827');
-      root.style.setProperty('--chorus-border', '#60a5fa');
-      root.style.setProperty('--chorus-text', '#eee');
-      root.style.setProperty('--comment-bg', '#ffd54f');
-      root.style.setProperty('--comment-text', '#000');
-      settingsBtnFixed.style.background = 'rgba(0,0,0,0.25)';
-    }
-  }
-  
-  function updateSettingsButtonLabel() {
-  const btn = document.getElementById('settingsBtnFixed');
-  if (!btn) return;
-
-  const label = currentUser || "Utilisateur";
-  btn.textContent = `⚙️ ${label}`;
-}
-
-  function toggleTheme() {
-    themeMode = (themeMode === 'dark') ? 'light' : 'dark';
-    localStorage.setItem('bandapp_theme', themeMode);
-    applyTheme();
-    syncSettingsUI();
-  }
-
-function openSettings() {
-  syncSettingsUI();
-  renderConnectedUsers(lastConnectedUsers);
-  settingsBackdrop.style.display = 'flex';
-}
-
-  function closeSettings() {
-    settingsBackdrop.style.display = 'none';
-  }
-
-  function openUserFromSettings() {
-    closeSettings();
-    setTimeout(() => openUserPicker(true), 50);
-  }
-
-  function syncSettingsUI() {
-    const lb = document.getElementById('settingsLeaderBtn');
-    if (lb) lb.innerText = isLeader ? "Quitter le mode Leader" : "Devenir leader";
-
-    const cb = document.getElementById('settingsChordBtn');
-    if (cb) cb.innerText = (chordStyle === 'latin') ? "Accords: Do" : "Accords: C";
-
-    const tb = document.getElementById('settingsThemeBtn');
-    if (tb) tb.innerText = (themeMode === 'dark') ? "Thème: Sombre" : "Thème: Clair";
-  }
-  
-  function joinMetaArray(value) {
-  if (Array.isArray(value)) return value.join(', ');
-  return String(value || '');
-}
-
-function closeSongMetaModal() {
-  if (songMetaBackdrop) songMetaBackdrop.style.display = 'none';
-}
-
-function openCreateSongModal() {
-  songMetaMode = 'create';
-
-  songMetaTitle.textContent = "Nouveau morceau";
-  songMetaTitleInput.value = "";
-  songMetaArtistInput.value = "";
-  songMetaFileName.value = "";
-  songMetaFileName.disabled = true;
-
-  if (songMetaArtistWrap) songMetaArtistWrap.style.display = 'grid';
-  if (songMetaFileNameWrap) songMetaFileNameWrap.style.display = 'none';
-
-  prepareSongMetaFormSelections({
-    category: 'Répertoire',
-    style: [],
-    ambiance: '',
-    audience: [],
-    chanteur: []
-  });
-
-  songMetaBackdrop.style.display = 'flex';
-}
-
-function getMetaValues(fieldName) {
-  const values = new Set();
-
-  Object.values(songMeta || {}).forEach(entry => {
-    const v = entry?.[fieldName];
-
-    if (Array.isArray(v)) {
-      v.forEach(x => {
-        const clean = String(x || '').trim();
-        if (clean) values.add(clean);
-      });
-    } else {
-      const clean = String(v || '').trim();
-      if (clean) values.add(clean);
-    }
-  });
-
-  return [...values].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
-}
-
-function fillSelectOptions(selectEl, values, multiple = false) {
-  if (!selectEl) return;
-
-  selectEl.innerHTML = '';
-
-  if (!multiple) {
-    const opt = document.createElement('option');
-    opt.value = '';
-    opt.textContent = '—';
-    selectEl.appendChild(opt);
-  }
-
-  values.forEach(v => {
-    const opt = document.createElement('option');
-    opt.value = v;
-    opt.textContent = v;
-    selectEl.appendChild(opt);
-  });
-}
-
-function setSelectedValues(selectEl, values) {
-  const arr = Array.isArray(values) ? values.map(v => String(v)) : [String(values || '')];
-
-  [...selectEl.options].forEach(opt => {
-    opt.selected = arr.includes(opt.value);
-  });
-}
-
-function getSelectedValues(selectEl) {
-  return [...selectEl.selectedOptions].map(opt => opt.value).filter(Boolean);
-}
-
-function prepareSongMetaFormSelections(data = {}) {
-  const defaultCategories = ['Répertoire', 'En travail', '1 minute', 'Archives'];
-  const categories = [...new Set([...defaultCategories, ...getMetaValues('category')])];
-  const styles = getMetaValues('style');
-  const ambiances = getMetaValues('ambiance');
-  const audiences = getMetaValues('audience');
-  const chanteurs = getMetaValues('chanteur');
-
-  fillSelectOptions(songMetaCategory, categories, false);
-  fillSelectOptions(songMetaStyle, styles, true);
-  fillSelectOptions(songMetaAmbiance, ambiances, false);
-  fillSelectOptions(songMetaAudience, audiences, true);
-  fillSelectOptions(songMetaChanteur, chanteurs, true);
-
-  songMetaCategory.value = data?.category || 'Répertoire';
-  songMetaAmbiance.value = data?.ambiance || '';
-
-  setSelectedValues(songMetaStyle, Array.isArray(data?.style) ? data.style : []);
-  setSelectedValues(songMetaAudience, Array.isArray(data?.audience) ? data.audience : []);
-  setSelectedValues(songMetaChanteur, Array.isArray(data?.chanteur) ? data.chanteur : []);
-}
-
-async function openEditSongMetaModal() {
-  if (!currentFileName) return;
-
-  songMetaMode = 'edit';
-  songMetaTitle.textContent = "Modifier les infos du morceau";
-
-  try {
-    const res = await fetch('/song-meta-entry?fileName=' + encodeURIComponent(currentFileName), { cache: 'no-store' });
-    const data = await res.json();
-
-    songMetaFileName.value = currentFileName;
-    songMetaTitleInput.value = data?.title || currentFileName.replace(/\.(pro|cho)$/i, '');
-    songMetaArtistInput.value = "";
-
-    songMetaFileName.disabled = true;
-
-    if (songMetaArtistWrap) songMetaArtistWrap.style.display = 'none';
-    if (songMetaFileNameWrap) songMetaFileNameWrap.style.display = 'grid';
-
-    prepareSongMetaFormSelections({
-      category: data?.category || 'Répertoire',
-      style: Array.isArray(data?.style) ? data.style : [],
-      ambiance: data?.ambiance || '',
-      audience: Array.isArray(data?.audience) ? data.audience : [],
-      chanteur: Array.isArray(data?.chanteur) ? data.chanteur : []
-    });
-
-    songMetaBackdrop.style.display = 'flex';
-  } catch (err) {
-    console.error(err);
-    alert("Erreur de chargement des infos morceau");
-  }
-}
-
-async function saveSongMetaModal() {
-  const pin = prompt("PIN requis") || "";
-  const cleanPin = String(pin).trim();
-  if (!cleanPin) return;
-
-  try {
-    let res;
-
-    if (songMetaMode === 'create') {
-      const title = String(songMetaTitleInput.value || "").trim();
-      const artist = String(songMetaArtistInput.value || "").trim();
-
-      if (!title) {
-        alert("Titre du morceau requis");
-        return;
-      }
-
-      if (!artist) {
-        alert("Artiste requis");
-        return;
-      }
-
-      const fileName = `${title} - ${artist}.pro`;
-
-      const payload = {
-        fileName,
-        pin: cleanPin,
-        title,
-        category: songMetaCategory.value,
-        style: getSelectedValues(songMetaStyle),
-        ambiance: songMetaAmbiance.value,
-        audience: getSelectedValues(songMetaAudience),
-        chanteur: getSelectedValues(songMetaChanteur),
-        content: `{t:${title}}\n{st:${artist}}\n\n`
-      };
-
-      res = await fetch('/create-song', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    } else {
-      const fileName = String(songMetaFileName.value || "").trim();
-      if (!fileName) {
-        alert("Nom de fichier requis");
-        return;
-      }
-
-      const payload = {
-        fileName,
-        pin: cleanPin,
-        title: songMetaTitleInput.value,
-        category: songMetaCategory.value,
-        style: getSelectedValues(songMetaStyle),
-        ambiance: songMetaAmbiance.value,
-        audience: getSelectedValues(songMetaAudience),
-        chanteur: getSelectedValues(songMetaChanteur)
-      };
-
-      res = await fetch('/save-song-meta', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    }
-
-    if (res.ok) {
-      closeSongMetaModal();
-      await fetchSongMeta();
-      await fetchSongs();
-      filterSongList(songSearchInput?.value || "");
-
-      if (songMetaMode === 'create') {
-        showToast("Morceau créé ✅");
-      } else {
-        showToast("Infos morceau enregistrées ✅");
-      }
-    } else if (res.status === 403) {
-      alert("PIN invalide");
-    } else if (res.status === 409) {
-      alert("Le morceau existe déjà");
-    } else {
-      alert("Erreur d'enregistrement");
-    }
-  } catch (err) {
-    console.error(err);
-    alert("Erreur d'enregistrement");
-  }
-}
-
-function renderConnectedUsers(usersList) {
-  const el = document.getElementById('connectedUsersList');
-  if (!el) return;
-
-  if (!Array.isArray(usersList) || usersList.length === 0) {
-    el.textContent = "Aucun utilisateur connecté";
-    return;
-  }
-
-  el.innerHTML = usersList.map(name => `<div>${escapeHtml(name)}</div>`).join('');
-}
-
-function applyLeaderUI() {
-  document.querySelectorAll('.leader-only').forEach(el => {
-    if (isLeader) {
-      if (el.classList.contains('controls-group')) {
-        el.style.display = 'flex';
-      } else {
-        el.style.display = '';
-      }
-    } else {
-      el.style.display = 'none';
-    }
-  });
-
-  const floating = document.getElementById('leaderFloatingActions');
-  if (floating) {
-    floating.style.display = isLeader ? 'block' : 'none';
-  }
-
-  const badge = document.getElementById('leaderBadge');
-  if (!badge) return;
-
-  if (isLeader) {
-    badge.textContent = "LEADER";
-    badge.classList.remove('off');
-    badge.classList.add('perso');
-  } else {
-    badge.textContent = "FOLLOW";
-    badge.classList.remove('perso');
-    badge.classList.add('off');
-  }
-}
-
-function updateConcertFloatingVisibility() {
-  const concertWrap = document.getElementById('concertFloatingActions');
-  if (!concertWrap) return;
-
-  const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
-  concertWrap.style.display = viewerOpen ? 'block' : 'none';
-}
-
-  function loadUsersList() {
-    const savedList = localStorage.getItem('bandapp_users');
-    if (savedList) {
-      try {
-        const parsed = JSON.parse(savedList);
-        if (Array.isArray(parsed) && parsed.length) return parsed;
-      } catch {}
-    }
-    return [...DEFAULT_USERS];
-  }
-
-  function saveUsersList() {
-    localStorage.setItem('bandapp_users', JSON.stringify(users));
-  }
-
-  function renderUserGrid() {
-    userGrid.innerHTML = "";
-    users.forEach(name => {
-      const div = document.createElement('div');
-      div.className = 'user-choice';
-      div.textContent = name;
-      div.onclick = () => setCurrentUser(name, true);
-      userGrid.appendChild(div);
-    });
-  }
-
-  function setCurrentUser(name, fromPicker) {
-    currentUser = String(name || "").trim();
-    if (!currentUser) return;
-
-    localStorage.setItem('bandapp_currentUser', currentUser);
-
-updateSettingsButtonLabel();
-
-socket.emit('register-user', {
-  userName: currentUser,
-  deviceId
+const express = require('express');
+const app = express();
+const http = require('http').Server(app);
+const io = require('socket.io')(http);
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const SONG_META_FILE = path.join(__dirname, 'public', 'song-meta.json');
+
+const playedTonight = new Set();
+
+app.use(express.json({ limit: '1mb' }));
+
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
 });
 
-    if (currentFileName) {
-      stopAutoScroll();
-      loadSong(currentFileName);
-      loadNotes();
-    }
+app.use(express.static('public', { etag: false, maxAge: 0 }));
 
-    if (fromPicker) {
-      userOverlay.style.display = 'none';
-      showToast(`Bienvenue ${currentUser}`);
-    }
-  }
+const PARTITIONS_DIR = path.join(__dirname, 'public', 'partitions');
+const HISTORY_DIR = path.join(__dirname, 'history');
+const SONG_SETTINGS_DIR = path.join(__dirname, 'song-settings');
+const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
 
-  function openUserPicker(force) {
-    const saved = localStorage.getItem('bandapp_currentUser') || "";
-    if (!force && saved) return;
-    userOverlay.style.display = 'flex';
-    renderUserGrid();
-  }
-
-  function addUser() {
-    const name = prompt("Nom du nouvel utilisateur ?") || "";
-    const clean = String(name).trim();
-    if (!clean) return;
-    if (users.some(u => u.toLowerCase() === clean.toLowerCase())) return;
-
-    users.push(clean);
-    users.sort((a,b)=>a.localeCompare(b, 'fr', { sensitivity:'base' }));
-    saveUsersList();
-    renderUserGrid();
-  }
-
-  function initUsers() {
-    users = loadUsersList();
-    saveUsersList();
-
-    const saved = localStorage.getItem('bandapp_currentUser') || "";
-    if (saved) {
-      setCurrentUser(saved, false);
-    } else {
-      openUserPicker(true);
-    }
-  }
-  
-  socket.on('song-created', async () => {
-  await fetchSongMeta();
-  await fetchSongs();
-  filterSongList(songSearchInput?.value || "");
-});
-
-  socket.on('connect', () => {
-    settingsBtnFixed.style.borderColor = "#4CAF50";
-
-    if (netBadge) {
-      netBadge.textContent = "ONLINE";
-      netBadge.classList.remove('off');
-      netBadge.classList.add('on');
-    }
-
-if (currentUser) {
-  socket.emit('register-user', {
-    userName: currentUser,
-    deviceId
-  });
-}
-  });
-
-  socket.on('disconnect', () => {
-    settingsBtnFixed.style.borderColor = "#f44336";
-
-    if (netBadge) {
-      netBadge.textContent = "OFFLINE";
-      netBadge.classList.remove('on');
-      netBadge.classList.add('off');
-    }
-  });
-  
-  socket.on('song-settings-updated', async ({ fileName, settings }) => {
-  if (normName(fileName) !== normName(currentFileName)) return;
-
-  fontSize = Number.isFinite(Number(settings?.fontSize)) ? Number(settings.fontSize) : 26;
-  transposeValue = Number.isFinite(Number(settings?.transpose)) ? Number(settings.transpose) : 0;
-  speedInput.value = Number.isFinite(Number(settings?.speed)) ? Number(settings.speed) : 50;
-
-  document.getElementById('transposeVal').innerText =
-    (transposeValue > 0 ? '+' : '') + transposeValue;
-
-  renderChordPro();
-
-  if (isLeader && isScrolling) {
-    socket.emit('sync-autoscroll', {
-      active: true,
-      speed: Number(speedInput.value) || 50
-    });
-  }
-});
-
-socket.on('connected-users', (data) => {
-  console.log("connected-users reçu :", data);
-  lastConnectedUsers = Array.isArray(data?.users) ? data.users : [];
-  renderConnectedUsers(lastConnectedUsers);
-});
-
-  socket.on('leader-state', (data) => {
-    const wasLeader = isLeader;
-    isLeader = data?.leaderSocketId === socket.id;
-
-    if (wasLeader && !isLeader) {
-      stopAutoScroll();
-    }
-
-    applyLeaderUI();
-    syncSettingsUI();
-  });
-
-  socket.on('leader-denied', (data) => {
-    showToast(`Leader déjà pris par ${data?.leaderUserName || 'un autre appareil'}`);
-  });
-  
-function populateSongFilters() {
-  if (!styleFilterEl || !ambianceFilterEl || !audienceFilterEl || !singerFilterEl) return;
-
-  const styles = new Set();
-  const ambiances = new Set();
-  const audiences = new Set();
-  const chanteurs = new Set();
-
-  allSongs.forEach(song => {
-    const meta = songMeta[song] || {};
-
-    const styleValues = Array.isArray(meta.style) ? meta.style : [];
-    const audienceValues = Array.isArray(meta.audience) ? meta.audience : [];
-    const singerValues = Array.isArray(meta.chanteur) ? meta.chanteur : [];
-
-    styleValues.forEach(v => {
-      const clean = String(v || "").trim();
-      if (clean) styles.add(clean);
-    });
-
-    const amb = String(meta.ambiance || "").trim();
-    if (amb) ambiances.add(amb);
-
-    audienceValues.forEach(v => {
-      const clean = String(v || "").trim();
-      if (clean) audiences.add(clean);
-    });
-
-    singerValues.forEach(v => {
-      const clean = String(v || "").trim();
-      if (clean) chanteurs.add(clean);
-    });
-  });
-
-  const sortedStyles = [...styles].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
-  const sortedAmbiances = [...ambiances].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
-  const sortedAudiences = [...audiences].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
-  const sortedChanteurs = [...chanteurs].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
-
-  styleFilterEl.innerHTML =
-    `<option value="">Tous les styles</option>` +
-    sortedStyles.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-
-  ambianceFilterEl.innerHTML =
-    `<option value="">Toutes les ambiances</option>` +
-    sortedAmbiances.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-
-  audienceFilterEl.innerHTML =
-    `<option value="">Toutes les audiences</option>` +
-    sortedAudiences.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-
-  singerFilterEl.innerHTML =
-    `<option value="">Tous les chanteurs</option>` +
-    sortedChanteurs.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+fs.mkdirSync(PARTITIONS_DIR, { recursive: true });
+fs.mkdirSync(HISTORY_DIR, { recursive: true });
+fs.mkdirSync(SONG_SETTINGS_DIR, { recursive: true });
+if (!fs.existsSync(SONG_META_FILE)) {
+  fs.writeFileSync(SONG_META_FILE, '{}', 'utf8');
 }
 
-async function fetchSongMeta() {
+let leaderSocketId = null;
+let leaderUserName = null;
+let leaderDeviceId = null;
+
+const connectedUsers = new Map();
+
+function isValidSongName(name) {
+  if (typeof name !== 'string') return false;
+  const lower = name.toLowerCase();
+  if (!(lower.endsWith('.pro') || lower.endsWith('.cho'))) return false;
+  if (name.includes('..') || name.includes('/') || name.includes('\\')) return false;
+  if (name.length > 120) return false;
+  return true;
+}
+
+function pinOk(pin) {
+  return String(pin || '') === LEADER_PIN;
+}
+
+function getSongPath(fileName) {
+  const filePath = path.join(PARTITIONS_DIR, fileName);
+  if (!filePath.startsWith(PARTITIONS_DIR + path.sep)) {
+    throw new Error("Chemin invalide");
+  }
+  return filePath;
+}
+
+function historyFilePath(fileName) {
+  const safe = Buffer.from(fileName, 'utf8').toString('base64url');
+  return path.join(HISTORY_DIR, safe + '.json');
+}
+
+function settingsFilePath(fileName) {
+  const safe = Buffer.from(fileName, 'utf8').toString('base64url');
+  return path.join(SONG_SETTINGS_DIR, safe + '.json');
+}
+
+function readHistory(fileName) {
+  const hp = historyFilePath(fileName);
+  if (!fs.existsSync(hp)) return [];
   try {
-    const res = await fetch('/song-meta.json', { cache: 'no-store' });
-    if (!res.ok) throw new Error('song-meta.json introuvable');
-    songMeta = await res.json();
-  } catch (err) {
-    console.warn('Erreur de chargement des métadonnées', err);
-    songMeta = {};
+    const raw = fs.readFileSync(hp, 'utf8');
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
   }
 }
 
-function isPlayedTonight(fileName) {
-  return playedTonightSet.has(fileName);
+function writeHistory(fileName, entries) {
+  const hp = historyFilePath(fileName);
+  fs.writeFileSync(hp, JSON.stringify(entries, null, 2), 'utf8');
 }
 
-function updatePlayedButton() {
-  if (!playedToggleBtn || !currentFileName) return;
-
-  const played = isPlayedTonight(currentFileName);
-  playedToggleBtn.textContent = played ? "JOUÉ ✅" : "JOUÉ";
-  playedToggleBtn.classList.toggle('active-btn', played);
+function appendHistory(fileName, entry) {
+  const items = readHistory(fileName);
+  items.unshift(entry);
+  writeHistory(fileName, items.slice(0, 50));
 }
 
-function updateConcertModeUI() {
-  document.body.classList.toggle('concert-mode', concertMode);
-
-  if (concertModeBtn) {
-    concertModeBtn.classList.toggle('active-btn', concertMode);
-  }
-
-  updateConcertFloatingVisibility();
+function createHistoryEntry({ fileName, previousContent, userName }) {
+  return {
+    id: crypto.randomUUID(),
+    fileName,
+    savedAt: new Date().toISOString(),
+    savedBy: String(userName || 'Inconnu'),
+    previousContent: String(previousContent ?? '')
+  };
 }
 
-function toggleConcertMode() {
-  concertMode = !concertMode;
-  updateConcertModeUI();
-}
-
-async function fetchSongs() {
-  const res = await fetch('/list-songs');
-  allSongs = (await res.json()).sort();
-
-  renderSongList();
-  populateSongFilters();
-  updateSongCount();
-}
-
-function renderSongList() {
-  const listEl = document.getElementById('songList');
-
-  listEl.innerHTML = allSongs.map((s, idx) => {
-    const meta = songMeta[s] || {};
-    const played = isPlayedTonight(s);
-
-    const styleValues = Array.isArray(meta.style) ? meta.style : [];
-    const audienceValues = Array.isArray(meta.audience) ? meta.audience : [];
-    const singerValues = Array.isArray(meta.chanteur) ? meta.chanteur : [];
-
-    return `
-      <div class="song-item ${played ? 'played' : ''}"
-           data-name="${s.toLowerCase()}"
-           data-category="${String(meta.category || 'Répertoire').toLowerCase()}"
-           data-style="${styleValues.map(v => String(v).toLowerCase()).join('|')}"
-           data-ambiance="${String(meta.ambiance || '').toLowerCase()}"
-           data-audience="${audienceValues.map(v => String(v).toLowerCase()).join('|')}"
-           data-singer="${singerValues.map(v => String(v).toLowerCase()).join('|')}"
-           data-played="${played ? 'played' : 'unplayed'}"
-           onclick="openSong(${idx})">
-        <div class="song-left">
-          <span class="song-badge ${played ? 'played' : ''}">
-            ${played ? 'Joué' : 'À jouer'}
-          </span>
-          <b class="song-title">${escapeHtml(meta.title || s.replace('.pro','').replace('.cho',''))}</b>
-        </div>
-        <span>❯</span>
-      </div>
-    `;
-  }).join('');
-}
-
-function getFilteredSongIndexes() {
-  const query = String(songSearchInput?.value || "").toLowerCase().trim();
-  const selectedCategory = String(categoryFilterEl?.value || "Répertoire").toLowerCase().trim();
-  const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
-  const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
-  const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
-  const selectedSinger = String(singerFilterEl?.value || "").toLowerCase().trim();
-  const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
-
-  const indexes = [];
-
-  allSongs.forEach((song, idx) => {
-    const meta = songMeta[song] || {};
-
-    const name = String(song || "").toLowerCase();
-    const category = String(meta.category || "Répertoire").toLowerCase();
-    const ambiance = String(meta.ambiance || "").toLowerCase();
-
-    const styleValues = Array.isArray(meta.style)
-      ? meta.style.map(v => String(v || "").toLowerCase().trim())
-      : [];
-
-    const audienceValues = Array.isArray(meta.audience)
-      ? meta.audience.map(v => String(v || "").toLowerCase().trim())
-      : [];
-
-    const singerValues = Array.isArray(meta.chanteur)
-      ? meta.chanteur.map(v => String(v || "").toLowerCase().trim())
-      : [];
-
-    const played = isPlayedTonight(song) ? "played" : "unplayed";
-
-    const matchQuery = !query || name.includes(query);
-    const matchCategory = !selectedCategory || category === selectedCategory;
-    const matchStyle = !selectedStyle || styleValues.includes(selectedStyle);
-    const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
-    const matchAudience = !selectedAudience || audienceValues.includes(selectedAudience);
-    const matchSinger = !selectedSinger || singerValues.includes(selectedSinger);
-    const matchPlayed = !selectedPlayed || played === selectedPlayed;
-
-    if (matchQuery && matchCategory && matchStyle && matchAmbiance && matchAudience && matchSinger && matchPlayed) {
-      indexes.push(idx);
-    }
-  });
-
-  return indexes;
-}
-
-function openRandomFilteredSong() {
-autoMarkCurrentSongAsPlayed();
-  const filteredIndexes = getFilteredSongIndexes();
-
-  if (!filteredIndexes.length) {
-    showToast("Aucun morceau dans cette sélection");
-    return;
-  }
-
-  const unplayedIndexes = filteredIndexes.filter(idx => !isPlayedTonight(allSongs[idx]));
-  const pool = unplayedIndexes.length ? unplayedIndexes : filteredIndexes;
-
-  let finalPool = pool;
-
-  if (currentIndex >= 0 && pool.length > 1) {
-    finalPool = pool.filter(idx => idx !== currentIndex);
-    if (!finalPool.length) finalPool = pool;
-  }
-
-  const randomIdx = finalPool[Math.floor(Math.random() * finalPool.length)];
-  openSong(randomIdx);
-}
-
-function filterSongList(q) {
-  const query = String(q || "").toLowerCase().trim();
-  const selectedCategory = String(categoryFilterEl?.value || "Répertoire").toLowerCase().trim();
-  const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
-  const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
-  const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
-  const selectedSinger = String(singerFilterEl?.value || "").toLowerCase().trim();
-  const selectedPlayed = String(playedFilterEl?.value || "").toLowerCase().trim();
-
-  const items = document.querySelectorAll('#songList .song-item');
-  let shown = 0;
-
-  items.forEach(item => {
-    const name = item.dataset.name || "";
-    const category = item.dataset.category || "répertoire";
-    const style = item.dataset.style || "";
-    const ambiance = item.dataset.ambiance || "";
-    const audience = item.dataset.audience || "";
-    const singer = item.dataset.singer || "";
-    const played = item.dataset.played || "unplayed";
-
-    const styleValues = style ? style.split('|') : [];
-    const audienceValues = audience ? audience.split('|') : [];
-    const singerValues = singer ? singer.split('|') : [];
-
-    const matchQuery = !query || name.includes(query);
-    const matchCategory = !selectedCategory || category === selectedCategory;
-    const matchStyle = !selectedStyle || styleValues.includes(selectedStyle);
-    const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
-    const matchAudience = !selectedAudience || audienceValues.includes(selectedAudience);
-    const matchSinger = !selectedSinger || singerValues.includes(selectedSinger);
-    const matchPlayed = !selectedPlayed || played === selectedPlayed;
-
-    const ok = matchQuery && matchCategory && matchStyle && matchAmbiance && matchAudience && matchSinger && matchPlayed;
-
-    item.style.display = ok ? "flex" : "none";
-    if (ok) shown++;
-  });
-
-  updateSongCount(shown);
-}
-
-function resetSongFilters() {
-  if (songSearchInput) songSearchInput.value = "";
-  if (categoryFilterEl) categoryFilterEl.value = "Répertoire";
-  if (styleFilterEl) styleFilterEl.value = "";
-  if (ambianceFilterEl) ambianceFilterEl.value = "";
-  if (audienceFilterEl) audienceFilterEl.value = "";
-  if (singerFilterEl) singerFilterEl.value = "";
-  if (playedFilterEl) playedFilterEl.value = "";
-  filterSongList("");
-}
-
-  function updateSongCount(visibleCount) {
-    if (!songCountEl) return;
-    const total = allSongs.length || 0;
-    const visible = (typeof visibleCount === "number") ? visibleCount : total;
-    songCountEl.textContent = `${visible}/${total}`;
-  }
-
-  function toggleLeader() {
-    if (isLeader) {
-      socket.emit('release-leader');
-    } else {
-      socket.emit('request-leader');
-    }
-  }
-  
-  function autoMarkCurrentSongAsPlayed() {
-  if (!isLeader) return;
-  if (!currentFileName) return;
-  if (isPlayedTonight(currentFileName)) return;
-
-  const openedForMs = Date.now() - currentSongOpenedAt;
-  if (openedForMs < 30000) return;
-
-  socket.emit('mark-played', {
-    fileName: currentFileName,
-    played: true
-  });
-}
-
-  function openSong(idx) {
-    if (idx < 0 || idx >= allSongs.length) return;
-
-    stopAutoScroll();
-
-autoMarkCurrentSongAsPlayed();
-    currentIndex = idx;
-    currentFileName = allSongs[idx];
-	currentSongOpenedAt = Date.now();
-	updatePlayedButton();
-
-    notesPanel.style.display = 'none';
-
-    document.getElementById('library').style.display = 'none';
-    document.getElementById('viewer-container').style.display = 'block';
-	updateConcertFloatingVisibility();
-
-    if (isLeader) {
-      socket.emit('sync-autoscroll', {
-        active: false,
-        speed: Number(speedInput.value) || 50
-      });
-
-      socket.emit('change-song', currentFileName);
-    }
-
-    loadSong(currentFileName);
-    setTimeout(loadNotes, 10);
-  }
-  
-  async function saveCurrentSongSettings() {
-  if (!isLeader) return;
-  if (!currentFileName) return;
-
-  const pin = prompt("PIN requis pour enregistrer les réglages du morceau") || "";
-  const cleanPin = String(pin).trim();
-  if (!cleanPin) return;
-
-  try {
-    const res = await fetch('/song-settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fileName: currentFileName,
-        pin: cleanPin,
-        fontSize,
-        speed: Number(speedInput.value) || 50,
-        transpose: transposeValue
-      })
-    });
-
-    if (res.ok) {
-      showToast("Réglages du morceau enregistrés ✅");
-    } else if (res.status === 403) {
-      alert("PIN invalide");
-    } else {
-      alert("Erreur d'enregistrement des réglages");
-    }
-  } catch (err) {
-    console.error(err);
-    alert("Erreur d'enregistrement des réglages");
-  }
-}
-  
-  async function loadSongSettings(fileName) {
-  try {
-    const res = await fetch('/song-settings?fileName=' + encodeURIComponent(fileName), {
-      cache: 'no-store'
-    });
-
-    const data = await res.json();
-
-    currentSongSettings = {
-      fontSize: Number.isFinite(Number(data?.fontSize)) ? Number(data.fontSize) : 26,
-      speed: Number.isFinite(Number(data?.speed)) ? Number(data.speed) : 50,
-      transpose: Number.isFinite(Number(data?.transpose)) ? Number(data.transpose) : 0
-    };
-
-    fontSize = currentSongSettings.fontSize;
-    transposeValue = currentSongSettings.transpose;
-    speedInput.value = currentSongSettings.speed;
-
-    document.getElementById('transposeVal').innerText =
-      (transposeValue > 0 ? '+' : '') + transposeValue;
-  } catch (err) {
-    console.error(err);
-    currentSongSettings = {
+function readSongSettings(fileName) {
+  const fp = settingsFilePath(fileName);
+  if (!fs.existsSync(fp)) {
+    return {
       fontSize: 26,
       speed: 50,
       transpose: 0
     };
-
-    fontSize = 26;
-    transposeValue = 0;
-    speedInput.value = 50;
-    document.getElementById('transposeVal').innerText = "0";
   }
-}
 
-async function loadSong(f) {
   try {
-    isLoadingSong = true;
-
-    if (remoteScrollRaf) {
-      cancelAnimationFrame(remoteScrollRaf);
-      remoteScrollRaf = null;
-    }
-
-    pendingRemoteScrollTop = 0;
-    isRemoteScrolling = false;
-
-const res = await fetch('/partitions/' + encodeURIComponent(f), { cache: 'no-store' });
-currentRaw = await res.text();
-
-await loadSongSettings(f);
-updatePlayedButton();
-
-renderChordPro();
-
-    viewerElement.scrollTop = 0;
-
-    requestAnimationFrame(() => {
-      viewerElement.scrollTop = 0;
-      requestAnimationFrame(() => {
-        viewerElement.scrollTop = 0;
-
-        setTimeout(() => {
-          isLoadingSong = false;
-        }, 150);
-      });
-    });
-  } catch (err) {
-    console.error(err);
-    isLoadingSong = false;
-    showToast("Erreur de chargement");
-  }
-}
-
-  socket.on('load-song', f => {
-    if (!isLeader) {
-      stopAutoScroll();
-      const idx = allSongs.indexOf(f);
-      if (idx !== -1) openSong(idx);
-    }
-  });
-
-  function normName(s) {
-    return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-  }
-
-socket.on('song-updated', ({ fileName }) => {
-  if (normName(fileName) !== normName(currentFileName)) return;
-
-  loadSong(currentFileName);
-});
-
-  function notesKey(fileName) {
-    const u = currentUser || "unknown";
-    return "notes:" + u + ":" + fileName;
-  }
-
-  function loadNotes() {
-    if (!currentFileName) return;
-    const val = localStorage.getItem(notesKey(currentFileName)) || "";
-    notesTextarea.value = val;
-  }
-
-  function saveNotes() {
-    if (!currentFileName) return;
-    localStorage.setItem(notesKey(currentFileName), notesTextarea.value || "");
-  }
-
-  function toggleNotes() {
-    const visible = notesPanel.style.display === "block";
-    notesPanel.style.display = visible ? "none" : "block";
-    if (!visible) loadNotes();
-  }
-
-  notesTextarea.addEventListener('input', saveNotes);
-
-  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
-
-  function getTopLyricAnchorState() {
-    const blocks = viewerElement.querySelectorAll('[data-kind="lyric"][data-anchor]');
-    if (!blocks.length) return null;
-
-    const st = viewerElement.scrollTop;
-    for (const el of blocks) {
-      const top = el.offsetTop;
-      const h = el.offsetHeight || 1;
-      if (top + h > st + 8) {
-        const progress = clamp01((st - top) / h);
-        return { anchor: el.dataset.anchor, progress };
-      }
-    }
-
-    const last = blocks[blocks.length - 1];
-    return { anchor: last.dataset.anchor, progress: 1 };
-  }
-
-  let lastEmitAt = 0;
-  let lastEmitAnchor = "";
-  let lastEmitProg = -1;
-
-  viewerElement.addEventListener('scroll', () => {
-    if (!isLeader || isRemoteScrolling || isScrolling) return;
-
-    const state = getTopLyricAnchorState();
-    if (!state) return;
-
-    const now = Date.now();
-    if (
-      now - lastEmitAt < 120 &&
-      state.anchor === lastEmitAnchor &&
-      Math.abs(state.progress - lastEmitProg) < 0.05
-    ) {
-      return;
-    }
-
-    lastEmitAt = now;
-    lastEmitAnchor = state.anchor;
-    lastEmitProg = state.progress;
-
-    socket.emit('scroll-sync', state);
-  });
-
-socket.on('apply-scroll', data => {
-  if (isLeader) return;
-  if (isScrolling) return;
-  if (isLoadingSong) return;
-
-  const anchor = data?.anchor;
-  const progress = clamp01(Number(data?.progress) || 0);
-
-  const el = anchor
-    ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`)
-    : null;
-
-  let targetTop;
-  if (el) {
-    const top = el.offsetTop;
-    const h = el.offsetHeight || 1;
-    targetTop = top + progress * h;
-  } else {
-    const max = viewerElement.scrollHeight - viewerElement.clientHeight;
-    targetTop = progress * (max > 0 ? max : 0);
-  }
-
-  if (Math.abs(viewerElement.scrollTop - targetTop) < 8) return;
-
-  pendingRemoteScrollTop = targetTop;
-
-  if (remoteScrollRaf) cancelAnimationFrame(remoteScrollRaf);
-  remoteScrollRaf = requestAnimationFrame(() => {
-    isRemoteScrolling = true;
-    viewerElement.scrollTop = pendingRemoteScrollTop;
-    setTimeout(() => { isRemoteScrolling = false; }, 120);
-  });
-});
-
-  function isEditorOpen() {
-    return document.getElementById('editor-container').style.display === 'flex';
-  }
-
-  function isViewerOpen() {
-    return document.getElementById('viewer-container').style.display === 'block';
-  }
-
-  function shouldBlockFollowerManualScroll(target) {
-    if (isLeader) return false;
-    if (!isViewerOpen()) return false;
-    if (isEditorOpen()) return false;
-    if (target && target.id === 'notesTextarea') return false;
-    return true;
-  }
-
-  viewerElement.addEventListener('wheel', (e) => {
-    if (shouldBlockFollowerManualScroll(e.target)) e.preventDefault();
-  }, { passive:false });
-
-  viewerElement.addEventListener('touchmove', (e) => {
-    if (shouldBlockFollowerManualScroll(e.target)) e.preventDefault();
-  }, { passive:false });
-
-  window.addEventListener('keydown', (e) => {
-    if (!shouldBlockFollowerManualScroll(document.activeElement)) return;
-
-    const blockedKeys = ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "];
-    if (blockedKeys.includes(e.key)) e.preventDefault();
-  }, { passive:false });
-
-  viewerElement.addEventListener('touchstart', (e) => {
-    if (!isViewerOpen() || isEditorOpen()) return;
-    if (e.target && e.target.id === 'notesTextarea') return;
-
-    const t = e.changedTouches[0];
-    touchStartX = t.screenX;
-    touchStartY = t.screenY;
-  }, { passive: true });
-
-  viewerElement.addEventListener('touchend', (e) => {
-    if (!isViewerOpen() || isEditorOpen()) return;
-    if (e.target && e.target.id === 'notesTextarea') return;
-
-    const t = e.changedTouches[0];
-    const dx = t.screenX - touchStartX;
-    const dy = t.screenY - touchStartY;
-
-    if (Math.abs(dx) < SWIPE_MIN_X) return;
-    if (Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return;
-
-const filteredIndexes = getFilteredSongIndexes();
-const pos = filteredIndexes.indexOf(currentIndex);
-
-autoMarkCurrentSongAsPlayed();
-
-if (dx > 0 && pos > 0) {
-  openSong(filteredIndexes[pos - 1]);
-}
-else if (dx < 0 && pos !== -1 && pos < filteredIndexes.length - 1) {
-  openSong(filteredIndexes[pos + 1]);
-}
-  }, { passive: true });
-
-  function sliderToPxPerSecond(value) {
-    const v = Number(value) || 50;
-    const delayMs = Math.max(10, 105 - v);
-    return 1000 / delayMs;
-  }
-
-  function autoScrollLoop(t) {
-    if (!isScrolling) return;
-
-    if (!lastRafTime) lastRafTime = t;
-    const dt = t - lastRafTime;
-    lastRafTime = t;
-
-    const pxPerSec = sliderToPxPerSecond(speedInput.value);
-    const deltaPx = (dt / 1000) * pxPerSec;
-
-    scrollCarry += deltaPx;
-    const step = Math.floor(scrollCarry);
-
-    if (step >= 1) {
-      viewerElement.scrollTop += step;
-      scrollCarry -= step;
-    }
-
-    rafId = requestAnimationFrame(autoScrollLoop);
-  }
-  
-  function updateLeaderPlayButton() {
-  const btn = document.getElementById('leaderPlayBtn');
-  if (!btn) return;
-
-  btn.textContent = isScrolling ? "⏸" : "▶";
-  btn.classList.toggle('active-btn', isScrolling);
-}
-
-function startAutoScroll() {
-  if (isScrolling) return;
-  isScrolling = true;
-
-  const playBtn = document.getElementById('playBtn');
-  if (playBtn) {
-    playBtn.innerText = "⏸";
-    playBtn.classList.add('active-btn');
-  }
-
-  updateLeaderPlayButton();
-
-  lastRafTime = 0;
-  scrollCarry = 0;
-  rafId = requestAnimationFrame(autoScrollLoop);
-}
-
-function stopAutoScroll() {
-  if (!isScrolling) return;
-  isScrolling = false;
-
-  const playBtn = document.getElementById('playBtn');
-  if (playBtn) {
-    playBtn.innerText = "▶";
-    playBtn.classList.remove('active-btn');
-  }
-
-  updateLeaderPlayButton();
-
-  if (rafId) cancelAnimationFrame(rafId);
-  rafId = null;
-  lastRafTime = 0;
-  scrollCarry = 0;
-}
-
-  function toggleAutoScroll(emitSync) {
-    if (isScrolling) {
-      stopAutoScroll();
-    } else {
-      if (isLeader && emitSync) {
-        const state = getTopLyricAnchorState();
-        if (state) socket.emit('scroll-sync', state);
-      }
-      startAutoScroll();
-    }
-
-    if (isLeader && emitSync) {
-      socket.emit('sync-autoscroll', {
-        active: isScrolling,
-        speed: Number(speedInput.value) || 50
-      });
-    }
-  }
-
-  function handleSpeedChange() {
-    if (!isLeader) return;
-
-    socket.emit('leader-speed', Number(speedInput.value) || 50);
-
-    if (isScrolling) {
-      socket.emit('sync-autoscroll', {
-        active: true,
-        speed: Number(speedInput.value) || 50
-      });
-    }
-  }
-
-  socket.on('apply-autoscroll', d => {
-    if (!isLeader) {
-      speedInput.value = d.speed;
-      const wantActive = !!d.active;
-      if (wantActive && !isScrolling) startAutoScroll();
-      if (!wantActive && isScrolling) stopAutoScroll();
-	  updateLeaderPlayButton();
-    }
-  });
-
-  socket.on('apply-fontsize', value => {
-    if (isLeader) return;
-
-    const v = Number(value);
-    if (!isFinite(v)) return;
-
-    fontSize = v;
-    renderChordPro();
-    renderGrids();
-  });
-
-  socket.on('apply-transpose', value => {
-    if (isLeader) return;
-
-    const v = Number(value);
-    if (!isFinite(v)) return;
-
-    transposeValue = v;
-    document.getElementById('transposeVal').innerText =
-      (transposeValue > 0 ? '+' : '') + transposeValue;
-
-    renderChordPro();
-    renderGrids();
-  });
-
-  socket.on('apply-speed', value => {
-    if (isLeader) return;
-
-    const v = Number(value);
-    if (!isFinite(v)) return;
-
-    speedInput.value = v;
-  });
-
-  function updateFontSize(delta) {
-    fontSize += delta;
-    renderChordPro();
-    renderGrids();
-
-    if (isLeader) {
-      socket.emit('leader-fontsize', fontSize);
-    }
-  }
-
-  function updateTranspose(dir) {
-    transposeValue += dir;
-    document.getElementById('transposeVal').innerText = (transposeValue > 0 ? '+' : '') + transposeValue;
-    renderChordPro();
-    renderGrids();
-
-    if (isLeader) {
-      socket.emit('leader-transpose', transposeValue);
-    }
-  }
-
-  function toggleChordStyle() {
-    chordStyle = (chordStyle === 'latin') ? 'american' : 'latin';
-    localStorage.setItem('bandapp_chordStyle', chordStyle);
-    syncSettingsUI();
-    renderChordPro();
-    renderGrids();
-  }
-
-  const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-  const scaleLat = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
-
-  function normalizeNote(note) {
-    return note
-      .replace('Bb','A#')
-      .replace('Db','C#')
-      .replace('Eb','D#')
-      .replace('Gb','F#')
-      .replace('Ab','G#');
-  }
-
-  function transChord(chord, steps) {
-    return chord.replace(/([A-G][#b]?)/g, (match) => {
-      const n = normalizeNote(match);
-      const idx = scale.indexOf(n);
-      if (idx === -1) return match;
-      let newIdx = (idx + steps) % 12;
-      if (newIdx < 0) newIdx += 12;
-      return (chordStyle === 'latin' ? scaleLat[newIdx] : scale[newIdx]);
-    });
-  }
-
-  function parseChordProLine(line) {
-    let chordLine = '';
-    let lyricLine = '';
-
-    let i = 0;
-    while (i < line.length) {
-      const ch = line[i];
-
-      if (ch === '[') {
-        const end = line.indexOf(']', i);
-        if (end !== -1) {
-          const chordRaw = line.slice(i + 1, end);
-          const chord = transChord(chordRaw, transposeValue);
-
-          const pos = lyricLine.length;
-          if (chordLine.length < pos) chordLine += ' '.repeat(pos - chordLine.length);
-          chordLine = chordLine.slice(0, pos) + chord + chordLine.slice(pos + chord.length);
-          i = end + 1;
-          continue;
-        }
-      }
-
-      lyricLine += ch;
-      chordLine += (ch === '\t') ? '\t' : ' ';
-      i++;
-    }
-
-    if (chordLine.length < lyricLine.length) chordLine += ' '.repeat(lyricLine.length - chordLine.length);
-    return { chordLine, lyricLine };
-  }
-
-  function clearSongContent() {
-    songContentEl.replaceChildren();
-  }
-
-  function parseZoomIpadDirective(line){
-    const m = String(line || "").trim().match(/^\{zoom-ipad\s*:\s*([0-9]*\.?[0-9]+)\s*\}$/i);
-    if (!m) return null;
-    const v = Number(m[1]);
-    if (!isFinite(v) || v <= 0) return null;
-    return v;
-  }
-
-  function addCenteredTitle(text, level) {
-    const el = document.createElement(level === 1 ? 'h1' : 'h2');
-    el.style.textAlign = 'center';
-    el.style.fontSize = ((level === 1 ? 34 : 20) * currentSongZoom) + 'px';
-    if (level === 2) el.style.color = (themeMode === 'light' ? '#555' : '#888');
-    el.textContent = text;
-    songContentEl.appendChild(el);
-  }
-
-  function addCommentLine(text, targetEl) {
-    const wrap = document.createElement('div');
-    wrap.className = 'commentwrap';
-
-    const span = document.createElement('span');
-    span.className = 'commentline';
-    span.textContent = text;
-
-    wrap.appendChild(span);
-    targetEl.appendChild(wrap);
-  }
-
-  function addChordBlock(chordLine, lyricLine, targetEl, anchorId) {
-    const block = document.createElement('div');
-    block.className = 'block';
-    block.style.fontSize = (fontSize * currentSongZoom) + 'px';
-    block.dataset.kind = 'lyric';
-    if (anchorId) block.dataset.anchor = anchorId;
-
-    const preChord = document.createElement('pre');
-    preChord.className = 'chordline';
-    preChord.textContent = chordLine;
-
-    const preLyric = document.createElement('pre');
-    preLyric.className = 'lyricline';
-    preLyric.textContent = lyricLine;
-
-    if (chordLine.trim().length > 0) block.appendChild(preChord);
-    block.appendChild(preLyric);
-    targetEl.appendChild(block);
-  }
-
-  function normAnchorText(s){
-    return String(s || "").toLowerCase().replace(/\s+/g, ' ').trim();
-  }
-
-  function hashDJB2(str){
-    let h = 5381;
-    for (let i=0; i<str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i);
-    return (h >>> 0).toString(16);
-  }
-
-  function parsePUStart(line){
-    const m = line.match(/^\{pu\s*:\s*([^}]+)\}$/i);
-    if (!m) return null;
-    return { user: m[1].trim() };
-  }
-
-  function renderPUBlock(targetEl, showContent, label, text){
-    const wrap = document.createElement('div');
-    wrap.className = 'pu-block';
-
-    const linesCount = (String(text || "").split('\n').length);
-
-    if (showContent) {
-      const lab = document.createElement('div');
-      lab.className = 'pu-label';
-      lab.textContent = label;
-      wrap.appendChild(lab);
-    } else if (linesCount > 10) {
-      const lab = document.createElement('div');
-      lab.className = 'pu-label';
-      lab.textContent = `SOLO ${label}`;
-      wrap.appendChild(lab);
-    }
-
-    const pre = document.createElement('pre');
-    pre.className = 'pu-pre';
-    pre.textContent = showContent
-      ? (text || "")
-      : Array.from({ length: linesCount }, () => " ").join("\n");
-
-    wrap.appendChild(pre);
-    targetEl.appendChild(wrap);
-  }
-
-  function renderChordPro() {
-    clearSongContent();
-    renderChordPro._occ = {};
-
-    const lines = currentRaw.split('\n');
-
-    let zoomSong = 1;
-    for (const line of lines) {
-      const z = parseZoomIpadDirective(line);
-      if (z !== null) { zoomSong = z; break; }
-    }
-
-    currentSongZoom = zoomSong;
-    songContentEl.style.setProperty('--song-zoom', String(currentSongZoom));
-
-    const overlayLayer = document.createElement('div');
-    overlayLayer.id = 'overlayLayer';
-    songContentEl.appendChild(overlayLayer);
-
-    let inChorus = false;
-    let chorusContainer = null;
-    let inPU = false;
-    let puUser = "";
-    let puBuffer = [];
-
-    for (const lineRaw of lines) {
-      const line = String(lineRaw || "");
-      if (parseZoomIpadDirective(line) !== null) continue;
-
-      const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
-
-      if (!inPU) {
-        const start = parsePUStart(line.trim());
-        if (start) {
-          inPU = true;
-          puUser = start.user;
-          puBuffer = [];
-          continue;
-        }
-      } else {
-        if (/^\{\/pu\s*\}$/i.test(line.trim())) {
-          const show = (currentUser || "").toLowerCase() === puUser.toLowerCase();
-          const txt = puBuffer.join("\n");
-          renderPUBlock(target, show, puUser, txt);
-          inPU = false;
-          puUser = "";
-          puBuffer = [];
-          continue;
-        }
-
-        puBuffer.push(line);
-        continue;
-      }
-
-      const title = line.match(/\{(?:t|title)\s*:\s*(.*?)\}/i);
-      if (title) { addCenteredTitle(title[1], 1); continue; }
-
-      const subtitle = line.match(/\{(?:st|subtitle)\s*:\s*(.*?)\}/i);
-      if (subtitle) { addCenteredTitle(subtitle[1], 2); continue; }
-
-      if (/\{soc\s*:\s*\}/i.test(line) || /\{soc\s*\}/i.test(line)) {
-        inChorus = true;
-        chorusContainer = document.createElement('div');
-        chorusContainer.className = 'chorus-block';
-        songContentEl.appendChild(chorusContainer);
-        continue;
-      }
-
-      if (/\{eoc\s*:\s*\}/i.test(line) || /\{eoc\s*\}/i.test(line)) {
-        inChorus = false;
-        chorusContainer = null;
-        continue;
-      }
-
-      const comment = line.match(/\{c\s*:\s*(.*?)\}/i);
-      if (comment) {
-        addCommentLine(comment[1], target);
-        continue;
-      }
-
-      const { chordLine, lyricLine } = parseChordProLine(line);
-      const key = normAnchorText(lyricLine);
-      renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
-      const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
-      addChordBlock(chordLine, lyricLine, target, anchorId);
-    }
-  }
-
-  function openEditor() {
-    stopAutoScroll();
-    startEditor();
-  }
-
-async function startEditor() {
-  const ta = document.getElementById('editor-textarea');
-  const res = await fetch('/partitions/' + encodeURIComponent(currentFileName), { cache: 'no-store' });
-  ta.value = await res.text();
-
-  document.getElementById('editor-container').style.display = 'flex';
-
-  if (editorLeaderWrap) editorLeaderWrap.style.display = 'flex';
-
-  setTimeout(() => {
-    renderChordBankFromEditor();
-    ta.oninput = renderChordBankFromEditor;
-  }, 0);
-}
-
-function closeEditor() {
-  const ta = document.getElementById('editor-textarea');
-  if (ta) ta.oninput = null;
-  document.getElementById('editor-container').style.display = 'none';
-}
-
-async function saveEditor() {
-  const newContent = document.getElementById('editor-textarea').value;
-  if (!currentFileName) return;
-
-  const pin = prompt("PIN requis pour enregistrer les modifications") || "";
-  const cleanPin = String(pin).trim();
-  if (!cleanPin) return;
-
-  const res = await fetch('/save-song', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      fileName: currentFileName,
-      content: newContent,
-      pin: cleanPin,
-      userName: currentUser
-    })
-  });
-
-  if (res.ok) {
-currentRaw = newContent;
-renderChordPro();
-closeEditor();
-
-    if (isLeader) socket.emit('change-song', currentFileName);
-
-    showToast("Modification enregistrée ✅");
-  } else if (res.status === 403) {
-    alert("PIN invalide");
-  } else {
-    alert("Erreur d'enregistrement");
-  }
-}
-
-  function closeViewer() {
-  currentSongOpenedAt = Date.now();
-    stopAutoScroll();
-    notesPanel.style.display = 'none';
-    document.getElementById('library').style.display = 'block';
-    document.getElementById('viewer-container').style.display = 'none';
-	updateConcertFloatingVisibility();
-    if (songSearchInput) songSearchInput.focus();
-  }
-
-  const BACKUP_PREFIXES = ['bandapp_', 'notes:', 'overlay:', 'grids:'];
-
-  function isBackupKey(k) {
-    return BACKUP_PREFIXES.some(p => k.startsWith(p));
-  }
-
-  function exportBackup() {
-    try {
-      const data = {};
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (!key) continue;
-        if (!isBackupKey(key)) continue;
-        data[key] = localStorage.getItem(key);
-      }
-
-      const payload = {
-        app: "bandapp",
-        schemaVersion: 1,
-        exportedAt: new Date().toISOString(),
-        data
-      };
-
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-
-      const d = new Date();
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const filename = `bandapp-backup-${y}-${m}-${day}.json`;
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      URL.revokeObjectURL(url);
-      showToast("Sauvegarde exportée ✅");
-    } catch (e) {
-      console.error(e);
-      alert("Erreur export sauvegarde");
-    }
-  }
-
-  function triggerImport() {
-    closeSettings();
-    const input = document.getElementById('importFile');
-    if (!input) return;
-    input.value = "";
-    setTimeout(() => input.click(), 80);
-  }
-
-  function handleImportFile(event) {
-    const file = event?.target?.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const txt = String(reader.result || "");
-        const json = JSON.parse(txt);
-
-        if (!json || json.app !== "bandapp" || typeof json.data !== "object") {
-          alert("Fichier de sauvegarde invalide.");
-          return;
-        }
-
-        const keys = Object.keys(json.data);
-        for (const k of keys) {
-          localStorage.setItem(k, json.data[k]);
-        }
-
-        showToast("Sauvegarde importée ✅");
-        setTimeout(() => location.reload(), 600);
-      } catch (e) {
-        console.error(e);
-        alert("Erreur : impossible d'importer la sauvegarde.");
-      }
+    const raw = fs.readFileSync(fp, 'utf8');
+    const data = JSON.parse(raw);
+
+    return {
+      fontSize: Number.isFinite(Number(data.fontSize)) ? Number(data.fontSize) : 26,
+      speed: Number.isFinite(Number(data.speed)) ? Number(data.speed) : 50,
+      transpose: Number.isFinite(Number(data.transpose)) ? Number(data.transpose) : 0
     };
-    reader.readAsText(file);
+  } catch {
+    return {
+      fontSize: 26,
+      speed: 50,
+      transpose: 0
+    };
   }
-
-function insertAtCursor(text){
-  const ta = document.getElementById('editor-textarea');
-  if (!ta) return;
-
-  const start = ta.selectionStart || 0;
-  const end = ta.selectionEnd || 0;
-
-  ta.value = ta.value.substring(0, start) + text + ta.value.substring(end);
-  ta.selectionStart = ta.selectionEnd = start + text.length;
-  ta.focus();
-
-  renderChordBankFromEditor();
 }
 
-  function insertTemplatePU(){
-    const u = currentUser || "Nom";
-    insertAtCursor(`{pu:${u}}\n\n{/pu}\n`);
-  }
+function writeSongSettings(fileName, settings) {
+  const fp = settingsFilePath(fileName);
 
-  function insertTemplateComment(){
-    insertAtCursor(`{c: }\n`);
-  }
+  const clean = {
+    fontSize: Number.isFinite(Number(settings.fontSize)) ? Number(settings.fontSize) : 26,
+    speed: Number.isFinite(Number(settings.speed)) ? Number(settings.speed) : 50,
+    transpose: Number.isFinite(Number(settings.transpose)) ? Number(settings.transpose) : 0
+  };
 
-  function extractChordsFromText(text){
-    const set = new Set();
-    const re = /\[([^\]]+)\]/g;
-    let m;
-    while ((m = re.exec(text)) !== null){
-      set.add(m[1].trim());
-    }
-    return Array.from(set);
-  }
+  fs.writeFileSync(fp, JSON.stringify(clean, null, 2), 'utf8');
+  return clean;
+}
 
-  function renderChordBankFromEditor(){
-    const bank = document.getElementById('chordBank');
-    if (!bank) return;
-
-    const chords = extractChordsFromText(editorTextarea.value);
-
-    if (!chords.length){
-      bank.innerHTML = "";
-      return;
-    }
-
-    bank.innerHTML =
-      "<span style='opacity:.5;font-size:12px;'>Accords:</span>" +
-      chords.map(c =>
-        `<button class="btn" style="padding:6px 10px;font-size:12px;" onclick="insertAtCursor('[${escapeHtml(c)}]')">${escapeHtml(c)}</button>`
-      ).join('');
-  }
-
-async function openHistoryModal() {
-  if (!currentFileName) return;
-
-  historyBackdrop.style.display = 'flex';
-  historyList.innerHTML = "Chargement...";
-
+function readSongMeta() {
   try {
-    const res = await fetch('/song-history?fileName=' + encodeURIComponent(currentFileName));
-    const items = await res.json();
-
-    if (!Array.isArray(items) || !items.length) {
-      historyList.innerHTML = "<div>Aucune version enregistrée.</div>";
-      return;
-    }
-
-historyList.innerHTML = items.map((item, idx) => {
-  const label = idx === 0 ? "Restaurer la dernière version" : "Restaurer cette version";
-  return `
-    <div style="
-      border:1px solid rgba(255,255,255,0.12);
-      border-radius:12px;
-      padding:12px;
-      margin-bottom:10px;
-      background:rgba(255,255,255,0.04);
-    ">
-      <div style="
-        font-weight:900;
-        margin-bottom:6px;
-        color:#eee;
-      ">
-        ${escapeHtml(item.savedAt || '')}
-      </div>
-
-      <div style="
-        font-size:13px;
-        margin-bottom:8px;
-        color:#ddd;
-      ">
-        Par ${escapeHtml(item.savedBy || 'Inconnu')}
-      </div>
-
-      <button class="btn" onclick="restoreHistoryVersion('${item.id}')">${label}</button>
-    </div>
-  `;
-}).join('');
-  } catch (err) {
-    console.error(err);
-    historyList.innerHTML = "<div>Erreur de chargement de l'historique.</div>";
+    if (!fs.existsSync(SONG_META_FILE)) return {};
+    const raw = fs.readFileSync(SONG_META_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+  } catch {
+    return {};
   }
 }
 
-function closeHistoryModal() {
-  historyBackdrop.style.display = 'none';
+function writeSongMeta(meta) {
+  fs.writeFileSync(SONG_META_FILE, JSON.stringify(meta, null, 2), 'utf8');
+  console.log("✅ song-meta.json mis à jour :", SONG_META_FILE);
 }
 
-async function restoreHistoryVersion(historyId) {
-  if (!currentFileName) return;
-
-  const ok = confirm("Restaurer cette version du morceau ?");
-  if (!ok) return;
-
-  const pin = prompt("PIN requis pour restaurer une ancienne version") || "";
-  const cleanPin = String(pin).trim();
-  if (!cleanPin) return;
-
-  try {
-    const res = await fetch('/restore-song', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fileName: currentFileName,
-        historyId,
-        pin: cleanPin,
-        userName: currentUser
-      })
-    });
-
-    if (res.ok) {
-      closeHistoryModal();
-      stopAutoScroll();
-      await loadSong(currentFileName);
-
-      if (isLeader) socket.emit('change-song', currentFileName);
-
-      showToast("Version restaurée ✅");
-    } else if (res.status === 403) {
-      alert("PIN invalide");
-    } else {
-      alert("Erreur lors de la restauration");
-    }
-  } catch (err) {
-    console.error(err);
-    alert("Erreur lors de la restauration");
+function normalizeStringArray(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map(v => String(v || '').trim())
+      .filter(Boolean);
   }
+
+  return String(value || '')
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean);
 }
 
-(async function initApp() {
-  applyTheme();
-  initUsers();
-  updateSettingsButtonLabel();
-  await fetchSongMeta();
-  await fetchSongs();
-  syncSettingsUI();
-  applyLeaderUI();
-  updateConcertModeUI();
-  updateLeaderPlayButton();
-  filterSongList(songSearchInput?.value || "");
-})();
-
-if (songSearchInput) {
-  songSearchInput.addEventListener('input', () => filterSongList(songSearchInput.value));
-  songSearchInput.addEventListener('search', () => filterSongList(songSearchInput.value));
+function normalizeSongMetaEntry(payload) {
+  return {
+    title: String(payload?.title || '').trim(),
+    artist: String(payload?.artist || '').trim(),
+    category: String(payload?.category || 'Répertoire').trim() || 'Répertoire',
+    style: normalizeStringArray(payload?.style),
+    ambiance: String(payload?.ambiance || '').trim(),
+    audience: normalizeStringArray(payload?.audience),
+    chanteur: normalizeStringArray(payload?.chanteur)
+  };
 }
 
-if (categoryFilterEl) {
-  categoryFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
+function broadcastConnectedUsers() {
+  const uniqueUsers = [...new Set(
+    [...connectedUsers.values()]
+      .map(v => String(v?.userName || '').trim())
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+
+  io.emit('connected-users', { users: uniqueUsers });
 }
 
-if (ambianceFilterEl) {
-  ambianceFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
-}
-
-if (audienceFilterEl) {
-  audienceFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
-}
-
-if (singerFilterEl) {
-  singerFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
-}
-
-if (styleFilterEl) {
-  styleFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
-}
-
-if (playedFilterEl) {
-  playedFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
-}
-
-function togglePlayedCurrentSong() {
-  if (!currentFileName) return;
-
-  const nextPlayed = !isPlayedTonight(currentFileName);
-  socket.emit('mark-played', {
-    fileName: currentFileName,
-    played: nextPlayed
+function broadcastLeaderState() {
+  io.emit('leader-state', {
+    leaderSocketId,
+    leaderUserName,
+    hasLeader: !!leaderSocketId
   });
 }
 
-function resetTonight() {
-  const ok = confirm("Réinitialiser tous les morceaux joués ce soir ?");
-  if (!ok) return;
-  socket.emit('reset-played-tonight');
+function broadcastPlayedTonight() {
+  io.emit('played-tonight-state', {
+    songs: [...playedTonight]
+  });
 }
 
-socket.on('played-tonight-state', (data) => {
-  const arr = Array.isArray(data?.songs) ? data.songs : [];
-  playedTonightSet = new Set(arr);
-
-  renderSongList();
-  filterSongList(songSearchInput?.value || "");
-  updatePlayedButton();
+app.get('/list-songs', (req, res) => {
+  try {
+    const files = fs.readdirSync(PARTITIONS_DIR);
+    const songs = files.filter(f => {
+      const lf = f.toLowerCase();
+      return lf.endsWith('.pro') || lf.endsWith('.cho');
+    });
+    res.json(songs);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json([]);
+  }
 });
 
-</script>
-</body>
-</html>
+app.get('/song-history', (req, res) => {
+  try {
+    const fileName = String(req.query.fileName || '');
+    if (!isValidSongName(fileName)) {
+      return res.status(400).json([]);
+    }
+
+    const items = readHistory(fileName).map(entry => ({
+      id: entry.id,
+      savedAt: entry.savedAt,
+      savedBy: entry.savedBy
+    }));
+
+    res.json(items);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json([]);
+  }
+});
+
+app.get('/song-settings', (req, res) => {
+  try {
+    const fileName = String(req.query.fileName || '');
+    if (!isValidSongName(fileName)) {
+      return res.status(400).json({
+        fontSize: 26,
+        speed: 50,
+        transpose: 0
+      });
+    }
+
+    res.json(readSongSettings(fileName));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      fontSize: 26,
+      speed: 50,
+      transpose: 0
+    });
+  }
+});
+
+app.get('/song-meta-entry', (req, res) => {
+  try {
+    const fileName = String(req.query.fileName || '');
+    if (!isValidSongName(fileName)) {
+      return res.status(400).json({});
+    }
+
+    const meta = readSongMeta();
+    res.json(meta[fileName] || {});
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({});
+  }
+});
+
+app.post('/song-settings', (req, res) => {
+  try {
+    const { fileName, pin, fontSize, speed, transpose } = req.body || {};
+
+    if (!pinOk(pin)) return res.status(403).send("PIN invalide");
+    if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
+
+    const saved = writeSongSettings(fileName, {
+      fontSize,
+      speed,
+      transpose
+    });
+
+    io.emit('song-settings-updated', {
+      fileName,
+      settings: saved
+    });
+
+    res.json(saved);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur");
+  }
+});
+
+app.post('/restore-song', (req, res) => {
+  try {
+    const { fileName, historyId, pin, userName } = req.body || {};
+
+    if (!pinOk(pin)) return res.status(403).send("PIN invalide");
+    if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
+    if (!historyId) return res.status(400).send("Version invalide");
+
+    const filePath = getSongPath(fileName);
+    const history = readHistory(fileName);
+    const entry = history.find(x => x.id === historyId);
+
+    if (!entry) {
+      return res.status(404).send("Version introuvable");
+    }
+
+    let currentContent = "";
+    if (fs.existsSync(filePath)) {
+      currentContent = fs.readFileSync(filePath, 'utf8');
+    }
+
+    appendHistory(fileName, createHistoryEntry({
+      fileName,
+      previousContent: currentContent,
+      userName: userName || 'Restauration'
+    }));
+
+    fs.writeFileSync(filePath, String(entry.previousContent ?? ""), 'utf8');
+
+    io.emit('song-updated', { fileName, at: Date.now() });
+    res.send("OK");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur");
+  }
+});
+
+app.post('/save-song', (req, res) => {
+  const { fileName, content, pin, userName } = req.body || {};
+
+  if (!pinOk(pin)) return res.status(403).send("PIN invalide");
+  if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
+
+  try {
+    const filePath = getSongPath(fileName);
+
+    let previousContent = "";
+    if (fs.existsSync(filePath)) {
+      previousContent = fs.readFileSync(filePath, 'utf8');
+    }
+
+    appendHistory(fileName, createHistoryEntry({
+      fileName,
+      previousContent,
+      userName: userName || 'Inconnu'
+    }));
+
+    fs.writeFile(filePath, String(content ?? ""), 'utf8', (err) => {
+      if (err) return res.status(500).send("Erreur");
+
+      io.emit('song-updated', { fileName, at: Date.now() });
+      res.send("OK");
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur");
+  }
+});
+
+app.post('/save-song-meta', (req, res) => {
+  try {
+    const { fileName, pin } = req.body || {};
+
+    if (!pinOk(pin)) return res.status(403).send("PIN invalide");
+    if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
+
+    const meta = readSongMeta();
+    meta[fileName] = normalizeSongMetaEntry(req.body || {});
+    writeSongMeta(meta);
+
+    res.send("OK");
+  } catch (err) {
+    console.error("Erreur save-song-meta:", err);
+    res.status(500).send("Erreur");
+  }
+});
+
+app.post('/create-song', (req, res) => {
+  try {
+    const {
+      fileName,
+      pin,
+      title,
+      artist,
+      category,
+      style,
+      ambiance,
+      audience,
+      chanteur
+    } = req.body || {};
+
+    if (!pinOk(pin)) return res.status(403).send("PIN invalide");
+
+    const cleanTitle = String(title || '').trim();
+    const cleanArtist = String(artist || '').trim();
+
+    if (!cleanTitle) return res.status(400).send("Titre invalide");
+    if (!cleanArtist) return res.status(400).send("Artiste invalide");
+
+    const finalFileName = String(fileName || `${cleanTitle} - ${cleanArtist}.pro`).trim();
+
+    if (!isValidSongName(finalFileName)) {
+      return res.status(400).send("Nom de fichier invalide");
+    }
+
+    const filePath = getSongPath(finalFileName);
+
+    if (fs.existsSync(filePath)) {
+      return res.status(409).send("Le morceau existe déjà");
+    }
+
+    const defaultContent =
+      `{t:${cleanTitle}}\n` +
+      `{st:${cleanArtist}}\n\n`;
+
+    fs.writeFileSync(filePath, defaultContent, 'utf8');
+
+    const meta = readSongMeta();
+    meta[finalFileName] = normalizeSongMetaEntry({
+      title: cleanTitle,
+      artist: cleanArtist,
+      category,
+      style,
+      ambiance,
+      audience,
+      chanteur
+    });
+    writeSongMeta(meta);
+
+    io.emit('song-created', { fileName: finalFileName, at: Date.now() });
+    res.send("OK");
+  } catch (err) {
+    console.error("Erreur create-song:", err);
+    res.status(500).send("Erreur");
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log('📱 connecté', socket.id);
+
+  broadcastLeaderState();
+  broadcastConnectedUsers();
+  broadcastPlayedTonight();
+
+  socket.on('register-user', ({ userName, deviceId }) => {
+    const cleanUser = String(userName || '').trim();
+    const cleanDeviceId = String(deviceId || '').trim();
+
+    if (!cleanUser || !cleanDeviceId) return;
+
+    socket.data.userName = cleanUser;
+    socket.data.deviceId = cleanDeviceId;
+
+    connectedUsers.set(socket.id, {
+      userName: cleanUser,
+      deviceId: cleanDeviceId
+    });
+
+    if (leaderDeviceId && cleanDeviceId === leaderDeviceId) {
+      leaderSocketId = socket.id;
+      leaderUserName = cleanUser;
+    }
+
+    broadcastConnectedUsers();
+    broadcastLeaderState();
+  });
+
+  socket.on('mark-played', ({ fileName, played }) => {
+    const name = String(fileName || '').trim();
+    if (!name) return;
+
+    if (played) {
+      playedTonight.add(name);
+    } else {
+      playedTonight.delete(name);
+    }
+
+    broadcastPlayedTonight();
+  });
+
+  socket.on('reset-played-tonight', () => {
+    playedTonight.clear();
+    broadcastPlayedTonight();
+  });
+
+  socket.on('request-leader', () => {
+    const deviceId = String(socket.data.deviceId || '').trim();
+    const userName = String(socket.data.userName || 'Leader').trim();
+
+    if (!deviceId) return;
+
+    if (!leaderDeviceId || leaderDeviceId === deviceId || !leaderSocketId) {
+      leaderSocketId = socket.id;
+      leaderDeviceId = deviceId;
+      leaderUserName = userName;
+      broadcastLeaderState();
+    } else {
+      socket.emit('leader-denied', { leaderUserName });
+    }
+  });
+
+  socket.on('release-leader', () => {
+    if (leaderSocketId === socket.id) {
+      leaderSocketId = null;
+      leaderDeviceId = null;
+      leaderUserName = "";
+      broadcastLeaderState();
+      io.emit('apply-autoscroll', { active: false, speed: 50 });
+    }
+  });
+
+  socket.on('change-song', (fileName) => {
+    io.emit('load-song', fileName);
+  });
+
+  let lastScrollAt = 0;
+  socket.on('scroll-sync', (payload) => {
+    const now = Date.now();
+    if (now - lastScrollAt < 60) return;
+    lastScrollAt = now;
+
+    const anchor = String(payload?.anchor || "");
+    const progress = Math.max(0, Math.min(1, Number(payload?.progress) || 0));
+
+    socket.broadcast.emit('apply-scroll', { anchor, progress });
+  });
+
+  socket.on('sync-autoscroll', (d) => {
+    socket.broadcast.emit('apply-autoscroll', {
+      active: !!d.active,
+      speed: d.speed
+    });
+  });
+
+  socket.on('leader-fontsize', (value) => {
+    socket.broadcast.emit('apply-fontsize', value);
+  });
+
+  socket.on('leader-transpose', (value) => {
+    socket.broadcast.emit('apply-transpose', value);
+  });
+
+  socket.on('leader-speed', (value) => {
+    socket.broadcast.emit('apply-speed', value);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('❌ déconnecté', socket.id);
+
+    const wasLeader = leaderSocketId === socket.id;
+
+    connectedUsers.delete(socket.id);
+    broadcastConnectedUsers();
+
+    if (wasLeader) {
+      leaderSocketId = null;
+      broadcastLeaderState();
+      io.emit('apply-autoscroll', { active: false, speed: 50 });
+    }
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, '0.0.0.0', () => {
+  console.log("✅ Serveur en ligne sur le port " + PORT);
+  console.log("🔐 PIN global:", LEADER_PIN);
+});
