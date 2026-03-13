@@ -154,6 +154,7 @@ function readSongMeta() {
 
 function writeSongMeta(meta) {
   fs.writeFileSync(SONG_META_FILE, JSON.stringify(meta, null, 2), 'utf8');
+  console.log("✅ song-meta.json mis à jour :", SONG_META_FILE);
 }
 
 function normalizeStringArray(value) {
@@ -172,6 +173,7 @@ function normalizeStringArray(value) {
 function normalizeSongMetaEntry(payload) {
   return {
     title: String(payload?.title || '').trim(),
+    artist: String(payload?.artist || '').trim(),
     category: String(payload?.category || 'Répertoire').trim() || 'Répertoire',
     style: normalizeStringArray(payload?.style),
     ambiance: String(payload?.ambiance || '').trim(),
@@ -382,39 +384,67 @@ app.post('/save-song-meta', (req, res) => {
 
     res.send("OK");
   } catch (err) {
-    console.error(err);
+    console.error("Erreur save-song-meta:", err);
     res.status(500).send("Erreur");
   }
 });
 
 app.post('/create-song', (req, res) => {
   try {
-    const { fileName, pin, content } = req.body || {};
+    const {
+      fileName,
+      pin,
+      title,
+      artist,
+      category,
+      style,
+      ambiance,
+      audience,
+      chanteur
+    } = req.body || {};
 
     if (!pinOk(pin)) return res.status(403).send("PIN invalide");
-    if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
 
-    const filePath = getSongPath(fileName);
+    const cleanTitle = String(title || '').trim();
+    const cleanArtist = String(artist || '').trim();
+
+    if (!cleanTitle) return res.status(400).send("Titre invalide");
+    if (!cleanArtist) return res.status(400).send("Artiste invalide");
+
+    const finalFileName = String(fileName || `${cleanTitle} - ${cleanArtist}.pro`).trim();
+
+    if (!isValidSongName(finalFileName)) {
+      return res.status(400).send("Nom de fichier invalide");
+    }
+
+    const filePath = getSongPath(finalFileName);
 
     if (fs.existsSync(filePath)) {
       return res.status(409).send("Le morceau existe déjà");
     }
 
-    const defaultContent = String(
-  content ||
-  `{t:${String(req.body?.title || fileName.replace(/\.(pro|cho)$/i, '')).trim()}}\n` +
-  `{st:${String(req.body?.artist || '').trim()}}\n\n`
-);
+    const defaultContent =
+      `{t:${cleanTitle}}\n` +
+      `{st:${cleanArtist}}\n\n`;
+
     fs.writeFileSync(filePath, defaultContent, 'utf8');
 
     const meta = readSongMeta();
-    meta[fileName] = normalizeSongMetaEntry(req.body || {});
+    meta[finalFileName] = normalizeSongMetaEntry({
+      title: cleanTitle,
+      artist: cleanArtist,
+      category,
+      style,
+      ambiance,
+      audience,
+      chanteur
+    });
     writeSongMeta(meta);
 
-    io.emit('song-created', { fileName, at: Date.now() });
+    io.emit('song-created', { fileName: finalFileName, at: Date.now() });
     res.send("OK");
   } catch (err) {
-    console.error(err);
+    console.error("Erreur create-song:", err);
     res.status(500).send("Erreur");
   }
 });
