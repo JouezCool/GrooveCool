@@ -11,8 +11,8 @@
   "description": "",
   "dependencies": {
     "express": "^5.2.1",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
     "googleapis": "^144.0.0",
-  "mime-types": "^2.1.35"
+    "mime-types": "^2.1.35"
   }
 }
