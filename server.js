@@ -2,12 +2,38 @@ const express = require('express');
 const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
-const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
-const SONG_META_FILE = path.join(__dirname, 'public', 'song-meta.json');
+const { google } = require('googleapis');
+const { Readable } = require('stream');
+
+const GOOGLE_DRIVE_PARTITIONS_FOLDER_ID = process.env.GOOGLE_DRIVE_PARTITIONS_FOLDER_ID || '';
+const GOOGLE_DRIVE_META_FOLDER_ID = process.env.GOOGLE_DRIVE_META_FOLDER_ID || '';
+const GOOGLE_DRIVE_HISTORY_FOLDER_ID = process.env.GOOGLE_DRIVE_HISTORY_FOLDER_ID || '';
+const GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID = process.env.GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID || '';
+const GOOGLE_DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID || ''; // non utilisé pour l’instant, laissé volontairement
+const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
+const GOOGLE_PRIVATE_KEY = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+
+const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
+
+const auth = new google.auth.JWT(
+  GOOGLE_SERVICE_ACCOUNT_EMAIL,
+  null,
+  GOOGLE_PRIVATE_KEY,
+  ['https://www.googleapis.com/auth/drive']
+);
+
+const drive = google.drive({
+  version: 'v3',
+  auth
+});
 
 const playedTonight = new Set();
+const connectedUsers = new Map();
+
+let leaderSocketId = null;
+let leaderUserName = null;
+let leaderDeviceId = null;
 
 app.use(express.json({ limit: '1mb' }));
 
@@ -18,160 +44,17 @@ app.use((req, res, next) => {
 
 app.use(express.static('public', { etag: false, maxAge: 0 }));
 
-const PARTITIONS_DIR = path.join(__dirname, 'public', 'partitions');
-const HISTORY_DIR = path.join(__dirname, 'history');
-const SONG_SETTINGS_DIR = path.join(__dirname, 'song-settings');
-const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
-
-fs.mkdirSync(PARTITIONS_DIR, { recursive: true });
-fs.mkdirSync(HISTORY_DIR, { recursive: true });
-fs.mkdirSync(SONG_SETTINGS_DIR, { recursive: true });
-if (!fs.existsSync(SONG_META_FILE)) {
-  fs.writeFileSync(SONG_META_FILE, '{}', 'utf8');
-}
-
-let leaderSocketId = null;
-let leaderUserName = null;
-let leaderDeviceId = null;
-
-const connectedUsers = new Map();
-
-function isValidSongName(name) {
-  if (typeof name !== 'string') return false;
-  const lower = name.toLowerCase();
-  if (!(lower.endsWith('.pro') || lower.endsWith('.cho'))) return false;
-  if (name.includes('..') || name.includes('/') || name.includes('\\')) return false;
-  if (name.length > 120) return false;
-  return true;
-}
-
 function pinOk(pin) {
   return String(pin || '') === LEADER_PIN;
 }
 
-function getSongPath(fileName) {
-  const filePath = path.join(PARTITIONS_DIR, fileName);
-  if (!filePath.startsWith(PARTITIONS_DIR + path.sep)) {
-    throw new Error("Chemin invalide");
-  }
-  return filePath;
-}
-
-function historyFilePath(fileName) {
-  const safe = Buffer.from(fileName, 'utf8').toString('base64url');
-  return path.join(HISTORY_DIR, safe + '.json');
-}
-
-function settingsFilePath(fileName) {
-  const safe = Buffer.from(fileName, 'utf8').toString('base64url');
-  return path.join(SONG_SETTINGS_DIR, safe + '.json');
-}
-
-function readHistory(fileName) {
-  const hp = historyFilePath(fileName);
-  if (!fs.existsSync(hp)) return [];
-  try {
-    const raw = fs.readFileSync(hp, 'utf8');
-    const data = JSON.parse(raw);
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeHistory(fileName, entries) {
-  const hp = historyFilePath(fileName);
-  fs.writeFileSync(hp, JSON.stringify(entries, null, 2), 'utf8');
-}
-
-function appendHistory(fileName, entry) {
-  const items = readHistory(fileName);
-  items.unshift(entry);
-  writeHistory(fileName, items.slice(0, 50));
-}
-
-function createHistoryEntry({ fileName, previousContent, userName }) {
-  return {
-    id: crypto.randomUUID(),
-    fileName,
-    savedAt: new Date().toISOString(),
-    savedBy: String(userName || 'Inconnu'),
-    previousContent: String(previousContent ?? '')
-  };
-}
-
-function readSongSettings(fileName) {
-  const fp = settingsFilePath(fileName);
-  if (!fs.existsSync(fp)) {
-    return {
-      fontSize: 26,
-      speed: 50,
-      transpose: 0
-    };
-  }
-
-  try {
-    const raw = fs.readFileSync(fp, 'utf8');
-    const data = JSON.parse(raw);
-
-    return {
-      fontSize: Number.isFinite(Number(data.fontSize)) ? Number(data.fontSize) : 26,
-      speed: Number.isFinite(Number(data.speed)) ? Number(data.speed) : 50,
-      transpose: Number.isFinite(Number(data.transpose)) ? Number(data.transpose) : 0
-    };
-  } catch {
-    return {
-      fontSize: 26,
-      speed: 50,
-      transpose: 0
-    };
-  }
-}
-
-function writeSongSettings(fileName, settings) {
-  const fp = settingsFilePath(fileName);
-
-  const clean = {
-    fontSize: Number.isFinite(Number(settings.fontSize)) ? Number(settings.fontSize) : 26,
-    speed: Number.isFinite(Number(settings.speed)) ? Number(settings.speed) : 50,
-    transpose: Number.isFinite(Number(settings.transpose)) ? Number(settings.transpose) : 0
-  };
-
-  fs.writeFileSync(fp, JSON.stringify(clean, null, 2), 'utf8');
-  return clean;
-}
-
-function readSongMeta() {
-  try {
-    if (!fs.existsSync(SONG_META_FILE)) {
-      console.log("⚠️ song-meta.json absent, création d'un objet vide");
-      return {};
-    }
-
-    const raw = fs.readFileSync(SONG_META_FILE, 'utf8');
-    const data = JSON.parse(raw);
-
-    if (data && typeof data === 'object' && !Array.isArray(data)) {
-      return data;
-    }
-
-    console.log("⚠️ song-meta.json n'est pas un objet JSON valide, reset {}");
-    return {};
-  } catch (err) {
-    console.error("❌ Erreur lecture song-meta.json :", err);
-    return {};
-  }
-}
-
-function writeSongMeta(meta) {
-  try {
-    fs.writeFileSync(SONG_META_FILE, JSON.stringify(meta, null, 2), 'utf8');
-    console.log("✅ song-meta.json mis à jour :", SONG_META_FILE);
-    console.log("✅ Nombre d'entrées meta :", Object.keys(meta).length);
-  } catch (err) {
-    console.error("❌ Erreur écriture song-meta.json :", err);
-    throw err;
-  }
+function isValidSongName(name) {
+  if (typeof name !== 'string') return false;
+  const lower = name.toLowerCase();
+  if (!lower.endsWith('.pro')) return false; // tu m’as dit que tu n’utilises que .pro
+  if (name.includes('..') || name.includes('/') || name.includes('\\')) return false;
+  if (name.length > 180) return false;
+  return true;
 }
 
 function normalizeStringArray(value) {
@@ -199,6 +82,240 @@ function normalizeSongMetaEntry(payload) {
   };
 }
 
+function historyFileName(fileName) {
+  const safe = Buffer.from(fileName, 'utf8').toString('base64url');
+  return `${safe}.json`;
+}
+
+function settingsFileName(fileName) {
+  const safe = Buffer.from(fileName, 'utf8').toString('base64url');
+  return `${safe}.json`;
+}
+
+function createHistoryEntry({ fileName, previousContent, userName }) {
+  return {
+    id: crypto.randomUUID(),
+    fileName,
+    savedAt: new Date().toISOString(),
+    savedBy: String(userName || 'Inconnu'),
+    previousContent: String(previousContent ?? '')
+  };
+}
+
+function escapeDriveQueryValue(value) {
+  return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+async function findDriveFileByName(folderId, fileName) {
+  if (!folderId) return null;
+
+  const q = [
+    `'${folderId}' in parents`,
+    `name = '${escapeDriveQueryValue(fileName)}'`,
+    `trashed = false`
+  ].join(' and ');
+
+  const res = await drive.files.list({
+    q,
+    fields: 'files(id, name, mimeType)',
+    pageSize: 10
+  });
+
+  return res.data.files?.[0] || null;
+}
+
+async function listDriveFiles(folderId) {
+  if (!folderId) return [];
+
+  let files = [];
+  let pageToken = undefined;
+
+  do {
+    const res = await drive.files.list({
+      q: `'${folderId}' in parents and trashed = false`,
+      fields: 'nextPageToken, files(id, name, mimeType)',
+      pageSize: 1000,
+      pageToken
+    });
+
+    files = files.concat(res.data.files || []);
+    pageToken = res.data.nextPageToken;
+  } while (pageToken);
+
+  return files;
+}
+
+async function readDriveTextFile(fileId) {
+  const res = await drive.files.get(
+    { fileId, alt: 'media' },
+    { responseType: 'text' }
+  );
+
+  return typeof res.data === 'string' ? res.data : String(res.data || '');
+}
+
+async function createDriveTextFile(folderId, fileName, content, mimeType = 'text/plain') {
+  const buffer = Buffer.from(String(content || ''), 'utf8');
+
+  const res = await drive.files.create({
+    requestBody: {
+      name: fileName,
+      parents: [folderId],
+      mimeType
+    },
+    media: {
+      mimeType,
+      body: Readable.from(buffer)
+    },
+    fields: 'id, name'
+  });
+
+  return res.data;
+}
+
+async function updateDriveTextFile(fileId, fileName, content, mimeType = 'text/plain') {
+  const buffer = Buffer.from(String(content || ''), 'utf8');
+
+  const res = await drive.files.update({
+    fileId,
+    requestBody: {
+      name: fileName
+    },
+    media: {
+      mimeType,
+      body: Readable.from(buffer)
+    },
+    fields: 'id, name'
+  });
+
+  return res.data;
+}
+
+async function upsertDriveTextFile(folderId, fileName, content, mimeType = 'text/plain') {
+  const existing = await findDriveFileByName(folderId, fileName);
+
+  if (existing) {
+    return updateDriveTextFile(existing.id, fileName, content, mimeType);
+  }
+
+  return createDriveTextFile(folderId, fileName, content, mimeType);
+}
+
+async function readDriveJsonFileByName(folderId, fileName, fallbackValue) {
+  const file = await findDriveFileByName(folderId, fileName);
+  if (!file) return fallbackValue;
+
+  try {
+    const raw = await readDriveTextFile(file.id);
+    return JSON.parse(raw);
+  } catch {
+    return fallbackValue;
+  }
+}
+
+async function writeDriveJsonFileByName(folderId, fileName, value) {
+  return upsertDriveTextFile(
+    folderId,
+    fileName,
+    JSON.stringify(value, null, 2),
+    'application/json'
+  );
+}
+
+async function readSongMeta() {
+  const data = await readDriveJsonFileByName(
+    GOOGLE_DRIVE_META_FOLDER_ID,
+    'song-meta.json',
+    {}
+  );
+
+  return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+}
+
+async function writeSongMeta(meta) {
+  await writeDriveJsonFileByName(
+    GOOGLE_DRIVE_META_FOLDER_ID,
+    'song-meta.json',
+    meta
+  );
+
+  console.log('✅ song-meta.json mis à jour sur Google Drive');
+  console.log('✅ Nombre d’entrées meta :', Object.keys(meta).length);
+}
+
+async function readSongSettings(fileName) {
+  const data = await readDriveJsonFileByName(
+    GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID,
+    settingsFileName(fileName),
+    {
+      fontSize: 26,
+      speed: 50,
+      transpose: 0
+    }
+  );
+
+  return {
+    fontSize: Number.isFinite(Number(data?.fontSize)) ? Number(data.fontSize) : 26,
+    speed: Number.isFinite(Number(data?.speed)) ? Number(data.speed) : 50,
+    transpose: Number.isFinite(Number(data?.transpose)) ? Number(data.transpose) : 0
+  };
+}
+
+async function writeSongSettings(fileName, settings) {
+  const clean = {
+    fontSize: Number.isFinite(Number(settings?.fontSize)) ? Number(settings.fontSize) : 26,
+    speed: Number.isFinite(Number(settings?.speed)) ? Number(settings.speed) : 50,
+    transpose: Number.isFinite(Number(settings?.transpose)) ? Number(settings.transpose) : 0
+  };
+
+  await writeDriveJsonFileByName(
+    GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID,
+    settingsFileName(fileName),
+    clean
+  );
+
+  return clean;
+}
+
+async function readHistory(fileName) {
+  const data = await readDriveJsonFileByName(
+    GOOGLE_DRIVE_HISTORY_FOLDER_ID,
+    historyFileName(fileName),
+    []
+  );
+
+  return Array.isArray(data) ? data : [];
+}
+
+async function writeHistory(fileName, entries) {
+  await writeDriveJsonFileByName(
+    GOOGLE_DRIVE_HISTORY_FOLDER_ID,
+    historyFileName(fileName),
+    entries
+  );
+}
+
+async function appendHistory(fileName, entry) {
+  const items = await readHistory(fileName);
+  items.unshift(entry);
+  await writeHistory(fileName, items.slice(0, 50));
+}
+
+async function readPartition(fileName) {
+  const file = await findDriveFileByName(GOOGLE_DRIVE_PARTITIONS_FOLDER_ID, fileName);
+  if (!file) return null;
+  return readDriveTextFile(file.id);
+}
+
+async function writePartition(fileName, content) {
+  return upsertDriveTextFile(
+    GOOGLE_DRIVE_PARTITIONS_FOLDER_ID,
+    fileName,
+    content,
+    'text/plain'
+  );
+}
+
 function broadcastConnectedUsers() {
   const uniqueUsers = [...new Set(
     [...connectedUsers.values()]
@@ -223,41 +340,60 @@ function broadcastPlayedTonight() {
   });
 }
 
-app.get('/list-songs', (req, res) => {
+app.get('/list-songs', async (req, res) => {
   try {
-    const files = fs.readdirSync(PARTITIONS_DIR);
-    const songs = files.filter(f => {
-      const lf = f.toLowerCase();
-      return lf.endsWith('.pro') || lf.endsWith('.cho');
-    });
+    const files = await listDriveFiles(GOOGLE_DRIVE_PARTITIONS_FOLDER_ID);
+    const songs = files
+      .map(f => f.name)
+      .filter(name => String(name || '').toLowerCase().endsWith('.pro'))
+      .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+
     res.json(songs);
   } catch (err) {
-    console.error(err);
+    console.error('❌ Erreur /list-songs:', err);
     res.status(500).json([]);
   }
 });
 
-app.get('/song-history', (req, res) => {
+app.get('/partitions/:fileName', async (req, res) => {
+  try {
+    const fileName = String(req.params.fileName || '');
+    if (!isValidSongName(fileName)) {
+      return res.status(400).send('Nom de fichier invalide');
+    }
+
+    const content = await readPartition(fileName);
+    if (content === null) {
+      return res.status(404).send('Introuvable');
+    }
+
+    res.type('text/plain; charset=utf-8').send(content);
+  } catch (err) {
+    console.error('❌ Erreur /partitions/:fileName:', err);
+    res.status(500).send('Erreur');
+  }
+});
+
+app.get('/song-history', async (req, res) => {
   try {
     const fileName = String(req.query.fileName || '');
     if (!isValidSongName(fileName)) {
       return res.status(400).json([]);
     }
 
-    const items = readHistory(fileName).map(entry => ({
+    const items = await readHistory(fileName);
+    res.json(items.map(entry => ({
       id: entry.id,
       savedAt: entry.savedAt,
       savedBy: entry.savedBy
-    }));
-
-    res.json(items);
+    })));
   } catch (err) {
-    console.error(err);
+    console.error('❌ Erreur /song-history:', err);
     res.status(500).json([]);
   }
 });
 
-app.get('/song-settings', (req, res) => {
+app.get('/song-settings', async (req, res) => {
   try {
     const fileName = String(req.query.fileName || '');
     if (!isValidSongName(fileName)) {
@@ -268,9 +404,10 @@ app.get('/song-settings', (req, res) => {
       });
     }
 
-    res.json(readSongSettings(fileName));
+    const settings = await readSongSettings(fileName);
+    res.json(settings);
   } catch (err) {
-    console.error(err);
+    console.error('❌ Erreur /song-settings:', err);
     res.status(500).json({
       fontSize: 26,
       speed: 50,
@@ -279,33 +416,29 @@ app.get('/song-settings', (req, res) => {
   }
 });
 
-app.get('/song-meta-entry', (req, res) => {
+app.get('/song-meta-entry', async (req, res) => {
   try {
     const fileName = String(req.query.fileName || '');
     if (!isValidSongName(fileName)) {
       return res.status(400).json({});
     }
 
-    const meta = readSongMeta();
+    const meta = await readSongMeta();
     res.json(meta[fileName] || {});
   } catch (err) {
-    console.error(err);
+    console.error('❌ Erreur /song-meta-entry:', err);
     res.status(500).json({});
   }
 });
 
-app.post('/song-settings', (req, res) => {
+app.post('/song-settings', async (req, res) => {
   try {
     const { fileName, pin, fontSize, speed, transpose } = req.body || {};
 
-    if (!pinOk(pin)) return res.status(403).send("PIN invalide");
-    if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
+    if (!pinOk(pin)) return res.status(403).send('PIN invalide');
+    if (!isValidSongName(fileName)) return res.status(400).send('Nom de fichier invalide');
 
-    const saved = writeSongSettings(fileName, {
-      fontSize,
-      speed,
-      transpose
-    });
+    const saved = await writeSongSettings(fileName, { fontSize, speed, transpose });
 
     io.emit('song-settings-updated', {
       fileName,
@@ -314,99 +447,89 @@ app.post('/song-settings', (req, res) => {
 
     res.json(saved);
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Erreur");
+    console.error('❌ Erreur POST /song-settings:', err);
+    res.status(500).send('Erreur');
   }
 });
 
-app.post('/restore-song', (req, res) => {
+app.post('/restore-song', async (req, res) => {
   try {
     const { fileName, historyId, pin, userName } = req.body || {};
 
-    if (!pinOk(pin)) return res.status(403).send("PIN invalide");
-    if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
-    if (!historyId) return res.status(400).send("Version invalide");
+    if (!pinOk(pin)) return res.status(403).send('PIN invalide');
+    if (!isValidSongName(fileName)) return res.status(400).send('Nom de fichier invalide');
+    if (!historyId) return res.status(400).send('Version invalide');
 
-    const filePath = getSongPath(fileName);
-    const history = readHistory(fileName);
+    const history = await readHistory(fileName);
     const entry = history.find(x => x.id === historyId);
 
     if (!entry) {
-      return res.status(404).send("Version introuvable");
+      return res.status(404).send('Version introuvable');
     }
 
-    let currentContent = "";
-    if (fs.existsSync(filePath)) {
-      currentContent = fs.readFileSync(filePath, 'utf8');
-    }
+    const currentContent = await readPartition(fileName);
 
-    appendHistory(fileName, createHistoryEntry({
+    await appendHistory(fileName, createHistoryEntry({
       fileName,
-      previousContent: currentContent,
+      previousContent: currentContent || '',
       userName: userName || 'Restauration'
     }));
 
-    fs.writeFileSync(filePath, String(entry.previousContent ?? ""), 'utf8');
+    await writePartition(fileName, String(entry.previousContent ?? ''));
 
     io.emit('song-updated', { fileName, at: Date.now() });
-    res.send("OK");
+    res.send('OK');
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Erreur");
+    console.error('❌ Erreur POST /restore-song:', err);
+    res.status(500).send('Erreur');
   }
 });
 
-app.post('/save-song', (req, res) => {
-  const { fileName, content, pin, userName } = req.body || {};
-
-  if (!pinOk(pin)) return res.status(403).send("PIN invalide");
-  if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
-
+app.post('/save-song', async (req, res) => {
   try {
-    const filePath = getSongPath(fileName);
+    const { fileName, content, pin, userName } = req.body || {};
 
-    let previousContent = "";
-    if (fs.existsSync(filePath)) {
-      previousContent = fs.readFileSync(filePath, 'utf8');
-    }
+    if (!pinOk(pin)) return res.status(403).send('PIN invalide');
+    if (!isValidSongName(fileName)) return res.status(400).send('Nom de fichier invalide');
 
-    appendHistory(fileName, createHistoryEntry({
+    const previousContent = await readPartition(fileName);
+
+    await appendHistory(fileName, createHistoryEntry({
       fileName,
-      previousContent,
+      previousContent: previousContent || '',
       userName: userName || 'Inconnu'
     }));
 
-    fs.writeFile(filePath, String(content ?? ""), 'utf8', (err) => {
-      if (err) return res.status(500).send("Erreur");
+    await writePartition(fileName, String(content ?? ''));
 
-      io.emit('song-updated', { fileName, at: Date.now() });
-      res.send("OK");
-    });
+    io.emit('song-updated', { fileName, at: Date.now() });
+    res.send('OK');
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Erreur");
+    console.error('❌ Erreur POST /save-song:', err);
+    res.status(500).send('Erreur');
   }
 });
 
-app.post('/save-song-meta', (req, res) => {
+app.post('/save-song-meta', async (req, res) => {
   try {
     const { fileName, pin } = req.body || {};
 
-    if (!pinOk(pin)) return res.status(403).send("PIN invalide");
-    if (!isValidSongName(fileName)) return res.status(400).send("Nom de fichier invalide");
+    if (!pinOk(pin)) return res.status(403).send('PIN invalide');
+    if (!isValidSongName(fileName)) return res.status(400).send('Nom de fichier invalide');
 
-    const meta = readSongMeta();
+    const meta = await readSongMeta();
     meta[fileName] = normalizeSongMetaEntry(req.body || {});
-    writeSongMeta(meta);
 
-    res.send("OK");
+    await writeSongMeta(meta);
+
+    res.send('OK');
   } catch (err) {
-    console.error("Erreur save-song-meta:", err);
-    res.status(500).send("Erreur");
+    console.error('❌ Erreur save-song-meta:', err);
+    res.status(500).send('Erreur');
   }
 });
 
-app.post('/create-song', (req, res) => {
+app.post('/create-song', async (req, res) => {
   try {
     const {
       fileName,
@@ -420,36 +543,45 @@ app.post('/create-song', (req, res) => {
       chanteur
     } = req.body || {};
 
-    console.log("📥 /create-song reçu :", req.body);
+    console.log('📥 /create-song reçu :', req.body);
 
-    if (!pinOk(pin)) return res.status(403).send("PIN invalide");
+    if (!pinOk(pin)) return res.status(403).send('PIN invalide');
 
     const cleanTitle = String(title || '').trim();
     const cleanArtist = String(artist || '').trim();
 
-    if (!cleanTitle) return res.status(400).send("Titre invalide");
-    if (!cleanArtist) return res.status(400).send("Artiste invalide");
+    if (!cleanTitle) return res.status(400).send('Titre invalide');
+    if (!cleanArtist) return res.status(400).send('Artiste invalide');
 
     const finalFileName = String(fileName || `${cleanTitle} - ${cleanArtist}.pro`).trim();
 
     if (!isValidSongName(finalFileName)) {
-      return res.status(400).send("Nom de fichier invalide");
+      return res.status(400).send('Nom de fichier invalide');
     }
 
-    const filePath = getSongPath(finalFileName);
+    const existingPartition = await findDriveFileByName(
+      GOOGLE_DRIVE_PARTITIONS_FOLDER_ID,
+      finalFileName
+    );
 
-    if (fs.existsSync(filePath)) {
-      return res.status(409).send("Le morceau existe déjà");
+    if (existingPartition) {
+      return res.status(409).send('Le morceau existe déjà');
     }
 
     const defaultContent =
       `{t:${cleanTitle}}\n` +
       `{st:${cleanArtist}}\n\n`;
 
-    fs.writeFileSync(filePath, defaultContent, 'utf8');
-    console.log("✅ Fichier morceau créé :", filePath);
+    await createDriveTextFile(
+      GOOGLE_DRIVE_PARTITIONS_FOLDER_ID,
+      finalFileName,
+      defaultContent,
+      'text/plain'
+    );
 
-    const meta = readSongMeta();
+    console.log('✅ Fichier morceau créé sur Google Drive :', finalFileName);
+
+    const meta = await readSongMeta();
 
     meta[finalFileName] = normalizeSongMetaEntry({
       title: cleanTitle,
@@ -461,15 +593,15 @@ app.post('/create-song', (req, res) => {
       chanteur
     });
 
-    console.log("📝 Entrée meta à écrire :", finalFileName, meta[finalFileName]);
+    console.log('📝 Entrée meta à écrire :', finalFileName, meta[finalFileName]);
 
-    writeSongMeta(meta);
+    await writeSongMeta(meta);
 
     io.emit('song-created', { fileName: finalFileName, at: Date.now() });
-    res.send("OK");
+    res.send('OK');
   } catch (err) {
-    console.error("❌ Erreur create-song:", err);
-    res.status(500).send("Erreur");
+    console.error('❌ Erreur create-song:', err);
+    res.status(500).send('Erreur');
   }
 });
 
@@ -507,11 +639,8 @@ io.on('connection', (socket) => {
     const name = String(fileName || '').trim();
     if (!name) return;
 
-    if (played) {
-      playedTonight.add(name);
-    } else {
-      playedTonight.delete(name);
-    }
+    if (played) playedTonight.add(name);
+    else playedTonight.delete(name);
 
     broadcastPlayedTonight();
   });
@@ -541,7 +670,7 @@ io.on('connection', (socket) => {
     if (leaderSocketId === socket.id) {
       leaderSocketId = null;
       leaderDeviceId = null;
-      leaderUserName = "";
+      leaderUserName = '';
       broadcastLeaderState();
       io.emit('apply-autoscroll', { active: false, speed: 50 });
     }
@@ -557,7 +686,7 @@ io.on('connection', (socket) => {
     if (now - lastScrollAt < 60) return;
     lastScrollAt = now;
 
-    const anchor = String(payload?.anchor || "");
+    const anchor = String(payload?.anchor || '');
     const progress = Math.max(0, Math.min(1, Number(payload?.progress) || 0));
 
     socket.broadcast.emit('apply-scroll', { anchor, progress });
@@ -592,17 +721,21 @@ io.on('connection', (socket) => {
 
     if (wasLeader) {
       leaderSocketId = null;
+      leaderDeviceId = null;
+      leaderUserName = '';
       broadcastLeaderState();
       io.emit('apply-autoscroll', { active: false, speed: 50 });
     }
   });
 });
 
-console.log("📁 PARTITIONS_DIR =", PARTITIONS_DIR);
-console.log("📁 SONG_META_FILE =", SONG_META_FILE);
+console.log('📁 GOOGLE_DRIVE_PARTITIONS_FOLDER_ID =', GOOGLE_DRIVE_PARTITIONS_FOLDER_ID ? 'OK' : 'MANQUANT');
+console.log('📁 GOOGLE_DRIVE_META_FOLDER_ID =', GOOGLE_DRIVE_META_FOLDER_ID ? 'OK' : 'MANQUANT');
+console.log('📁 GOOGLE_DRIVE_HISTORY_FOLDER_ID =', GOOGLE_DRIVE_HISTORY_FOLDER_ID ? 'OK' : 'MANQUANT');
+console.log('📁 GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID =', GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID ? 'OK' : 'MANQUANT');
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, '0.0.0.0', () => {
-  console.log("✅ Serveur en ligne sur le port " + PORT);
-  console.log("🔐 PIN global:", LEADER_PIN);
+  console.log('✅ Serveur en ligne sur le port ' + PORT);
+  console.log('🔐 PIN global:', LEADER_PIN);
 });
