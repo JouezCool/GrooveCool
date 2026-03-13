@@ -1024,8 +1024,7 @@ const songMetaStyle = document.getElementById('songMetaStyle');
 const songMetaAmbiance = document.getElementById('songMetaAmbiance');
 const songMetaAudience = document.getElementById('songMetaAudience');
 const songMetaChanteur = document.getElementById('songMetaChanteur');
-const songMetaContent = document.getElementById('songMetaContent');
-const songMetaContentWrap = document.getElementById('songMetaContentWrap');
+
   let touchStartX = 0, touchStartY = 0;
   const SWIPE_MIN_X = 110;
   const SWIPE_RATIO = 1.4;
@@ -1144,6 +1143,9 @@ function openCreateSongModal() {
   songMetaFileName.value = "";
   songMetaFileName.disabled = true;
 
+  if (songMetaArtistWrap) songMetaArtistWrap.style.display = 'grid';
+  if (songMetaFileNameWrap) songMetaFileNameWrap.style.display = 'none';
+
   prepareSongMetaFormSelections({
     category: 'Répertoire',
     style: [],
@@ -1243,6 +1245,9 @@ async function openEditSongMetaModal() {
     songMetaTitleInput.value = data?.title || currentFileName.replace(/\.(pro|cho)$/i, '');
     songMetaArtistInput.value = data?.artist || "";
     songMetaFileName.disabled = true;
+
+    if (songMetaArtistWrap) songMetaArtistWrap.style.display = 'grid';
+    if (songMetaFileNameWrap) songMetaFileNameWrap.style.display = 'none';
 
     prepareSongMetaFormSelections({
       category: data?.category || 'Répertoire',
@@ -1676,7 +1681,7 @@ function renderSongList() {
 
     return `
       <div class="song-item ${played ? 'played' : ''}"
-           data-name="${s.toLowerCase()}"
+           data-name="${String((meta.title && meta.artist) ? `${meta.title} ${meta.artist}` : s).toLowerCase()}"
            data-category="${String(meta.category || 'Répertoire').toLowerCase()}"
            data-style="${styleValues.map(v => String(v).toLowerCase()).join('|')}"
            data-ambiance="${String(meta.ambiance || '').toLowerCase()}"
