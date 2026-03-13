@@ -10,7 +10,6 @@ const GOOGLE_DRIVE_PARTITIONS_FOLDER_ID = process.env.GOOGLE_DRIVE_PARTITIONS_FO
 const GOOGLE_DRIVE_META_FOLDER_ID = process.env.GOOGLE_DRIVE_META_FOLDER_ID || '';
 const GOOGLE_DRIVE_HISTORY_FOLDER_ID = process.env.GOOGLE_DRIVE_HISTORY_FOLDER_ID || '';
 const GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID = process.env.GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID || '';
-const GOOGLE_DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID || ''; // non utilisé pour l’instant, laissé volontairement
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
 const GOOGLE_PRIVATE_KEY = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
 
@@ -103,7 +102,9 @@ function createHistoryEntry({ fileName, previousContent, userName }) {
 }
 
 function escapeDriveQueryValue(value) {
-  return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return String(value || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'");
 }
 
 async function findDriveFileByName(folderId, fileName) {
@@ -126,8 +127,8 @@ async function findDriveFileByName(folderId, fileName) {
   return res.data.files?.[0] || null;
 }
 
-async function listDriveSongs() {
-  if (!GOOGLE_DRIVE_PARTITIONS_FOLDER_ID) return [];
+async function listDriveFiles(folderId) {
+  if (!folderId) return [];
 
   const results = [];
   let pageToken = null;
@@ -135,7 +136,7 @@ async function listDriveSongs() {
   do {
     const res = await drive.files.list({
       q: [
-        `'${GOOGLE_DRIVE_PARTITIONS_FOLDER_ID}' in parents`,
+        `'${folderId}' in parents`,
         `trashed = false`
       ].join(' and '),
       fields: 'nextPageToken, files(id, name, mimeType)',
@@ -145,12 +146,17 @@ async function listDriveSongs() {
       includeItemsFromAllDrives: true
     });
 
-    const files = res.data.files || [];
-    results.push(...files);
+    results.push(...(res.data.files || []));
     pageToken = res.data.nextPageToken || null;
   } while (pageToken);
 
-  return results
+  return results;
+}
+
+async function listDriveSongs() {
+  const files = await listDriveFiles(GOOGLE_DRIVE_PARTITIONS_FOLDER_ID);
+
+  return files
     .map(f => f.name)
     .filter(name => {
       const lower = String(name || '').toLowerCase();
@@ -187,7 +193,8 @@ async function createDriveTextFile(folderId, fileName, content, mimeType = 'text
       mimeType,
       body: Readable.from(buffer)
     },
-    fields: 'id, name'
+    fields: 'id, name',
+    supportsAllDrives: true
   });
 
   return res.data;
@@ -205,7 +212,8 @@ async function updateDriveTextFile(fileId, fileName, content, mimeType = 'text/p
       mimeType,
       body: Readable.from(buffer)
     },
-    fields: 'id, name'
+    fields: 'id, name',
+    supportsAllDrives: true
   });
 
   return res.data;
@@ -228,7 +236,8 @@ async function readDriveJsonFileByName(folderId, fileName, fallbackValue) {
   try {
     const raw = await readDriveTextFile(file.id);
     return JSON.parse(raw);
-  } catch {
+  } catch (err) {
+    console.error(`❌ JSON invalide pour ${fileName}:`, err);
     return fallbackValue;
   }
 }
@@ -360,12 +369,24 @@ function broadcastPlayedTonight() {
   });
 }
 
+app.get('/health', async (req, res) => {
+  res.json({
+    ok: true,
+    partitionsFolder: !!GOOGLE_DRIVE_PARTITIONS_FOLDER_ID,
+    metaFolder: !!GOOGLE_DRIVE_META_FOLDER_ID,
+    historyFolder: !!GOOGLE_DRIVE_HISTORY_FOLDER_ID,
+    settingsFolder: !!GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID,
+    serviceAccount: !!GOOGLE_SERVICE_ACCOUNT_EMAIL
+  });
+});
+
 app.get('/list-songs', async (req, res) => {
   try {
     const songs = await listDriveSongs();
+    console.log('🎵 /list-songs ->', songs.length, 'morceaux');
     res.json(songs);
   } catch (err) {
-    console.error('Erreur /list-songs :', err);
+    console.error('❌ Erreur /list-songs :', err);
     res.status(500).json([]);
   }
 });
@@ -385,7 +406,7 @@ app.get('/partitions/:fileName', async (req, res) => {
     const content = await readDriveTextFile(file.id);
     res.type('text/plain').send(content);
   } catch (err) {
-    console.error('Erreur lecture partition Drive :', err);
+    console.error('❌ Erreur lecture partition Drive :', err);
     res.status(500).send('Erreur');
   }
 });
@@ -459,18 +480,49 @@ app.get('/song-meta-entry', async (req, res) => {
 
 app.get('/debug/drive', async (req, res) => {
   try {
-    const files = await listDriveFiles(GOOGLE_DRIVE_PARTITIONS_FOLDER_ID);
+    const [partitionFiles, metaFiles, historyFiles, settingsFiles] = await Promise.all([
+      listDriveFiles(GOOGLE_DRIVE_PARTITIONS_FOLDER_ID),
+      listDriveFiles(GOOGLE_DRIVE_META_FOLDER_ID),
+      listDriveFiles(GOOGLE_DRIVE_HISTORY_FOLDER_ID),
+      listDriveFiles(GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID)
+    ]);
+
     res.json({
-      partitionsFolderId: GOOGLE_DRIVE_PARTITIONS_FOLDER_ID,
-      count: files.length,
-      files: files.map(f => ({
+      folders: {
+        partitions: GOOGLE_DRIVE_PARTITIONS_FOLDER_ID || null,
+        meta: GOOGLE_DRIVE_META_FOLDER_ID || null,
+        history: GOOGLE_DRIVE_HISTORY_FOLDER_ID || null,
+        settings: GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID || null
+      },
+      counts: {
+        partitions: partitionFiles.length,
+        meta: metaFiles.length,
+        history: historyFiles.length,
+        settings: settingsFiles.length
+      },
+      partitions: partitionFiles.map(f => ({
+        id: f.id,
+        name: f.name,
+        mimeType: f.mimeType
+      })),
+      meta: metaFiles.map(f => ({
+        id: f.id,
+        name: f.name,
+        mimeType: f.mimeType
+      })),
+      history: historyFiles.map(f => ({
+        id: f.id,
+        name: f.name,
+        mimeType: f.mimeType
+      })),
+      settings: settingsFiles.map(f => ({
         id: f.id,
         name: f.name,
         mimeType: f.mimeType
       }))
     });
   } catch (err) {
-    console.error('❌ Erreur debug drive:', err);
+    console.error('❌ Erreur /debug/drive:', err);
     res.status(500).json({
       error: err.message,
       details: String(err)
@@ -569,9 +621,10 @@ app.post('/save-song-meta', async (req, res) => {
 
     await writeSongMeta(meta);
 
+    io.emit('song-meta-updated', { fileName, at: Date.now() });
     res.send('OK');
   } catch (err) {
-    console.error('❌ Erreur save-song-meta:', err);
+    console.error('❌ Erreur POST /save-song-meta:', err);
     res.status(500).send('Erreur');
   }
 });
@@ -589,8 +642,6 @@ app.post('/create-song', async (req, res) => {
       audience,
       chanteur
     } = req.body || {};
-
-    console.log('📥 /create-song reçu :', req.body);
 
     if (!pinOk(pin)) return res.status(403).send('PIN invalide');
 
@@ -626,8 +677,6 @@ app.post('/create-song', async (req, res) => {
       'text/plain'
     );
 
-    console.log('✅ Fichier morceau créé sur Google Drive :', finalFileName);
-
     const meta = await readSongMeta();
 
     meta[finalFileName] = normalizeSongMetaEntry({
@@ -640,14 +689,12 @@ app.post('/create-song', async (req, res) => {
       chanteur
     });
 
-    console.log('📝 Entrée meta à écrire :', finalFileName, meta[finalFileName]);
-
     await writeSongMeta(meta);
 
     io.emit('song-created', { fileName: finalFileName, at: Date.now() });
     res.send('OK');
   } catch (err) {
-    console.error('❌ Erreur create-song:', err);
+    console.error('❌ Erreur POST /create-song:', err);
     res.status(500).send('Erreur');
   }
 });
@@ -780,6 +827,7 @@ console.log('📁 GOOGLE_DRIVE_PARTITIONS_FOLDER_ID =', GOOGLE_DRIVE_PARTITIONS_
 console.log('📁 GOOGLE_DRIVE_META_FOLDER_ID =', GOOGLE_DRIVE_META_FOLDER_ID ? 'OK' : 'MANQUANT');
 console.log('📁 GOOGLE_DRIVE_HISTORY_FOLDER_ID =', GOOGLE_DRIVE_HISTORY_FOLDER_ID ? 'OK' : 'MANQUANT');
 console.log('📁 GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID =', GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID ? 'OK' : 'MANQUANT');
+console.log('📧 GOOGLE_SERVICE_ACCOUNT_EMAIL =', GOOGLE_SERVICE_ACCOUNT_EMAIL || 'MANQUANT');
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, '0.0.0.0', () => {
