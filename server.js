@@ -143,18 +143,35 @@ function writeSongSettings(fileName, settings) {
 
 function readSongMeta() {
   try {
-    if (!fs.existsSync(SONG_META_FILE)) return {};
+    if (!fs.existsSync(SONG_META_FILE)) {
+      console.log("⚠️ song-meta.json absent, création d'un objet vide");
+      return {};
+    }
+
     const raw = fs.readFileSync(SONG_META_FILE, 'utf8');
     const data = JSON.parse(raw);
-    return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
-  } catch {
+
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      return data;
+    }
+
+    console.log("⚠️ song-meta.json n'est pas un objet JSON valide, reset {}");
+    return {};
+  } catch (err) {
+    console.error("❌ Erreur lecture song-meta.json :", err);
     return {};
   }
 }
 
 function writeSongMeta(meta) {
-  fs.writeFileSync(SONG_META_FILE, JSON.stringify(meta, null, 2), 'utf8');
-  console.log("✅ song-meta.json mis à jour :", SONG_META_FILE);
+  try {
+    fs.writeFileSync(SONG_META_FILE, JSON.stringify(meta, null, 2), 'utf8');
+    console.log("✅ song-meta.json mis à jour :", SONG_META_FILE);
+    console.log("✅ Nombre d'entrées meta :", Object.keys(meta).length);
+  } catch (err) {
+    console.error("❌ Erreur écriture song-meta.json :", err);
+    throw err;
+  }
 }
 
 function normalizeStringArray(value) {
@@ -403,6 +420,8 @@ app.post('/create-song', (req, res) => {
       chanteur
     } = req.body || {};
 
+    console.log("📥 /create-song reçu :", req.body);
+
     if (!pinOk(pin)) return res.status(403).send("PIN invalide");
 
     const cleanTitle = String(title || '').trim();
@@ -428,8 +447,10 @@ app.post('/create-song', (req, res) => {
       `{st:${cleanArtist}}\n\n`;
 
     fs.writeFileSync(filePath, defaultContent, 'utf8');
+    console.log("✅ Fichier morceau créé :", filePath);
 
     const meta = readSongMeta();
+
     meta[finalFileName] = normalizeSongMetaEntry({
       title: cleanTitle,
       artist: cleanArtist,
@@ -439,12 +460,15 @@ app.post('/create-song', (req, res) => {
       audience,
       chanteur
     });
+
+    console.log("📝 Entrée meta à écrire :", finalFileName, meta[finalFileName]);
+
     writeSongMeta(meta);
 
     io.emit('song-created', { fileName: finalFileName, at: Date.now() });
     res.send("OK");
   } catch (err) {
-    console.error("Erreur create-song:", err);
+    console.error("❌ Erreur create-song:", err);
     res.status(500).send("Erreur");
   }
 });
@@ -573,6 +597,9 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+console.log("📁 PARTITIONS_DIR =", PARTITIONS_DIR);
+console.log("📁 SONG_META_FILE =", SONG_META_FILE);
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, '0.0.0.0', () => {
