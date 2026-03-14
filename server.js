@@ -568,11 +568,15 @@ app.post('/restore-song', async (req, res) => {
 
     const currentContent = await readPartition(fileName);
 
-    await appendHistory(fileName, createHistoryEntry({
-      fileName,
-      previousContent: currentContent || '',
-      userName: userName || 'Restauration'
-    }));
+    try {
+      await appendHistory(fileName, createHistoryEntry({
+        fileName,
+        previousContent: currentContent || '',
+        userName: userName || 'Restauration'
+      }));
+    } catch (historyErr) {
+      console.error('⚠️ Historique non enregistré avant restauration :', historyErr?.errors || historyErr?.message || historyErr);
+    }
 
     await writePartition(fileName, String(entry.previousContent ?? ''));
 
@@ -593,11 +597,15 @@ app.post('/save-song', async (req, res) => {
 
     const previousContent = await readPartition(fileName);
 
-    await appendHistory(fileName, createHistoryEntry({
-      fileName,
-      previousContent: previousContent || '',
-      userName: userName || 'Inconnu'
-    }));
+    try {
+      await appendHistory(fileName, createHistoryEntry({
+        fileName,
+        previousContent: previousContent || '',
+        userName: userName || 'Inconnu'
+      }));
+    } catch (historyErr) {
+      console.error('⚠️ Historique non enregistré :', historyErr?.errors || historyErr?.message || historyErr);
+    }
 
     await writePartition(fileName, String(content ?? ''));
 
