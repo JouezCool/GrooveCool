@@ -1704,7 +1704,10 @@ function renderSongList() {
           <span class="song-badge ${played ? 'played' : ''}">
             ${played ? 'Joué' : 'À jouer'}
           </span>
-          <b class="song-title">${escapeHtml(displayTitle)}</b>
+          <span class="song-title">
+  <b>${escapeHtml(title)}</b>
+  ${artist ? ' - ' + escapeHtml(artist) : ''}
+</span>
         </div>
         <span>❯</span>
       </div>
