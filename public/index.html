@@ -1679,9 +1679,18 @@ function renderSongList() {
     const audienceValues = Array.isArray(meta.audience) ? meta.audience : [];
     const singerValues = Array.isArray(meta.chanteur) ? meta.chanteur : [];
 
+    const displayTitle = [meta.title || s.replace('.pro', '').replace('.cho', ''), meta.artist || '']
+      .filter(Boolean)
+      .join(' - ');
+
+    const searchText = [meta.title || s, meta.artist || '']
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
     return `
       <div class="song-item ${played ? 'played' : ''}"
-           data-name="${String((meta.title && meta.artist) ? `${meta.title} ${meta.artist}` : s).toLowerCase()}"
+           data-name="${escapeHtml(searchText)}"
            data-category="${String(meta.category || 'Répertoire').toLowerCase()}"
            data-style="${styleValues.map(v => String(v).toLowerCase()).join('|')}"
            data-ambiance="${String(meta.ambiance || '').toLowerCase()}"
@@ -1693,11 +1702,7 @@ function renderSongList() {
           <span class="song-badge ${played ? 'played' : ''}">
             ${played ? 'Joué' : 'À jouer'}
           </span>
-          <b class="song-title">${escapeHtml(
-  meta.title && meta.artist
-    ? `${meta.title} - ${meta.artist}`
-    : (meta.title || s.replace('.pro','').replace('.cho',''))
-)}</b>
+          <b class="song-title">${escapeHtml(displayTitle)}</b>
         </div>
         <span>❯</span>
       </div>
@@ -1719,7 +1724,11 @@ function getFilteredSongIndexes() {
   allSongs.forEach((song, idx) => {
     const meta = songMeta[song] || {};
 
-    const name = String(song || "").toLowerCase();
+   const name = [
+  song,
+  meta.title || '',
+  meta.artist || ''
+].join(' ').toLowerCase();
     const category = String(meta.category || "Répertoire").toLowerCase();
     const ambiance = String(meta.ambiance || "").toLowerCase();
 
