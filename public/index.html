@@ -1679,14 +1679,16 @@ function renderSongList() {
     const audienceValues = Array.isArray(meta.audience) ? meta.audience : [];
     const singerValues = Array.isArray(meta.chanteur) ? meta.chanteur : [];
 
-    const displayTitle = [meta.title || s.replace('.pro', '').replace('.cho', ''), meta.artist || '']
-      .filter(Boolean)
-      .join(' - ');
+    const fileBase = String(s || '').replace(/\.(pro|cho)$/i, '');
+    const parts = fileBase.split(' - ');
+    const fallbackTitle = parts[0] || fileBase;
+    const fallbackArtist = parts.length > 1 ? parts.slice(1).join(' - ') : '';
 
-    const searchText = [meta.title || s, meta.artist || '']
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
+    const title = String(meta.title || fallbackTitle).trim();
+    const artist = String(meta.artist || fallbackArtist).trim();
+
+    const displayTitle = [title, artist].filter(Boolean).join(' - ');
+    const searchText = [title, artist, s].filter(Boolean).join(' ').toLowerCase();
 
     return `
       <div class="song-item ${played ? 'played' : ''}"
