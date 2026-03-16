@@ -41,12 +41,14 @@ let oauthTokens = null;
 function getDriveClient() {
   if (oauthTokens && oauthTokens.access_token) {
     oauth2Client.setCredentials(oauthTokens);
+    console.log('🔐 Drive client = OAUTH USER');
     return google.drive({
       version: 'v3',
       auth: oauth2Client
     });
   }
 
+  console.log('🔐 Drive client = SERVICE ACCOUNT');
   return google.drive({
     version: 'v3',
     auth
@@ -788,6 +790,13 @@ app.post('/create-song', async (req, res) => {
     res.send('OK');
   } catch (err) {
     console.error('❌ Erreur POST /create-song:', err);
+
+    if (err?.errors?.[0]?.reason === 'storageQuotaExceeded') {
+      return res.status(500).send(
+        "Création impossible : l'application utilise encore le service account au lieu de la connexion Google OAuth."
+      );
+    }
+
     res.status(500).send('Erreur');
   }
 });
