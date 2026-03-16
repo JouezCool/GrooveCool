@@ -798,6 +798,7 @@ nav{
 <button class="btn" onclick="openHistoryModal()">V1</button>
 <button class="btn" onclick="openEditSongMetaModal()">INFOS</button>
 <button class="btn btn-blue" onclick="openEditor()">ÉDITER</button>
+<button class="btn" style="border-color:#ff5252; color:#ff5252;" onclick="deleteCurrentSong()">SUPPRIMER</button>
     </nav>
 	
 <div id="leaderFloatingActions">
@@ -1050,6 +1051,53 @@ function escapeHtml(s) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+async function deleteCurrentSong() {
+  if (!currentFileName) return;
+
+  const confirmText = prompt("Pour supprimer ce morceau, tape SUPPRIMER");
+  if (!confirmText) return;
+
+  if (String(confirmText).trim().toUpperCase() !== "SUPPRIMER") {
+    alert("Confirmation invalide");
+    return;
+  }
+
+  const pin = prompt("PIN requis pour supprimer ce morceau") || "";
+  const cleanPin = String(pin).trim();
+  if (!cleanPin) return;
+
+  try {
+    const res = await fetch('/delete-song', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: currentFileName,
+        pin: cleanPin,
+        confirmText
+      })
+    });
+
+    if (res.ok) {
+      const deletedFileName = currentFileName;
+
+      closeViewer();
+      await fetchSongMeta();
+      await fetchSongs();
+      filterSongList(songSearchInput?.value || "");
+
+      showToast(`Morceau supprimé : ${deletedFileName}`);
+    } else if (res.status === 403) {
+      alert("PIN invalide");
+    } else {
+      const txt = await res.text();
+      alert("Erreur de suppression : " + txt);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Erreur de suppression");
+  }
 }
 
   function applyTheme() {
@@ -1496,6 +1544,16 @@ socket.emit('register-user', {
   filterSongList(songSearchInput?.value || "");
 });
 
+socket.on('song-deleted', async ({ fileName }) => {
+  await fetchSongMeta();
+  await fetchSongs();
+  filterSongList(songSearchInput?.value || "");
+
+  if (normName(fileName) === normName(currentFileName)) {
+    closeViewer();
+  }
+});
+
   socket.on('connect', () => {
     settingsBtnFixed.style.borderColor = "#4CAF50";
 
@@ -1717,7 +1775,7 @@ function renderSongList() {
 
 function getFilteredSongIndexes() {
   const query = String(songSearchInput?.value || "").toLowerCase().trim();
-  const selectedCategory = String(categoryFilterEl?.value || "Répertoire").toLowerCase().trim();
+  const selectedCategory = String(categoryFilterEl?.value ?? "").toLowerCase().trim();
   const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
   const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
   const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
@@ -1792,7 +1850,7 @@ autoMarkCurrentSongAsPlayed();
 
 function filterSongList(q) {
   const query = String(q || "").toLowerCase().trim();
-  const selectedCategory = String(categoryFilterEl?.value || "Répertoire").toLowerCase().trim();
+  const selectedCategory = String(categoryFilterEl?.value ?? "").toLowerCase().trim();;
   const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
   const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
   const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
