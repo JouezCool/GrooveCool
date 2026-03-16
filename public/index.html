@@ -1538,6 +1538,17 @@ socket.emit('register-user', {
     }
   }
   
+  socket.on('song-meta-updated', async ({ fileName }) => {
+  await fetchSongMeta();
+  renderSongList();
+  populateSongFilters();
+  filterSongList(songSearchInput?.value || "");
+
+  if (normName(fileName) === normName(currentFileName)) {
+    updatePlayedButton();
+  }
+});
+  
   socket.on('song-created', async () => {
   await fetchSongMeta();
   await fetchSongs();
@@ -1751,11 +1762,11 @@ function renderSongList() {
     return `
       <div class="song-item ${played ? 'played' : ''}"
            data-name="${escapeHtml(searchText)}"
-           data-category="${String(meta.category || 'Répertoire').toLowerCase()}"
-           data-style="${styleValues.map(v => String(v).toLowerCase()).join('|')}"
-           data-ambiance="${String(meta.ambiance || '').toLowerCase()}"
-           data-audience="${audienceValues.map(v => String(v).toLowerCase()).join('|')}"
-           data-singer="${singerValues.map(v => String(v).toLowerCase()).join('|')}"
+           data-category="${String(meta.category || 'Répertoire').trim().toLowerCase()}"
+data-style="${styleValues.map(v => String(v).trim().toLowerCase()).join('|')}"
+data-ambiance="${String(meta.ambiance || '').trim().toLowerCase()}"
+data-audience="${audienceValues.map(v => String(v).trim().toLowerCase()).join('|')}"
+data-singer="${singerValues.map(v => String(v).trim().toLowerCase()).join('|')}"
            data-played="${played ? 'played' : 'unplayed'}"
            onclick="openSong(${idx})">
         <div class="song-left">
@@ -1792,19 +1803,19 @@ function getFilteredSongIndexes() {
   meta.title || '',
   meta.artist || ''
 ].join(' ').toLowerCase();
-    const category = String(meta.category || "Répertoire").toLowerCase();
-    const ambiance = String(meta.ambiance || "").toLowerCase();
+    const category = String(meta.category || "Répertoire").trim().toLowerCase();
+const ambiance = String(meta.ambiance || "").trim().toLowerCase();
 
     const styleValues = Array.isArray(meta.style)
-      ? meta.style.map(v => String(v || "").toLowerCase().trim())
+      ? meta.style.map(v => String(v || "").trim().toLowerCase())
       : [];
 
     const audienceValues = Array.isArray(meta.audience)
-      ? meta.audience.map(v => String(v || "").toLowerCase().trim())
+      ? meta.audience.map(v => String(v || "").trim().toLowerCase())
       : [];
 
     const singerValues = Array.isArray(meta.chanteur)
-      ? meta.chanteur.map(v => String(v || "").toLowerCase().trim())
+      ? meta.chanteur.map(v => String(v || "").trim().toLowerCase())
       : [];
 
     const played = isPlayedTonight(song) ? "played" : "unplayed";
@@ -1862,16 +1873,16 @@ function filterSongList(q) {
 
   items.forEach(item => {
     const name = item.dataset.name || "";
-    const category = item.dataset.category || "répertoire";
-    const style = item.dataset.style || "";
-    const ambiance = item.dataset.ambiance || "";
-    const audience = item.dataset.audience || "";
-    const singer = item.dataset.singer || "";
+    const category = String(item.dataset.category || "répertoire").trim();
+const style = String(item.dataset.style || "").trim();
+const ambiance = String(item.dataset.ambiance || "").trim();
+const audience = String(item.dataset.audience || "").trim();
+const singer = String(item.dataset.singer || "").trim();
     const played = item.dataset.played || "unplayed";
 
-    const styleValues = style ? style.split('|') : [];
-    const audienceValues = audience ? audience.split('|') : [];
-    const singerValues = singer ? singer.split('|') : [];
+    const styleValues = style ? style.split('|').map(v => v.trim()) : [];
+const audienceValues = audience ? audience.split('|').map(v => v.trim()) : [];
+const singerValues = singer ? singer.split('|').map(v => v.trim()) : [];
 
     const matchQuery = !query || name.includes(query);
     const matchCategory = !selectedCategory || category === selectedCategory;
