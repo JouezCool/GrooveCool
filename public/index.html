@@ -1744,10 +1744,6 @@ function renderSongList() {
     const meta = songMeta[s] || {};
     const played = isPlayedTonight(s);
 
-    const styleValues = Array.isArray(meta.style) ? meta.style : [];
-    const audienceValues = Array.isArray(meta.audience) ? meta.audience : [];
-    const singerValues = Array.isArray(meta.chanteur) ? meta.chanteur : [];
-
     const fileBase = String(s || '').replace(/\.(pro|cho)$/i, '');
     const parts = fileBase.split(' - ');
     const fallbackTitle = parts[0] || fileBase;
@@ -1756,29 +1752,17 @@ function renderSongList() {
     const title = String(meta.title || fallbackTitle).trim();
     const artist = String(meta.artist || fallbackArtist).trim();
 
-    const displayTitle = [title, artist].filter(Boolean).join(' - ');
-    const searchText = [title, artist, s].filter(Boolean).join(' ').toLowerCase();
-	
-	console.log('CAT', s, '=>', JSON.stringify(String(meta.category || 'Répertoire').trim().toLowerCase()));
-
     return `
       <div class="song-item ${played ? 'played' : ''}"
-           data-name="${escapeHtml(searchText)}"
-           data-category="${String(meta.category || 'Répertoire').trim().toLowerCase()}"
-data-style="${styleValues.map(v => String(v).trim().toLowerCase()).join('|')}"
-data-ambiance="${String(meta.ambiance || '').trim().toLowerCase()}"
-data-audience="${audienceValues.map(v => String(v).trim().toLowerCase()).join('|')}"
-data-singer="${singerValues.map(v => String(v).trim().toLowerCase()).join('|')}"
-           data-played="${played ? 'played' : 'unplayed'}"
+           data-index="${idx}"
            onclick="openSong(${idx})">
         <div class="song-left">
           <span class="song-badge ${played ? 'played' : ''}">
             ${played ? 'Joué' : 'À jouer'}
           </span>
           <span class="song-title">
-  <b>${escapeHtml(title)}</b>
-  ${artist ? ' - ' + escapeHtml(artist) : ''}
-</span>
+            <b>${escapeHtml(title)}</b>${artist ? ' - ' + escapeHtml(artist) : ''}
+          </span>
         </div>
         <span>❯</span>
       </div>
@@ -1788,7 +1772,7 @@ data-singer="${singerValues.map(v => String(v).trim().toLowerCase()).join('|')}"
 
 function getFilteredSongIndexes() {
   const query = String(songSearchInput?.value || "").toLowerCase().trim();
-  const selectedCategory = String(categoryFilterEl?.value ?? "").toLowerCase().trim();
+  const selectedCategory = String(categoryFilterEl?.value || "").toLowerCase().trim();
   const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
   const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
   const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
@@ -1800,13 +1784,18 @@ function getFilteredSongIndexes() {
   allSongs.forEach((song, idx) => {
     const meta = songMeta[song] || {};
 
-   const name = [
-  song,
-  meta.title || '',
-  meta.artist || ''
-].join(' ').toLowerCase();
+    const fileBase = String(song || '').replace(/\.(pro|cho)$/i, '');
+    const parts = fileBase.split(' - ');
+    const fallbackTitle = parts[0] || fileBase;
+    const fallbackArtist = parts.length > 1 ? parts.slice(1).join(' - ') : '';
+
+    const title = String(meta.title || fallbackTitle).trim();
+    const artist = String(meta.artist || fallbackArtist).trim();
+
+    const searchText = [song, title, artist].join(' ').toLowerCase();
+
     const category = String(meta.category || "Répertoire").trim().toLowerCase();
-const ambiance = String(meta.ambiance || "").trim().toLowerCase();
+    const ambiance = String(meta.ambiance || "").trim().toLowerCase();
 
     const styleValues = Array.isArray(meta.style)
       ? meta.style.map(v => String(v || "").trim().toLowerCase())
@@ -1822,7 +1811,7 @@ const ambiance = String(meta.ambiance || "").trim().toLowerCase();
 
     const played = isPlayedTonight(song) ? "played" : "unplayed";
 
-    const matchQuery = !query || name.includes(query);
+    const matchQuery = !query || searchText.includes(query);
     const matchCategory = !selectedCategory || category === selectedCategory;
     const matchStyle = !selectedStyle || styleValues.includes(selectedStyle);
     const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
@@ -1863,7 +1852,7 @@ autoMarkCurrentSongAsPlayed();
 
 function filterSongList(q) {
   const query = String(q || "").toLowerCase().trim();
-  const selectedCategory = String(categoryFilterEl?.value ?? "").toLowerCase().trim();;
+  const selectedCategory = String(categoryFilterEl?.value || "").toLowerCase().trim();
   const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
   const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
   const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
@@ -1873,20 +1862,38 @@ function filterSongList(q) {
   const items = document.querySelectorAll('#songList .song-item');
   let shown = 0;
 
-  items.forEach(item => {
-    const name = item.dataset.name || "";
-    const category = String(item.dataset.category || "répertoire").trim();
-const style = String(item.dataset.style || "").trim();
-const ambiance = String(item.dataset.ambiance || "").trim();
-const audience = String(item.dataset.audience || "").trim();
-const singer = String(item.dataset.singer || "").trim();
-    const played = item.dataset.played || "unplayed";
+  items.forEach((item, idx) => {
+    const song = allSongs[idx];
+    const meta = songMeta[song] || {};
 
-    const styleValues = style ? style.split('|').map(v => v.trim()) : [];
-const audienceValues = audience ? audience.split('|').map(v => v.trim()) : [];
-const singerValues = singer ? singer.split('|').map(v => v.trim()) : [];
+    const fileBase = String(song || '').replace(/\.(pro|cho)$/i, '');
+    const parts = fileBase.split(' - ');
+    const fallbackTitle = parts[0] || fileBase;
+    const fallbackArtist = parts.length > 1 ? parts.slice(1).join(' - ') : '';
 
-    const matchQuery = !query || name.includes(query);
+    const title = String(meta.title || fallbackTitle).trim();
+    const artist = String(meta.artist || fallbackArtist).trim();
+
+    const searchText = [song, title, artist].join(' ').toLowerCase();
+
+    const category = String(meta.category || "Répertoire").trim().toLowerCase();
+    const ambiance = String(meta.ambiance || "").trim().toLowerCase();
+
+    const styleValues = Array.isArray(meta.style)
+      ? meta.style.map(v => String(v || "").trim().toLowerCase())
+      : [];
+
+    const audienceValues = Array.isArray(meta.audience)
+      ? meta.audience.map(v => String(v || "").trim().toLowerCase())
+      : [];
+
+    const singerValues = Array.isArray(meta.chanteur)
+      ? meta.chanteur.map(v => String(v || "").trim().toLowerCase())
+      : [];
+
+    const played = isPlayedTonight(song) ? "played" : "unplayed";
+
+    const matchQuery = !query || searchText.includes(query);
     const matchCategory = !selectedCategory || category === selectedCategory;
     const matchStyle = !selectedStyle || styleValues.includes(selectedStyle);
     const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
