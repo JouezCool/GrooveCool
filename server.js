@@ -289,6 +289,18 @@ async function writeDriveJsonFileByName(folderId, fileName, value) {
   );
 }
 
+async function trashDriveFile(fileId) {
+  const drive = getDriveClient();
+
+  await drive.files.update({
+    fileId,
+    requestBody: {
+      trashed: true
+    },
+    supportsAllDrives: true
+  });
+}
+
 async function readOauthTokensFromDrive() {
   try {
     if (!GOOGLE_DRIVE_META_FOLDER_ID) return null;
@@ -839,6 +851,38 @@ app.post('/create-song', async (req, res) => {
       );
     }
 
+    res.status(500).send('Erreur');
+  }
+});
+
+app.post('/delete-song', async (req, res) => {
+  try {
+    const { fileName, pin, confirmText } = req.body || {};
+
+    if (!pinOk(pin)) return res.status(403).send('PIN invalide');
+    if (!isValidSongName(fileName)) return res.status(400).send('Nom de fichier invalide');
+
+    if (String(confirmText || '').trim().toUpperCase() !== 'SUPPRIMER') {
+      return res.status(400).send('Confirmation invalide');
+    }
+
+    const file = await findDriveFileByName(GOOGLE_DRIVE_PARTITIONS_FOLDER_ID, fileName);
+    if (!file) {
+      return res.status(404).send('Fichier introuvable');
+    }
+
+    await trashDriveFile(file.id);
+
+    const meta = await readSongMeta();
+    if (meta[fileName]) {
+      delete meta[fileName];
+      await writeSongMeta(meta);
+    }
+
+    io.emit('song-deleted', { fileName, at: Date.now() });
+    res.send('OK');
+  } catch (err) {
+    console.error('❌ Erreur POST /delete-song:', err);
     res.status(500).send('Erreur');
   }
 });
