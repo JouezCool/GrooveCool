@@ -1758,6 +1758,8 @@ function renderSongList() {
 
     const displayTitle = [title, artist].filter(Boolean).join(' - ');
     const searchText = [title, artist, s].filter(Boolean).join(' ').toLowerCase();
+	
+	console.log('CAT', s, '=>', JSON.stringify(String(meta.category || 'Répertoire').trim().toLowerCase()));
 
     return `
       <div class="song-item ${played ? 'played' : ''}"
