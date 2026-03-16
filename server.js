@@ -13,6 +13,14 @@ const GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID = process.env.GOOGLE_DRIVE_SONG_SETTI
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
 const GOOGLE_PRIVATE_KEY = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
 
+const GOOGLE_OAUTH_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID || '';
+const GOOGLE_OAUTH_CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET || '';
+const GOOGLE_OAUTH_REDIRECT_URI = process.env.GOOGLE_OAUTH_REDIRECT_URI || '';
+const GOOGLE_OAUTH_SCOPES = (process.env.GOOGLE_OAUTH_SCOPES || 'https://www.googleapis.com/auth/drive')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
 
 const auth = new google.auth.JWT(
@@ -31,7 +39,6 @@ const oauth2Client = new google.auth.OAuth2(
 let oauthTokens = null;
 
 function getDriveClient() {
-	const drive = getDriveClient();
   if (oauthTokens && oauthTokens.access_token) {
     oauth2Client.setCredentials(oauthTokens);
     return google.drive({
@@ -121,7 +128,6 @@ function createHistoryEntry({ fileName, previousContent, userName }) {
 }
 
 function escapeDriveQueryValue(value) {
-	const drive = getDriveClient();
   return String(value || '')
     .replace(/\\/g, '\\\\')
     .replace(/'/g, "\\'");
