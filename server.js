@@ -22,10 +22,29 @@ const auth = new google.auth.JWT(
   ['https://www.googleapis.com/auth/drive']
 );
 
-const drive = google.drive({
-  version: 'v3',
-  auth
-});
+const oauth2Client = new google.auth.OAuth2(
+  GOOGLE_OAUTH_CLIENT_ID,
+  GOOGLE_OAUTH_CLIENT_SECRET,
+  GOOGLE_OAUTH_REDIRECT_URI
+);
+
+let oauthTokens = null;
+
+function getDriveClient() {
+	const drive = getDriveClient();
+  if (oauthTokens && oauthTokens.access_token) {
+    oauth2Client.setCredentials(oauthTokens);
+    return google.drive({
+      version: 'v3',
+      auth: oauth2Client
+    });
+  }
+
+  return google.drive({
+    version: 'v3',
+    auth
+  });
+}
 
 const playedTonight = new Set();
 const connectedUsers = new Map();
@@ -102,12 +121,14 @@ function createHistoryEntry({ fileName, previousContent, userName }) {
 }
 
 function escapeDriveQueryValue(value) {
+	const drive = getDriveClient();
   return String(value || '')
     .replace(/\\/g, '\\\\')
     .replace(/'/g, "\\'");
 }
 
 async function findDriveFileByName(folderId, fileName) {
+	const drive = getDriveClient();
   if (!folderId) return null;
 
   const q = [
@@ -128,6 +149,7 @@ async function findDriveFileByName(folderId, fileName) {
 }
 
 async function listDriveFiles(folderId) {
+	const drive = getDriveClient();
   if (!folderId) return [];
 
   const results = [];
@@ -154,6 +176,7 @@ async function listDriveFiles(folderId) {
 }
 
 async function listDriveSongs() {
+	const drive = getDriveClient();
   const files = await listDriveFiles(GOOGLE_DRIVE_PARTITIONS_FOLDER_ID);
 
   return files
@@ -166,6 +189,7 @@ async function listDriveSongs() {
 }
 
 async function readDriveTextFile(fileId) {
+	const drive = getDriveClient();
   const res = await drive.files.get(
     {
       fileId,
@@ -181,6 +205,7 @@ async function readDriveTextFile(fileId) {
 }
 
 async function createDriveTextFile(folderId, fileName, content, mimeType = 'text/plain') {
+	const drive = getDriveClient();
   const buffer = Buffer.from(String(content || ''), 'utf8');
 
   const res = await drive.files.create({
@@ -201,6 +226,7 @@ async function createDriveTextFile(folderId, fileName, content, mimeType = 'text
 }
 
 async function updateDriveTextFile(fileId, fileName, content, mimeType = 'text/plain') {
+	const drive = getDriveClient();
   const buffer = Buffer.from(String(content || ''), 'utf8');
 
   const res = await drive.files.update({
@@ -220,6 +246,7 @@ async function updateDriveTextFile(fileId, fileName, content, mimeType = 'text/p
 }
 
 async function upsertDriveTextFile(folderId, fileName, content, mimeType = 'text/plain') {
+	const drive = getDriveClient();
   const existing = await findDriveFileByName(folderId, fileName);
 
   if (existing) {
@@ -230,6 +257,7 @@ async function upsertDriveTextFile(folderId, fileName, content, mimeType = 'text
 }
 
 async function readDriveJsonFileByName(folderId, fileName, fallbackValue) {
+	const drive = getDriveClient();
   const file = await findDriveFileByName(folderId, fileName);
   if (!file) return fallbackValue;
 
@@ -243,6 +271,7 @@ async function readDriveJsonFileByName(folderId, fileName, fallbackValue) {
 }
 
 async function writeDriveJsonFileByName(folderId, fileName, value) {
+	const drive = getDriveClient();
   return upsertDriveTextFile(
     folderId,
     fileName,
@@ -377,6 +406,56 @@ app.get('/health', async (req, res) => {
     historyFolder: !!GOOGLE_DRIVE_HISTORY_FOLDER_ID,
     settingsFolder: !!GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID,
     serviceAccount: !!GOOGLE_SERVICE_ACCOUNT_EMAIL
+  });
+});
+
+app.get('/auth/google', (req, res) => {
+  if (!GOOGLE_OAUTH_CLIENT_ID || !GOOGLE_OAUTH_CLIENT_SECRET || !GOOGLE_OAUTH_REDIRECT_URI) {
+    return res.status(500).send('OAuth Google non configuré');
+  }
+
+  const url = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: GOOGLE_OAUTH_SCOPES
+  });
+
+  res.redirect(url);
+});
+
+app.get('/oauth2callback', async (req, res) => {
+  try {
+    const code = String(req.query.code || '');
+    if (!code) {
+      return res.status(400).send('Code OAuth manquant');
+    }
+
+    const { tokens } = await oauth2Client.getToken(code);
+    oauthTokens = tokens;
+    oauth2Client.setCredentials(tokens);
+
+    console.log('✅ OAuth Google connecté');
+    console.log('✅ Refresh token présent :', !!tokens.refresh_token);
+
+    res.send(`
+      <html>
+        <body style="font-family:sans-serif;background:#111;color:#eee;padding:30px">
+          <h2>Connexion Google réussie ✅</h2>
+          <p>Tu peux fermer cette fenêtre et revenir dans BandApp.</p>
+        </body>
+      </html>
+    `);
+  } catch (err) {
+    console.error('❌ Erreur OAuth callback:', err);
+    res.status(500).send('Erreur OAuth');
+  }
+});
+
+app.get('/auth/status', (req, res) => {
+  res.json({
+    oauthConfigured: !!(GOOGLE_OAUTH_CLIENT_ID && GOOGLE_OAUTH_CLIENT_SECRET && GOOGLE_OAUTH_REDIRECT_URI),
+    oauthConnected: !!(oauthTokens && oauthTokens.access_token),
+    hasRefreshToken: !!(oauthTokens && oauthTokens.refresh_token)
   });
 });
 
