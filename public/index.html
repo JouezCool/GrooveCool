@@ -1784,7 +1784,7 @@ function renderSongList() {
 
 function getFilteredSongIndexes() {
   const query = String(songSearchInput?.value || "").toLowerCase().trim();
-  const selectedCategory = String(categoryFilterEl?.value || "").toLowerCase().trim();
+  const selectedCategory = String(categoryFilterEl?.value ?? "").toLowerCase().trim();
   const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
   const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
   const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
@@ -1796,15 +1796,11 @@ function getFilteredSongIndexes() {
   allSongs.forEach((song, idx) => {
     const meta = songMeta[song] || {};
 
-    const fileBase = String(song || '').replace(/\.(pro|cho)$/i, '');
-    const parts = fileBase.split(' - ');
-    const fallbackTitle = parts[0] || fileBase;
-    const fallbackArtist = parts.length > 1 ? parts.slice(1).join(' - ') : '';
-
-    const title = String(meta.title || fallbackTitle).trim();
-    const artist = String(meta.artist || fallbackArtist).trim();
-
-    const searchText = [song, title, artist].join(' ').toLowerCase();
+    const name = [
+      song,
+      meta.title || '',
+      meta.artist || ''
+    ].join(' ').toLowerCase();
 
     const category = String(meta.category || "Répertoire").trim().toLowerCase();
     const ambiance = String(meta.ambiance || "").trim().toLowerCase();
@@ -1823,7 +1819,7 @@ function getFilteredSongIndexes() {
 
     const played = isPlayedTonight(song) ? "played" : "unplayed";
 
-    const matchQuery = !query || searchText.includes(query);
+    const matchQuery = !query || name.includes(query);
     const matchCategory = !selectedCategory || category === selectedCategory;
     const matchStyle = !selectedStyle || styleValues.includes(selectedStyle);
     const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
@@ -1831,7 +1827,15 @@ function getFilteredSongIndexes() {
     const matchSinger = !selectedSinger || singerValues.includes(selectedSinger);
     const matchPlayed = !selectedPlayed || played === selectedPlayed;
 
-    if (matchQuery && matchCategory && matchStyle && matchAmbiance && matchAudience && matchSinger && matchPlayed) {
+    if (
+      matchQuery &&
+      matchCategory &&
+      matchStyle &&
+      matchAmbiance &&
+      matchAudience &&
+      matchSinger &&
+      matchPlayed
+    ) {
       indexes.push(idx);
     }
   });
@@ -1864,7 +1868,7 @@ autoMarkCurrentSongAsPlayed();
 
 function filterSongList(q) {
   const query = String(q || "").toLowerCase().trim();
-  const selectedCategory = String(categoryFilterEl?.value || "").toLowerCase().trim();
+  const selectedCategory = String(categoryFilterEl?.value ?? "").toLowerCase().trim();
   const selectedStyle = String(styleFilterEl?.value || "").toLowerCase().trim();
   const selectedAmbiance = String(ambianceFilterEl?.value || "").toLowerCase().trim();
   const selectedAudience = String(audienceFilterEl?.value || "").toLowerCase().trim();
@@ -1874,19 +1878,16 @@ function filterSongList(q) {
   const items = document.querySelectorAll('#songList .song-item');
   let shown = 0;
 
-  items.forEach((item, idx) => {
+  items.forEach(item => {
+    const idx = Number(item.dataset.index);
     const song = allSongs[idx];
     const meta = songMeta[song] || {};
 
-    const fileBase = String(song || '').replace(/\.(pro|cho)$/i, '');
-    const parts = fileBase.split(' - ');
-    const fallbackTitle = parts[0] || fileBase;
-    const fallbackArtist = parts.length > 1 ? parts.slice(1).join(' - ') : '';
-
-    const title = String(meta.title || fallbackTitle).trim();
-    const artist = String(meta.artist || fallbackArtist).trim();
-
-    const searchText = [song, title, artist].join(' ').toLowerCase();
+    const name = [
+      song,
+      meta.title || '',
+      meta.artist || ''
+    ].join(' ').toLowerCase();
 
     const category = String(meta.category || "Répertoire").trim().toLowerCase();
     const ambiance = String(meta.ambiance || "").trim().toLowerCase();
@@ -1905,23 +1906,22 @@ function filterSongList(q) {
 
     const played = isPlayedTonight(song) ? "played" : "unplayed";
 
-    const matchQuery = !query || searchText.includes(query);
+    const matchQuery = !query || name.includes(query);
     const matchCategory = !selectedCategory || category === selectedCategory;
     const matchStyle = !selectedStyle || styleValues.includes(selectedStyle);
     const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
     const matchAudience = !selectedAudience || audienceValues.includes(selectedAudience);
     const matchSinger = !selectedSinger || singerValues.includes(selectedSinger);
     const matchPlayed = !selectedPlayed || played === selectedPlayed;
-	
-	if (song.includes('3ème SEX')) {
-  console.log('DEBUG FILTRE', {
-    song,
-    metaCategory: meta.category,
-    selectedCategory
-  });
-}
 
-    const ok = matchQuery && matchCategory && matchStyle && matchAmbiance && matchAudience && matchSinger && matchPlayed;
+    const ok =
+      matchQuery &&
+      matchCategory &&
+      matchStyle &&
+      matchAmbiance &&
+      matchAudience &&
+      matchSinger &&
+      matchPlayed;
 
     item.style.display = ok ? "flex" : "none";
     if (ok) shown++;
