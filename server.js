@@ -22,6 +22,7 @@ const GOOGLE_OAUTH_SCOPES = (process.env.GOOGLE_OAUTH_SCOPES || 'https://www.goo
   .filter(Boolean);
 
 const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
+const OAUTH_TOKENS_FILE_NAME = 'oauth-tokens.json';
 
 const auth = new google.auth.JWT(
   GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -288,6 +289,44 @@ async function writeDriveJsonFileByName(folderId, fileName, value) {
   );
 }
 
+async function readOauthTokensFromDrive() {
+  try {
+    if (!GOOGLE_DRIVE_META_FOLDER_ID) return null;
+
+    const data = await readDriveJsonFileByName(
+      GOOGLE_DRIVE_META_FOLDER_ID,
+      OAUTH_TOKENS_FILE_NAME,
+      null
+    );
+
+    if (!data || typeof data !== 'object') return null;
+
+    return data;
+  } catch (err) {
+    console.error('❌ Erreur lecture oauth-tokens.json:', err);
+    return null;
+  }
+}
+
+async function writeOauthTokensToDrive(tokens) {
+  try {
+    if (!GOOGLE_DRIVE_META_FOLDER_ID) {
+      throw new Error('GOOGLE_DRIVE_META_FOLDER_ID manquant');
+    }
+
+    await writeDriveJsonFileByName(
+      GOOGLE_DRIVE_META_FOLDER_ID,
+      OAUTH_TOKENS_FILE_NAME,
+      tokens
+    );
+
+    console.log('✅ oauth-tokens.json mis à jour sur Google Drive');
+  } catch (err) {
+    console.error('❌ Erreur écriture oauth-tokens.json:', err);
+    throw err;
+  }
+}
+
 async function readSongMeta() {
   const data = await readDriveJsonFileByName(
     GOOGLE_DRIVE_META_FOLDER_ID,
@@ -438,12 +477,14 @@ app.get('/oauth2callback', async (req, res) => {
       return res.status(400).send('Code OAuth manquant');
     }
 
-    const { tokens } = await oauth2Client.getToken(code);
-    oauthTokens = tokens;
-    oauth2Client.setCredentials(tokens);
+const { tokens } = await oauth2Client.getToken(code);
+oauthTokens = tokens;
+oauth2Client.setCredentials(tokens);
 
-    console.log('✅ OAuth Google connecté');
-    console.log('✅ Refresh token présent :', !!tokens.refresh_token);
+await writeOauthTokensToDrive(tokens);
+
+console.log('✅ OAuth Google connecté');
+console.log('✅ Refresh token présent :', !!tokens.refresh_token);
 
     res.send(`
       <html>
@@ -462,7 +503,8 @@ app.get('/oauth2callback', async (req, res) => {
 app.get('/auth/status', (req, res) => {
   res.json({
     oauthConfigured: !!(GOOGLE_OAUTH_CLIENT_ID && GOOGLE_OAUTH_CLIENT_SECRET && GOOGLE_OAUTH_REDIRECT_URI),
-    oauthConnected: !!(oauthTokens && oauthTokens.access_token),
+    oauthConnected: !!(oauthTokens && (oauthTokens.access_token || oauthTokens.refresh_token)),
+    hasAccessToken: !!(oauthTokens && oauthTokens.access_token),
     hasRefreshToken: !!(oauthTokens && oauthTokens.refresh_token)
   });
 });
@@ -931,8 +973,29 @@ console.log('📁 GOOGLE_DRIVE_HISTORY_FOLDER_ID =', GOOGLE_DRIVE_HISTORY_FOLDER
 console.log('📁 GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID =', GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID ? 'OK' : 'MANQUANT');
 console.log('📧 GOOGLE_SERVICE_ACCOUNT_EMAIL =', GOOGLE_SERVICE_ACCOUNT_EMAIL || 'MANQUANT');
 
+async function bootstrapOauthTokens() {
+  try {
+    const storedTokens = await readOauthTokensFromDrive();
+
+    if (storedTokens && storedTokens.refresh_token) {
+      oauthTokens = storedTokens;
+      oauth2Client.setCredentials(storedTokens);
+      console.log('✅ Tokens OAuth rechargés depuis Google Drive');
+    } else {
+      console.log('ℹ️ Aucun token OAuth sauvegardé trouvé');
+    }
+  } catch (err) {
+    console.error('❌ Erreur bootstrap OAuth:', err);
+  }
+}
+
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, '0.0.0.0', () => {
-  console.log('✅ Serveur en ligne sur le port ' + PORT);
-  console.log('🔐 PIN global:', LEADER_PIN);
-});
+
+(async () => {
+  await bootstrapOauthTokens();
+
+  http.listen(PORT, '0.0.0.0', () => {
+    console.log('✅ Serveur en ligne sur le port ' + PORT);
+    console.log('🔐 PIN global:', LEADER_PIN);
+  });
+})();
