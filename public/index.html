@@ -968,17 +968,18 @@ nav{
   let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
 
   let isRemoteScrolling = false;
-  let isScrolling = false;
-  let rafId = null;
-  let lastRafTime = 0;
-  let scrollCarry = 0;
-  let remoteScrollRaf = null;
-  let pendingRemoteScrollTop = 0;
-  let currentSongZoom = 1;
-  let isLoadingSong = false;
-  let lastConnectedUsers = [];
-  let songMetaIndex = {};
-  let concertMode = false;
+let isScrolling = false;
+let rafId = null;
+let lastRafTime = 0;
+let scrollCarry = 0;
+let remoteScrollRaf = null;
+let pendingRemoteScrollTop = 0;
+let currentSongZoom = 1;
+let isLoadingSong = false;
+let lastConnectedUsers = [];
+let songMeta = {};
+let songMetaIndex = {};
+let concertMode = false;
   let songMetaMode = 'edit';
 let currentSongOpenedAt = 0;
 let playedTonightSet = new Set();
@@ -2133,13 +2134,6 @@ function songMatchesFilters(song, query) {
     (!selectedSinger || singerValues.includes(selectedSinger)) &&
     (!selectedPlayed || played === selectedPlayed)
   );
-}
-
-function normalizeCategory(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ');
 }
 
   function notesKey(fileName) {
