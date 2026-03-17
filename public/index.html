@@ -1819,7 +1819,7 @@ function getFilteredSongIndexes() {
       meta.artist || ''
     ].join(' ').toLowerCase();
 
-    const category = String(meta.category || "Répertoire").trim().toLowerCase();
+    const category = normalizeCategory(meta.category);
     const ambiance = String(meta.ambiance || "").trim().toLowerCase();
 
     const styleValues = Array.isArray(meta.style)
@@ -1837,7 +1837,7 @@ function getFilteredSongIndexes() {
     const played = isPlayedTonight(song) ? "played" : "unplayed";
 
     const matchQuery = !query || name.includes(query);
-    const matchCategory = !selectedCategory || category === selectedCategory;
+    const matchCategory = !selectedCategory || category === normalizeCategory(selectedCategory);
     const matchStyle = !selectedStyle || styleValues.includes(selectedStyle);
     const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
     const matchAudience = !selectedAudience || audienceValues.includes(selectedAudience);
@@ -1906,7 +1906,7 @@ function filterSongList(q) {
       meta.artist || ''
     ].join(' ').toLowerCase();
 
-    const category = String(meta.category || "Répertoire").trim().toLowerCase();
+    const category = normalizeCategory(meta.category);
     const ambiance = String(meta.ambiance || "").trim().toLowerCase();
 
     const styleValues = Array.isArray(meta.style)
@@ -1924,7 +1924,7 @@ function filterSongList(q) {
     const played = isPlayedTonight(song) ? "played" : "unplayed";
 
     const matchQuery = !query || name.includes(query);
-    const matchCategory = !selectedCategory || category === selectedCategory;
+    const matchCategory = !selectedCategory || category === normalizeCategory(selectedCategory);
     const matchStyle = !selectedStyle || styleValues.includes(selectedStyle);
     const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
     const matchAudience = !selectedAudience || audienceValues.includes(selectedAudience);
@@ -2150,6 +2150,13 @@ function getMetaForSong(song) {
   const realKey = Object.keys(songMeta).find(k => normName(k) === wanted);
 
   return realKey ? songMeta[realKey] : {};
+}
+
+function normalizeCategory(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
 }
 
   function notesKey(fileName) {
