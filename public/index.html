@@ -977,7 +977,7 @@ nav{
   let currentSongZoom = 1;
   let isLoadingSong = false;
   let lastConnectedUsers = [];
-  let songMeta = {};
+  let songMetaIndex = {};
   let concertMode = false;
   let songMetaMode = 'edit';
 let currentSongOpenedAt = 0;
@@ -1044,6 +1044,19 @@ const songMetaChanteur = document.getElementById('songMetaChanteur');
   let toastTimer = null;
   let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin';
   let themeMode = localStorage.getItem('bandapp_theme') || 'dark';
+
+function rebuildSongMetaIndex() {
+  songMetaIndex = {};
+
+  Object.entries(songMeta || {}).forEach(([fileName, meta]) => {
+    const key = normName(fileName);
+    if (key) {
+      songMetaIndex[key] = meta || {};
+    }
+  });
+
+  console.log("META INDEX:", Object.keys(songMetaIndex).length, "entrées");
+}
 
   function showToast(msg) {
     if (toastTimer) clearTimeout(toastTimer);
@@ -1713,10 +1726,15 @@ async function fetchSongMeta() {
   try {
     const res = await fetch('/song-meta.json', { cache: 'no-store' });
     if (!res.ok) throw new Error('song-meta.json introuvable');
+
     songMeta = await res.json();
+    rebuildSongMetaIndex();
+
+    console.log("META chargée:", Object.keys(songMeta).length, "entrées");
   } catch (err) {
     console.warn('Erreur de chargement des métadonnées', err);
     songMeta = {};
+    songMetaIndex = {};
   }
 }
 
@@ -1828,7 +1846,6 @@ function filterSongList(q) {
   items.forEach(item => {
     const idx = Number(item.dataset.index);
     const song = allSongs[idx];
-
     const ok = songMatchesFilters(song, q);
 
     item.style.display = ok ? "flex" : "none";
@@ -2026,9 +2043,9 @@ renderChordPro();
 
 function normalizeText(value) {
   return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // enlève les accents
-    .replace(/[’`]/g, "'")           // unifie les apostrophes
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’`´]/g, "'")
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
@@ -2040,23 +2057,26 @@ function normName(value) {
 
 function normalizeMetaArray(value) {
   if (Array.isArray(value)) {
-    return value
-      .map(v => normalizeText(v))
-      .filter(Boolean);
+    return [...new Set(
+      value
+        .map(v => normalizeText(v))
+        .filter(Boolean)
+    )];
   }
 
   if (value == null || value === '') return [];
-
-  return [normalizeText(value)].filter(Boolean);
+  return [normalizeText(value)];
 }
 
 function getMetaForSong(song) {
-  if (songMeta[song]) return songMeta[song];
+  return songMetaIndex[normName(song)] || {};
+}
 
-  const wanted = normName(song);
-  const realKey = Object.keys(songMeta).find(k => normName(k) === wanted);
-
-  return realKey ? songMeta[realKey] : {};
+function debugMetaMatching() {
+  const missing = allSongs.filter(song => !songMetaIndex[normName(song)]);
+  console.log("SONGS:", allSongs.length);
+  console.log("META:", Object.keys(songMeta).length);
+  console.log("MISSING META MATCH:", missing.length, missing);
 }
 
 function songMatchesFilters(song, query) {
@@ -2089,22 +2109,14 @@ function songMatchesFilters(song, query) {
 
   const played = isPlayedTonight(song) ? "played" : "unplayed";
 
-  const matchQuery = !normalizedQuery || searchableText.includes(normalizedQuery);
-  const matchCategory = !selectedCategory || category === selectedCategory;
-  const matchStyle = !selectedStyle || styleValues.includes(selectedStyle);
-  const matchAmbiance = !selectedAmbiance || ambiance === selectedAmbiance;
-  const matchAudience = !selectedAudience || audienceValues.includes(selectedAudience);
-  const matchSinger = !selectedSinger || singerValues.includes(selectedSinger);
-  const matchPlayed = !selectedPlayed || played === selectedPlayed;
-
   return (
-    matchQuery &&
-    matchCategory &&
-    matchStyle &&
-    matchAmbiance &&
-    matchAudience &&
-    matchSinger &&
-    matchPlayed
+    (!normalizedQuery || searchableText.includes(normalizedQuery)) &&
+    (!selectedCategory || category === selectedCategory) &&
+    (!selectedStyle || styleValues.includes(selectedStyle)) &&
+    (!selectedAmbiance || ambiance === selectedAmbiance) &&
+    (!selectedAudience || audienceValues.includes(selectedAudience)) &&
+    (!selectedSinger || singerValues.includes(selectedSinger)) &&
+    (!selectedPlayed || played === selectedPlayed)
   );
 }
 
@@ -3005,6 +3017,7 @@ async function restoreHistoryVersion(historyId) {
   updateSettingsButtonLabel();
   await fetchSongMeta();
   await fetchSongs();
+  debugMetaMatching();
   syncSettingsUI();
   applyLeaderUI();
   updateConcertModeUI();
