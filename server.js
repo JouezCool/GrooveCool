@@ -137,7 +137,7 @@ function escapeDriveQueryValue(value) {
 }
 
 async function findDriveFileByName(folderId, fileName) {
-	const drive = getDriveClient();
+  const drive = getDriveClient();
   if (!folderId) return null;
 
   const q = [
@@ -148,13 +148,50 @@ async function findDriveFileByName(folderId, fileName) {
 
   const res = await drive.files.list({
     q,
-    fields: 'files(id, name, mimeType)',
-    pageSize: 10,
+    fields: 'files(id, name, mimeType, createdTime, modifiedTime)',
+    pageSize: 50,
     supportsAllDrives: true,
     includeItemsFromAllDrives: true
   });
 
-  return res.data.files?.[0] || null;
+  const files = res.data.files || [];
+  if (!files.length) return null;
+
+  if (files.length > 1) {
+    console.warn(`⚠️ Doublons détectés pour ${fileName} : ${files.length} fichiers`);
+    files.forEach(f => {
+      console.warn(` - ${f.id} | ${f.name} | created=${f.createdTime} | modified=${f.modifiedTime}`);
+    });
+  }
+
+  files.sort((a, b) => {
+    const am = new Date(a.modifiedTime || 0).getTime();
+    const bm = new Date(b.modifiedTime || 0).getTime();
+    return bm - am;
+  });
+
+  return files[0];
+}
+
+async function findAllDriveFilesByName(folderId, fileName) {
+  const drive = getDriveClient();
+  if (!folderId) return [];
+
+  const q = [
+    `'${folderId}' in parents`,
+    `name = '${escapeDriveQueryValue(fileName)}'`,
+    `trashed = false`
+  ].join(' and ');
+
+  const res = await drive.files.list({
+    q,
+    fields: 'files(id, name, mimeType, createdTime, modifiedTime)',
+    pageSize: 50,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true
+  });
+
+  return res.data.files || [];
 }
 
 async function listDriveFiles(folderId) {
@@ -255,11 +292,20 @@ async function updateDriveTextFile(fileId, fileName, content, mimeType = 'text/p
 }
 
 async function upsertDriveTextFile(folderId, fileName, content, mimeType = 'text/plain') {
-	const drive = getDriveClient();
-  const existing = await findDriveFileByName(folderId, fileName);
+  const existingFiles = await findAllDriveFilesByName(folderId, fileName);
 
-  if (existing) {
-    return updateDriveTextFile(existing.id, fileName, content, mimeType);
+  if (existingFiles.length > 1) {
+    console.warn(`⚠️ Plusieurs fichiers "${fileName}" trouvés. Mise à jour du plus récent.`);
+    existingFiles.sort((a, b) => {
+      const am = new Date(a.modifiedTime || 0).getTime();
+      const bm = new Date(b.modifiedTime || 0).getTime();
+      return bm - am;
+    });
+    return updateDriveTextFile(existingFiles[0].id, fileName, content, mimeType);
+  }
+
+  if (existingFiles.length === 1) {
+    return updateDriveTextFile(existingFiles[0].id, fileName, content, mimeType);
   }
 
   return createDriveTextFile(folderId, fileName, content, mimeType);
