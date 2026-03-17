@@ -2074,9 +2074,24 @@ function getMetaForSong(song) {
 
 function debugMetaMatching() {
   const missing = allSongs.filter(song => !songMetaIndex[normName(song)]);
+
   console.log("SONGS:", allSongs.length);
   console.log("META:", Object.keys(songMeta).length);
-  console.log("MISSING META MATCH:", missing.length, missing);
+  console.log("MISSING META MATCH:", missing.length);
+  console.table(missing.map(song => ({
+    song,
+    normalized: normName(song)
+  })));
+
+  const unusedMeta = Object.keys(songMeta).filter(key => {
+    return !allSongs.some(song => normName(song) === normName(key));
+  });
+
+  console.log("UNUSED META KEYS:", unusedMeta.length);
+  console.table(unusedMeta.map(key => ({
+    metaKey: key,
+    normalized: normName(key)
+  })));
 }
 
 function songMatchesFilters(song, query) {
