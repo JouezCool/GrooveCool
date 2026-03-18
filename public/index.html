@@ -857,6 +857,7 @@ nav{
         <button class="btn" id="settingsLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
         <button class="btn" id="settingsChordBtn" onclick="toggleChordStyle()">Accords: Do</button>
         <button class="btn" id="settingsThemeBtn" onclick="toggleTheme()">Thème: Sombre</button>
+		<button class="btn" onclick="openUserColorModal()">🎨 Ma couleur</button>
 		<button class="btn" onclick="openCreateSongModal()">➕ Nouveau morceau</button>
         <button class="btn" onclick="exportBackup()">⬇️ Exporter sauvegarde</button>
         <button class="btn" onclick="triggerImport()">⬆️ Importer sauvegarde</button>
@@ -949,6 +950,35 @@ nav{
   </div>
 </div>
 
+<div id="userColorBackdrop" style="
+  position:fixed; inset:0; display:none; z-index:6800;
+  background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:18px;">
+  <div style="width:min(420px,100%); background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden;">
+    <header style="padding:14px 16px; border-bottom:1px solid #2a2a2a; background:#161616;">
+      <h3 style="margin:0; font-size:14px; color:#fff;">Couleur de mes blocs perso</h3>
+    </header>
+
+    <div style="padding:16px; display:grid; gap:14px;">
+      <div style="font-size:14px; color:#ddd;">
+        Utilisateur : <b id="userColorCurrentName"></b>
+      </div>
+
+      <input id="userColorInput" type="color" value="#c7b6ff"
+        style="width:100%; height:56px; border:none; background:none; cursor:pointer;" />
+
+      <div id="userColorPreview" class="pu-block">
+        <div class="pu-label">Aperçu</div>
+        <pre class="pu-pre">Exemple de bloc personnel</pre>
+      </div>
+    </div>
+
+    <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end; gap:10px;">
+      <button class="btn" onclick="closeUserColorModal()">ANNULER</button>
+      <button class="btn btn-blue" onclick="saveUserColor()">ENREGISTRER</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const socket = io();
   
@@ -980,6 +1010,7 @@ let isLoadingSong = false;
 let lastConnectedUsers = [];
 let songMeta = {};
 let songMetaIndex = {};
+let userColors = {};
 let concertMode = false;
   let songMetaMode = 'edit';
 let currentSongOpenedAt = 0;
@@ -1036,6 +1067,11 @@ const songMetaAmbiance = document.getElementById('songMetaAmbiance');
 const songMetaAudience = document.getElementById('songMetaAudience');
 const songMetaChanteur = document.getElementById('songMetaChanteur');
 
+const userColorBackdrop = document.getElementById('userColorBackdrop');
+const userColorInput = document.getElementById('userColorInput');
+const userColorPreview = document.getElementById('userColorPreview');
+const userColorCurrentName = document.getElementById('userColorCurrentName');
+
   let touchStartX = 0, touchStartY = 0;
   const SWIPE_MIN_X = 110;
   const SWIPE_RATIO = 1.4;
@@ -1046,6 +1082,47 @@ const songMetaChanteur = document.getElementById('songMetaChanteur');
   let toastTimer = null;
   let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin';
   let themeMode = localStorage.getItem('bandapp_theme') || 'dark';
+
+function getAutoUserColor(userName) {
+  if (!userName) return "#c7b6ff";
+
+  const colors = [
+    "#c7b6ff",
+    "#a8d8ff",
+    "#b8f2d3",
+    "#ffd6a5",
+    "#ffb3c6",
+    "#ffe599",
+    "#b5ead7",
+    "#cdb4db",
+    "#ffc8dd",
+    "#d0f4de"
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < userName.length; i++) {
+    hash = userName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function getUserColor(userName) {
+  const clean = String(userName || '').trim();
+  if (!clean) return "#c7b6ff";
+  return userColors[clean] || getAutoUserColor(clean);
+}
+
+function hexToRgba(hex, alpha) {
+  const clean = String(hex || '').replace('#', '');
+  if (clean.length !== 6) return `rgba(168, 85, 247, ${alpha})`;
+
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 function rebuildSongMetaIndex() {
   songMetaIndex = {};
@@ -1723,19 +1800,73 @@ function populateSongFilters() {
   singerFilterEl.value = [...singerFilterEl.options].some(opt => opt.value === currentSinger) ? currentSinger : "";
 }
 
-async function fetchSongMeta() {
+async function fetchUserColors() {
   try {
-    const res = await fetch('/song-meta.json', { cache: 'no-store' });
-    if (!res.ok) throw new Error('song-meta.json introuvable');
+    const res = await fetch('/user-colors.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('user-colors.json introuvable');
 
-    songMeta = await res.json();
-    rebuildSongMetaIndex();
-
-    console.log("META chargée:", Object.keys(songMeta).length, "entrées");
+    userColors = await res.json();
   } catch (err) {
-    console.warn('Erreur de chargement des métadonnées', err);
-    songMeta = {};
-    songMetaIndex = {};
+    console.warn('Erreur de chargement des couleurs utilisateur', err);
+    userColors = {};
+  }
+}
+
+function openUserColorModal() {
+  if (!currentUser) return;
+
+  userColorCurrentName.textContent = currentUser;
+  userColorInput.value = getUserColor(currentUser);
+
+  updateUserColorPreview(userColorInput.value);
+
+  userColorBackdrop.style.display = 'flex';
+}
+
+function closeUserColorModal() {
+  userColorBackdrop.style.display = 'none';
+}
+
+function updateUserColorPreview(color) {
+  if (!userColorPreview) return;
+
+  userColorPreview.style.background = hexToRgba(color, 0.18);
+  userColorPreview.style.borderLeft = `4px solid ${color}`;
+  userColorPreview.style.color = 'var(--text)';
+}
+
+async function saveUserColor() {
+  if (!currentUser) return;
+
+  const color = String(userColorInput.value || '').trim();
+  if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+    alert("Couleur invalide");
+    return;
+  }
+
+  try {
+    const res = await fetch('/save-user-color', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userName: currentUser,
+        color
+      })
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      alert("Erreur d'enregistrement couleur : " + txt);
+      return;
+    }
+
+    userColors[currentUser] = color;
+    closeUserColorModal();
+    renderChordPro();
+    showToast("Couleur enregistrée ✅");
+  } catch (err) {
+    console.error(err);
+    alert("Erreur d'enregistrement couleur");
   }
 }
 
@@ -2401,6 +2532,16 @@ function stopAutoScroll() {
       });
     }
   }
+  
+  socket.on('user-colors-updated', ({ userName, color }) => {
+  const cleanUser = String(userName || '').trim();
+  const cleanColor = String(color || '').trim();
+
+  if (!cleanUser || !/^#[0-9A-Fa-f]{6}$/.test(cleanColor)) return;
+
+  userColors[cleanUser] = cleanColor;
+  renderChordPro();
+});
 
   socket.on('apply-autoscroll', d => {
     if (!isLeader) {
@@ -2598,33 +2739,40 @@ function stopAutoScroll() {
     return { user: m[1].trim() };
   }
 
-  function renderPUBlock(targetEl, showContent, label, text){
-    const wrap = document.createElement('div');
-    wrap.className = 'pu-block';
+function renderPUBlock(targetEl, showContent, label, text){
+  const wrap = document.createElement('div');
+  wrap.className = 'pu-block';
 
-    const linesCount = (String(text || "").split('\n').length);
+  const userColor = getUserColor(label);
+  wrap.style.background = hexToRgba(userColor, 0.18);
+  wrap.style.borderLeft = `4px solid ${userColor}`;
+  wrap.style.color = 'var(--text)';
 
-    if (showContent) {
-      const lab = document.createElement('div');
-      lab.className = 'pu-label';
-      lab.textContent = label;
-      wrap.appendChild(lab);
-    } else if (linesCount > 10) {
-      const lab = document.createElement('div');
-      lab.className = 'pu-label';
-      lab.textContent = `SOLO ${label}`;
-      wrap.appendChild(lab);
-    }
+  const linesCount = (String(text || "").split('\n').length);
 
-    const pre = document.createElement('pre');
-    pre.className = 'pu-pre';
-    pre.textContent = showContent
-      ? (text || "")
-      : Array.from({ length: linesCount }, () => " ").join("\n");
-
-    wrap.appendChild(pre);
-    targetEl.appendChild(wrap);
+  if (showContent) {
+    const lab = document.createElement('div');
+    lab.className = 'pu-label';
+    lab.textContent = label;
+    lab.style.color = userColor;
+    wrap.appendChild(lab);
+  } else if (linesCount > 10) {
+    const lab = document.createElement('div');
+    lab.className = 'pu-label';
+    lab.textContent = `SOLO ${label}`;
+    lab.style.color = userColor;
+    wrap.appendChild(lab);
   }
+
+  const pre = document.createElement('pre');
+  pre.className = 'pu-pre';
+  pre.textContent = showContent
+    ? (text || "")
+    : Array.from({ length: linesCount }, () => " ").join("\n");
+
+  wrap.appendChild(pre);
+  targetEl.appendChild(wrap);
+}
 
   function renderChordPro() {
     clearSongContent();
@@ -3020,6 +3168,7 @@ async function restoreHistoryVersion(historyId) {
   initUsers();
   updateSettingsButtonLabel();
   await fetchSongMeta();
+  await fetchUserColors();
   await fetchSongs();
   debugMetaMatching();
   syncSettingsUI();
@@ -3056,6 +3205,12 @@ if (styleFilterEl) {
 
 if (playedFilterEl) {
   playedFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
+}
+
+if (userColorInput) {
+  userColorInput.addEventListener('input', () => {
+    updateUserColorPreview(userColorInput.value);
+  });
 }
 
 function togglePlayedCurrentSong() {
