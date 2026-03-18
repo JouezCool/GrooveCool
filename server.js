@@ -56,7 +56,7 @@ function getDriveClient() {
   });
 }
 
-const playedTonight = new Set();
+let playedTonight = new Set();
 const connectedUsers = new Map();
 
 let leaderSocketId = null;
@@ -71,6 +71,24 @@ app.use((req, res, next) => {
 });
 
 app.use(express.static('public', { etag: false, maxAge: 0 }));
+
+async function readPlayedTonight() {
+  const data = await readDriveJsonFileByName(
+    GOOGLE_DRIVE_META_FOLDER_ID,
+    'played-tonight.json',
+    []
+  );
+
+  return new Set(Array.isArray(data) ? data : []);
+}
+
+async function writePlayedTonight(setValue) {
+  await writeDriveJsonFileByName(
+    GOOGLE_DRIVE_META_FOLDER_ID,
+    'played-tonight.json',
+    [...setValue]
+  );
+}
 
 function pinOk(pin) {
   return String(pin || '') === LEADER_PIN;
@@ -503,6 +521,13 @@ function broadcastPlayedTonight() {
   });
 }
 
+function sanitizeFilePart(value) {
+  return String(value || '')
+    .replace(/[\\/:*?"<>|]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 app.get('/health', async (req, res) => {
   res.json({
     ok: true,
@@ -846,7 +871,9 @@ app.post('/create-song', async (req, res) => {
     if (!cleanTitle) return res.status(400).send('Titre invalide');
     if (!cleanArtist) return res.status(400).send('Artiste invalide');
 
-    const finalFileName = String(fileName || `${cleanTitle} - ${cleanArtist}.pro`).trim();
+    const safeTitle = sanitizeFilePart(cleanTitle);
+const safeArtist = sanitizeFilePart(cleanArtist);
+const finalFileName = String(fileName || `${safeTitle} - ${safeArtist}.pro`).trim();
 
     if (!isValidSongName(finalFileName)) {
       return res.status(400).send('Nom de fichier invalide');
@@ -924,6 +951,21 @@ app.post('/delete-song', async (req, res) => {
       delete meta[fileName];
       await writeSongMeta(meta);
     }
+	const historyFile = await findDriveFileByName(
+  GOOGLE_DRIVE_HISTORY_FOLDER_ID,
+  historyFileName(fileName)
+);
+if (historyFile) {
+  await trashDriveFile(historyFile.id);
+}
+
+const settingsFile = await findDriveFileByName(
+  GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID,
+  settingsFileName(fileName)
+);
+if (settingsFile) {
+  await trashDriveFile(settingsFile.id);
+}
 
     io.emit('song-deleted', { fileName, at: Date.now() });
     res.send('OK');
@@ -963,20 +1005,22 @@ io.on('connection', (socket) => {
     broadcastLeaderState();
   });
 
-  socket.on('mark-played', ({ fileName, played }) => {
-    const name = String(fileName || '').trim();
-    if (!name) return;
+socket.on('mark-played', async ({ fileName, played }) => {
+  const name = String(fileName || '').trim();
+  if (!name) return;
 
-    if (played) playedTonight.add(name);
-    else playedTonight.delete(name);
+  if (played) playedTonight.add(name);
+  else playedTonight.delete(name);
 
-    broadcastPlayedTonight();
-  });
+  await writePlayedTonight(playedTonight);
+  broadcastPlayedTonight();
+});
 
-  socket.on('reset-played-tonight', () => {
-    playedTonight.clear();
-    broadcastPlayedTonight();
-  });
+socket.on('reset-played-tonight', async () => {
+  playedTonight.clear();
+  await writePlayedTonight(playedTonight);
+  broadcastPlayedTonight();
+});
 
   socket.on('request-leader', () => {
     const deviceId = String(socket.data.deviceId || '').trim();
@@ -1084,6 +1128,7 @@ const PORT = process.env.PORT || 3000;
 (async () => {
   await bootstrapOauthTokens();
 
+playedTonight = await readPlayedTonight();
   http.listen(PORT, '0.0.0.0', () => {
     console.log('✅ Serveur en ligne sur le port ' + PORT);
     console.log('🔐 PIN global:', LEADER_PIN);
