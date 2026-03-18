@@ -1870,6 +1870,22 @@ async function saveUserColor() {
   }
 }
 
+async function fetchSongMeta() {
+  try {
+    const res = await fetch('/song-meta.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('song-meta.json introuvable');
+
+    songMeta = await res.json();
+    rebuildSongMetaIndex();
+
+    console.log("META chargée:", Object.keys(songMeta).length, "entrées");
+  } catch (err) {
+    console.warn('Erreur de chargement des métadonnées', err);
+    songMeta = {};
+    songMetaIndex = {};
+  }
+}
+
 function isPlayedTonight(fileName) {
   return playedTonightSet.has(fileName);
 }
