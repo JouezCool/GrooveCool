@@ -966,6 +966,7 @@ nav{
 
   let isLeader = false, allSongs = [], currentIndex = -1;
   let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
+  let songContentCache = {};
 
   let isRemoteScrolling = false;
 let isScrolling = false;
@@ -1308,8 +1309,7 @@ async function openEditSongMetaModal() {
   songMetaTitle.textContent = "Modifier les infos du morceau";
 
   try {
-    const res = await fetch('/song-meta-entry?fileName=' + encodeURIComponent(currentFileName), { cache: 'no-store' });
-    const data = await res.json();
+    const data = getMetaForSong(currentFileName);
 
     songMetaFileName.value = currentFileName;
     songMetaTitleInput.value = data?.title || currentFileName.replace(/\.(pro|cho)$/i, '');
@@ -2248,13 +2248,9 @@ socket.on('apply-scroll', data => {
     return document.getElementById('viewer-container').style.display === 'block';
   }
 
-  function shouldBlockFollowerManualScroll(target) {
-    if (isLeader) return false;
-    if (!isViewerOpen()) return false;
-    if (isEditorOpen()) return false;
-    if (target && target.id === 'notesTextarea') return false;
-    return true;
-  }
+function shouldBlockFollowerManualScroll(target) {
+  return false;
+}
 
   viewerElement.addEventListener('wheel', (e) => {
     if (shouldBlockFollowerManualScroll(e.target)) e.preventDefault();
@@ -2725,8 +2721,7 @@ function stopAutoScroll() {
 
 async function startEditor() {
   const ta = document.getElementById('editor-textarea');
-  const res = await fetch('/partitions/' + encodeURIComponent(currentFileName), { cache: 'no-store' });
-  ta.value = await res.text();
+  ta.value = currentRaw || "";
 
   document.getElementById('editor-container').style.display = 'flex';
 
