@@ -424,6 +424,24 @@ async function writeSongMeta(meta) {
   console.log('✅ Nombre d’entrées meta :', Object.keys(meta).length);
 }
 
+async function readUserColors() {
+  const data = await readDriveJsonFileByName(
+    GOOGLE_DRIVE_META_FOLDER_ID,
+    'user-colors.json',
+    {}
+  );
+
+  return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+}
+
+async function writeUserColors(colors) {
+  await writeDriveJsonFileByName(
+    GOOGLE_DRIVE_META_FOLDER_ID,
+    'user-colors.json',
+    colors
+  );
+}
+
 async function readSongSettings(fileName) {
   const data = await readDriveJsonFileByName(
     GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID,
@@ -527,6 +545,16 @@ function sanitizeFilePart(value) {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+app.get('/user-colors.json', async (req, res) => {
+  try {
+    const colors = await readUserColors();
+    res.json(colors);
+  } catch (err) {
+    console.error('❌ Erreur /user-colors.json:', err);
+    res.status(500).json({});
+  }
+});
 
 app.get('/health', async (req, res) => {
   res.json({
@@ -739,6 +767,35 @@ app.get('/debug/drive', async (req, res) => {
       error: err.message,
       details: String(err)
     });
+  }
+});
+
+app.post('/save-user-color', async (req, res) => {
+  try {
+    const { userName, color } = req.body || {};
+
+    const cleanUser = String(userName || '').trim();
+    const cleanColor = String(color || '').trim();
+
+    if (!cleanUser) return res.status(400).send('Utilisateur invalide');
+    if (!/^#[0-9A-Fa-f]{6}$/.test(cleanColor)) {
+      return res.status(400).send('Couleur invalide');
+    }
+
+    const colors = await readUserColors();
+    colors[cleanUser] = cleanColor;
+
+    await writeUserColors(colors);
+
+    io.emit('user-colors-updated', {
+      userName: cleanUser,
+      color: cleanColor
+    });
+
+    res.send('OK');
+  } catch (err) {
+    console.error('❌ Erreur POST /save-user-color:', err);
+    res.status(500).send('Erreur');
   }
 });
 
