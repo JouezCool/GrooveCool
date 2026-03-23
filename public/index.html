@@ -176,19 +176,6 @@ body.concert-mode #concertFloatingActions{
 body.concert-mode #settingsFixedWrap{
   display:none !important;
 }
-
-<div id="bottomSpeedBar" class="leader-only">
-  <div id="speedPercent">50%</div>
-  <input
-    type="range"
-    id="scrollSpeed"
-    min="1"
-    max="95"
-    value="50"
-    oninput="handleSpeedChange(); updateSpeedPercent();"
-  >
-</div>
-
 #concertModeBtn.active-btn{
   background:rgba(255,152,0,0.25);
   color:#fff;
@@ -862,6 +849,18 @@ nav{
 
   <button class="btn concert-float-btn" id="prevSongBtn" onclick="openPreviousFilteredSong()">⬅ PRÉC.</button>
   <button class="btn concert-float-btn" id="nextSongBtn" onclick="openNextFilteredSong()">SUIV. ➡</button>
+</div>
+
+<div id="bottomSpeedBar" class="leader-only">
+  <div id="speedPercent">50%</div>
+  <input
+    type="range"
+    id="scrollSpeed"
+    min="1"
+    max="95"
+    value="50"
+    oninput="handleSpeedChange(); updateSpeedPercent();"
+  >
 </div>
 
     <div id="notesPanel">
