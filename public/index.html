@@ -71,8 +71,8 @@
 }
 
 #prevSongBtn{
-  right:12px;
-  top:52px;
+  left:12px;
+  top:104px;
 }
 
 #nextSongBtn{
@@ -97,6 +97,29 @@
 #bottomSpeedBar input[type="range"]{
   width:100%;
   margin:0;
+  height:36px;
+  accent-color: #ff9800;
+}
+
+#bottomSpeedBar input[type="range"]::-webkit-slider-thumb{
+  width:28px;
+  height:28px;
+}
+
+#bottomSpeedBar input[type="range"]::-webkit-slider-runnable-track{
+  height:12px;
+  border-radius:999px;
+}
+
+#bottomSpeedBar input[type="range"]::-moz-range-thumb{
+  width:28px;
+  height:28px;
+  border:none;
+}
+
+#bottomSpeedBar input[type="range"]::-moz-range-track{
+  height:12px;
+  border-radius:999px;
 }
 
 #speedPercent{
@@ -2449,7 +2472,6 @@ viewerElement.addEventListener('scroll', () => {
 
 socket.on('apply-scroll', data => {
   if (isLeader) return;
-  if (isScrolling) return;
   if (isLoadingSong) return;
 
   const anchor = data?.anchor;
