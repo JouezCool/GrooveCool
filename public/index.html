@@ -69,6 +69,52 @@
   border:1px solid #444;
   border-radius:8px;
 }
+
+#prevSongBtn{
+  right:12px;
+  top:52px;
+}
+
+#nextSongBtn{
+  right:12px;
+  top:104px;
+}
+
+#bottomSpeedBar{
+  display:none;
+  position:fixed;
+  left:12px;
+  right:12px;
+  bottom:12px;
+  z-index:35;
+  background:rgba(0,0,0,0.78);
+  backdrop-filter: blur(6px);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:14px;
+  padding:10px 12px 12px;
+}
+
+#bottomSpeedBar input[type="range"]{
+  width:100%;
+  margin:0;
+}
+
+#speedPercent{
+  text-align:center;
+  font-weight:900;
+  font-size:13px;
+  color:#fff;
+  margin-bottom:8px;
+}
+
+body.concert-mode #bottomSpeedBar{
+  bottom:12px;
+}
+
+body.concert-mode #prevSongBtn,
+body.concert-mode #nextSongBtn{
+  display:block;
+}
 	
 	#leaderFloatingActions{
   display:none;
@@ -130,6 +176,18 @@ body.concert-mode #concertFloatingActions{
 body.concert-mode #settingsFixedWrap{
   display:none !important;
 }
+
+<div id="bottomSpeedBar" class="leader-only">
+  <div id="speedPercent">50%</div>
+  <input
+    type="range"
+    id="scrollSpeed"
+    min="1"
+    max="95"
+    value="50"
+    oninput="handleSpeedChange(); updateSpeedPercent();"
+  >
+</div>
 
 #concertModeBtn.active-btn{
   background:rgba(255,152,0,0.25);
@@ -771,10 +829,6 @@ nav{
     <nav>
       <button class="btn" onclick="closeViewer()">⬅</button>
 
-<div class="controls-group leader-only">
-  <input type="range" id="scrollSpeed" min="1" max="95" value="50" oninput="handleSpeedChange()">
-</div>
-
       <div class="controls-group leader-only">
         <button class="btn" onclick="updateFontSize(-2)">A-</button>
         <button class="btn" onclick="updateFontSize(2)">A+</button>
@@ -805,6 +859,9 @@ nav{
 
 <div id="concertFloatingActions">
   <button class="btn concert-float-btn center-btn" id="concertModeBtn" onclick="toggleConcertMode()">MODE CONCERT</button>
+
+  <button class="btn concert-float-btn" id="prevSongBtn" onclick="openPreviousFilteredSong()">⬅ PRÉC.</button>
+  <button class="btn concert-float-btn" id="nextSongBtn" onclick="openNextFilteredSong()">SUIV. ➡</button>
 </div>
 
     <div id="notesPanel">
@@ -1518,8 +1575,9 @@ function renderConnectedUsers(usersList) {
 function applyLeaderUI() {
   document.querySelectorAll('.leader-only').forEach(el => {
     if (isLeader) {
-      if (el.classList.contains('controls-group')) {
+      if (el.classList.contains('controls-group') || el.id === 'bottomSpeedBar') {
         el.style.display = 'flex';
+        if (el.id === 'bottomSpeedBar') el.style.display = 'block';
       } else {
         el.style.display = '';
       }
@@ -1697,6 +1755,7 @@ if (currentUser) {
   fontSize = Number.isFinite(Number(settings?.fontSize)) ? Number(settings.fontSize) : 26;
   transposeValue = Number.isFinite(Number(settings?.transpose)) ? Number(settings.transpose) : 0;
   speedInput.value = Number.isFinite(Number(settings?.speed)) ? Number(settings.speed) : 50;
+updateSpeedPercent();
 
   document.getElementById('transposeVal').innerText =
     (transposeValue > 0 ? '+' : '') + transposeValue;
@@ -1987,6 +2046,40 @@ autoMarkCurrentSongAsPlayed();
   openSong(randomIdx);
 }
 
+function openPreviousFilteredSong() {
+  const filteredIndexes = getFilteredSongIndexes();
+  const pos = filteredIndexes.indexOf(currentIndex);
+
+  autoMarkCurrentSongAsPlayed();
+
+  if (pos > 0) {
+    openSong(filteredIndexes[pos - 1]);
+  }
+}
+
+function openNextFilteredSong() {
+  const filteredIndexes = getFilteredSongIndexes();
+  const pos = filteredIndexes.indexOf(currentIndex);
+
+  autoMarkCurrentSongAsPlayed();
+
+  if (pos !== -1 && pos < filteredIndexes.length - 1) {
+    openSong(filteredIndexes[pos + 1]);
+  }
+}
+
+function updateSpeedPercent() {
+  const el = document.getElementById('speedPercent');
+  if (!el || !speedInput) return;
+
+  const min = Number(speedInput.min || 1);
+  const max = Number(speedInput.max || 95);
+  const val = Number(speedInput.value || 50);
+
+  const pct = Math.round(((val - min) / (max - min)) * 100);
+  el.textContent = `${pct}%`;
+}
+
 function filterSongList(q) {
   const items = document.querySelectorAll('#songList .song-item');
   let shown = 0;
@@ -2124,6 +2217,7 @@ autoMarkCurrentSongAsPlayed();
     fontSize = currentSongSettings.fontSize;
     transposeValue = currentSongSettings.transpose;
     speedInput.value = currentSongSettings.speed;
+	updateSpeedPercent();
 
     document.getElementById('transposeVal').innerText =
       (transposeValue > 0 ? '+' : '') + transposeValue;
@@ -2138,6 +2232,7 @@ autoMarkCurrentSongAsPlayed();
     fontSize = 26;
     transposeValue = 0;
     speedInput.value = 50;
+	updateSpeedPercent();
     document.getElementById('transposeVal').innerText = "0";
   }
 }
@@ -2331,27 +2426,27 @@ function songMatchesFilters(song, query) {
   let lastEmitAnchor = "";
   let lastEmitProg = -1;
 
-  viewerElement.addEventListener('scroll', () => {
-    if (!isLeader || isRemoteScrolling || isScrolling) return;
+viewerElement.addEventListener('scroll', () => {
+  if (!isLeader || isRemoteScrolling) return;
 
-    const state = getTopLyricAnchorState();
-    if (!state) return;
+  const state = getTopLyricAnchorState();
+  if (!state) return;
 
-    const now = Date.now();
-    if (
-      now - lastEmitAt < 120 &&
-      state.anchor === lastEmitAnchor &&
-      Math.abs(state.progress - lastEmitProg) < 0.05
-    ) {
-      return;
-    }
+  const now = Date.now();
+  if (
+    now - lastEmitAt < 120 &&
+    state.anchor === lastEmitAnchor &&
+    Math.abs(state.progress - lastEmitProg) < 0.05
+  ) {
+    return;
+  }
 
-    lastEmitAt = now;
-    lastEmitAnchor = state.anchor;
-    lastEmitProg = state.progress;
+  lastEmitAt = now;
+  lastEmitAnchor = state.anchor;
+  lastEmitProg = state.progress;
 
-    socket.emit('scroll-sync', state);
-  });
+  socket.emit('scroll-sync', state);
+});
 
 socket.on('apply-scroll', data => {
   if (isLeader) return;
@@ -2423,29 +2518,9 @@ function shouldBlockFollowerManualScroll(target) {
     touchStartY = t.screenY;
   }, { passive: true });
 
-  viewerElement.addEventListener('touchend', (e) => {
-    if (!isViewerOpen() || isEditorOpen()) return;
-    if (e.target && e.target.id === 'notesTextarea') return;
-
-    const t = e.changedTouches[0];
-    const dx = t.screenX - touchStartX;
-    const dy = t.screenY - touchStartY;
-
-    if (Math.abs(dx) < SWIPE_MIN_X) return;
-    if (Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return;
-
-const filteredIndexes = getFilteredSongIndexes();
-const pos = filteredIndexes.indexOf(currentIndex);
-
-autoMarkCurrentSongAsPlayed();
-
-if (dx > 0 && pos > 0) {
-  openSong(filteredIndexes[pos - 1]);
-}
-else if (dx < 0 && pos !== -1 && pos < filteredIndexes.length - 1) {
-  openSong(filteredIndexes[pos + 1]);
-}
-  }, { passive: true });
+viewerElement.addEventListener('touchend', () => {
+  // swipe désactivé
+}, { passive: true });
 
   function sliderToPxPerSecond(value) {
     const v = Number(value) || 50;
@@ -2559,15 +2634,17 @@ function stopAutoScroll() {
   renderChordPro();
 });
 
-  socket.on('apply-autoscroll', d => {
-    if (!isLeader) {
-      speedInput.value = d.speed;
-      const wantActive = !!d.active;
-      if (wantActive && !isScrolling) startAutoScroll();
-      if (!wantActive && isScrolling) stopAutoScroll();
-	  updateLeaderPlayButton();
-    }
-  });
+socket.on('apply-autoscroll', d => {
+  if (!isLeader) {
+    speedInput.value = d.speed;
+    updateSpeedPercent();
+
+    const wantActive = !!d.active;
+    if (wantActive && !isScrolling) startAutoScroll();
+    if (!wantActive && isScrolling) stopAutoScroll();
+    updateLeaderPlayButton();
+  }
+});
 
   socket.on('apply-fontsize', value => {
     if (isLeader) return;
@@ -2594,14 +2671,15 @@ function stopAutoScroll() {
     renderGrids();
   });
 
-  socket.on('apply-speed', value => {
-    if (isLeader) return;
+socket.on('apply-speed', value => {
+  if (isLeader) return;
 
-    const v = Number(value);
-    if (!isFinite(v)) return;
+  const v = Number(value);
+  if (!isFinite(v)) return;
 
-    speedInput.value = v;
-  });
+  speedInput.value = v;
+  updateSpeedPercent();
+});
 
   function updateFontSize(delta) {
     fontSize += delta;
@@ -3191,6 +3269,7 @@ async function restoreHistoryVersion(historyId) {
   applyLeaderUI();
   updateConcertModeUI();
   updateLeaderPlayButton();
+updateSpeedPercent();
   filterSongList(songSearchInput?.value || "");
 })();
 
