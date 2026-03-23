@@ -40,7 +40,7 @@ const oauth2Client = new google.auth.OAuth2(
 let oauthTokens = null;
 
 function getDriveClient() {
-  if (oauthTokens && oauthTokens.access_token) {
+  if (oauthTokens && (oauthTokens.access_token || oauthTokens.refresh_token)) {
     oauth2Client.setCredentials(oauthTokens);
     console.log('🔐 Drive client = OAUTH USER');
     return google.drive({
@@ -1168,15 +1168,34 @@ async function bootstrapOauthTokens() {
   try {
     const storedTokens = await readOauthTokensFromDrive();
 
-    if (storedTokens && storedTokens.refresh_token) {
-      oauthTokens = storedTokens;
-      oauth2Client.setCredentials(storedTokens);
-      console.log('✅ Tokens OAuth rechargés depuis Google Drive');
-    } else {
+    if (!storedTokens || !storedTokens.refresh_token) {
       console.log('ℹ️ Aucun token OAuth sauvegardé trouvé');
+      oauthTokens = null;
+      return;
+    }
+
+    try {
+      oauth2Client.setCredentials(storedTokens);
+
+      const tokenResponse = await oauth2Client.getAccessToken();
+      if (!tokenResponse || !tokenResponse.token) {
+        throw new Error('Impossible de rafraîchir le token OAuth');
+      }
+
+      oauthTokens = {
+        ...storedTokens,
+        access_token: tokenResponse.token
+      };
+
+      console.log('✅ Tokens OAuth rechargés depuis Google Drive');
+    } catch (oauthErr) {
+      console.warn('⚠️ Token OAuth invalide, retour sur service account');
+      console.warn(oauthErr?.message || oauthErr);
+      oauthTokens = null;
     }
   } catch (err) {
     console.error('❌ Erreur bootstrap OAuth:', err);
+    oauthTokens = null;
   }
 }
 
@@ -1185,7 +1204,13 @@ const PORT = process.env.PORT || 3000;
 (async () => {
   await bootstrapOauthTokens();
 
-playedTonight = await readPlayedTonight();
+  try {
+    playedTonight = await readPlayedTonight();
+  } catch (err) {
+    console.error('⚠️ Impossible de lire played-tonight.json au démarrage :', err?.message || err);
+    playedTonight = new Set();
+  }
+
   http.listen(PORT, '0.0.0.0', () => {
     console.log('✅ Serveur en ligne sur le port ' + PORT);
     console.log('🔐 PIN global:', LEADER_PIN);
