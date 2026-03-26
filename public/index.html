@@ -1086,6 +1086,7 @@ let concertMode = false;
 let currentSongOpenedAt = 0;
 let playedTonightSet = new Set();
 let currentLoadToken = 0;
+let ignoreRemoteScrollUntil = 0;
 let deviceId = localStorage.getItem('bandapp_deviceId') || "";
 if (!deviceId) {
   deviceId = (crypto?.randomUUID?.() || ('dev-' + Date.now() + '-' + Math.random().toString(36).slice(2)));
@@ -2540,11 +2541,9 @@ viewerElement.addEventListener('scroll', () => {
 });
 
 socket.on('apply-scroll', data => {
-if (Date.now() < ignoreRemoteScrollUntil) return;
+  if (Date.now() < ignoreRemoteScrollUntil) return;
   if (isLeader) return;
   if (isLoadingSong) return;
-  
-  let ignoreRemoteScrollUntil = 0;
 
   const anchor = data?.anchor;
   const progress = clamp01(Number(data?.progress) || 0);
