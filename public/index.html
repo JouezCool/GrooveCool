@@ -1064,6 +1064,8 @@ nav{
   let isLeader = false, allSongs = [], currentIndex = -1;
   let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
   let songContentCache = {};
+  
+  const songTextCache = new Map();
 
   let isRemoteScrolling = false;
 let isScrolling = false;
@@ -1716,6 +1718,28 @@ socket.emit('register-user', {
     updatePlayedButton();
   }
 });
+
+socket.on('song-updated', ({ fileName }) => {
+  if (!fileName) return;
+
+  songTextCache.delete(fileName);
+
+  if (normName(fileName) === normName(currentFileName)) {
+    loadSong(fileName);
+  }
+});
+
+socket.on('song-deleted', async ({ fileName }) => {
+  songTextCache.delete(fileName);
+
+  await fetchSongMeta();
+  await fetchSongs();
+  filterSongList(songSearchInput?.value || "");
+
+  if (normName(fileName) === normName(currentFileName)) {
+    closeViewer();
+  }
+});
   
   socket.on('song-created', async () => {
   await fetchSongMeta();
@@ -2261,8 +2285,15 @@ async function loadSong(f) {
     pendingRemoteScrollTop = 0;
     isRemoteScrolling = false;
 
-    const res = await fetch('/partitions/' + encodeURIComponent(f), { cache: 'no-store' });
-    const raw = await res.text();
+let raw;
+
+if (songTextCache.has(f)) {
+  raw = songTextCache.get(f);
+} else {
+  const res = await fetch('/partitions/' + encodeURIComponent(f), { cache: 'no-store' });
+  raw = await res.text();
+  songTextCache.set(f, raw);
+}
 
     if (loadToken !== currentLoadToken) return;
 
@@ -3024,6 +3055,7 @@ async function saveEditor() {
 
   if (res.ok) {
 currentRaw = newContent;
+songTextCache.set(currentFileName, newContent);
 renderChordPro();
 closeEditor();
 
