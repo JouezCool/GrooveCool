@@ -2168,6 +2168,7 @@ function openSong(idx) {
 
   stopAutoScroll();
   autoMarkCurrentSongAsPlayed();
+  ignoreRemoteScrollUntil = Date.now() + 500;
 
   currentIndex = idx;
   const targetFileName = allSongs[idx];
@@ -2187,6 +2188,14 @@ function openSong(idx) {
 
     socket.emit('change-song', targetFileName);
   }
+
+if (remoteScrollRaf) {
+  cancelAnimationFrame(remoteScrollRaf);
+  remoteScrollRaf = null;
+}
+pendingRemoteScrollTop = 0;
+isRemoteScrolling = false;
+viewerElement.scrollTop = 0;
 
   loadSong(targetFileName);
   setTimeout(loadNotes, 10);
@@ -2531,8 +2540,11 @@ viewerElement.addEventListener('scroll', () => {
 });
 
 socket.on('apply-scroll', data => {
+if (Date.now() < ignoreRemoteScrollUntil) return;
   if (isLeader) return;
   if (isLoadingSong) return;
+  
+  let ignoreRemoteScrollUntil = 0;
 
   const anchor = data?.anchor;
   const progress = clamp01(Number(data?.progress) || 0);
