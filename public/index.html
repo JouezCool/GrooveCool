@@ -1071,6 +1071,7 @@ nav{
 let resumeAutoScrollAfterTouch = false;
   let isRemoteScrolling = false;
 let isScrolling = false;
+let isLeaderManualDragging = false;
 let rafId = null;
 let lastRafTime = 0;
 let scrollCarry = 0;
@@ -2521,7 +2522,12 @@ function songMatchesFilters(song, query) {
 
 viewerElement.addEventListener('scroll', () => {
   if (!isLeader || isRemoteScrolling) return;
-  if (isScrolling) return; // très important : pas de sync manuelle pendant autoplay
+
+  // pendant l'autoplay local du leader, on n'envoie rien
+  if (isScrolling) return;
+
+  // pendant que le leader glisse avec le doigt, on n'envoie rien non plus
+  if (isLeaderManualDragging) return;
 
   const state = getTopLyricAnchorState();
   if (!state) return;
@@ -2607,6 +2613,10 @@ viewerElement.addEventListener('touchstart', (e) => {
   if (!isViewerOpen() || isEditorOpen()) return;
   if (e.target && e.target.id === 'notesTextarea') return;
 
+  if (isLeader) {
+    isLeaderManualDragging = true;
+  }
+
   if (isLeader && isScrolling) {
     resumeAutoScrollAfterTouch = true;
     stopAutoScroll();
@@ -2621,12 +2631,41 @@ viewerElement.addEventListener('touchstart', (e) => {
 }, { passive: true });
 
 viewerElement.addEventListener('touchend', () => {
-  if (isLeader && resumeAutoScrollAfterTouch) {
+  if (isLeader) {
+    isLeaderManualDragging = false;
+  }
+
+  if (isLeader) {
     const state = getTopLyricAnchorState();
     if (state) {
       socket.emit('scroll-sync', state);
     }
+  }
 
+  if (isLeader && resumeAutoScrollAfterTouch) {
+    resumeAutoScrollAfterTouch = false;
+    startAutoScroll();
+
+    socket.emit('sync-autoscroll', {
+      active: true,
+      speed: Number(speedInput.value) || 50
+    });
+  }
+}, { passive: true });
+
+viewerElement.addEventListener('touchcancel', () => {
+  if (isLeader) {
+    isLeaderManualDragging = false;
+  }
+
+  if (isLeader) {
+    const state = getTopLyricAnchorState();
+    if (state) {
+      socket.emit('scroll-sync', state);
+    }
+  }
+
+  if (isLeader && resumeAutoScrollAfterTouch) {
     resumeAutoScrollAfterTouch = false;
     startAutoScroll();
 
