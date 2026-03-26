@@ -1066,6 +1066,7 @@ nav{
   let songContentCache = {};
   
   const songTextCache = new Map();
+  const songSettingsCache = new Map();
 
   let isRemoteScrolling = false;
 let isScrolling = false;
@@ -1785,6 +1786,11 @@ if (currentUser) {
   });
   
   socket.on('song-settings-updated', async ({ fileName, settings }) => {
+  songSettingsCache.set(fileName, {
+  fontSize: Number.isFinite(Number(settings?.fontSize)) ? Number(settings.fontSize) : 26,
+  speed: Number.isFinite(Number(settings?.speed)) ? Number(settings.speed) : 50,
+  transpose: Number.isFinite(Number(settings?.transpose)) ? Number(settings.transpose) : 0
+});
   if (normName(fileName) !== normName(currentFileName)) return;
 
   fontSize = Number.isFinite(Number(settings?.fontSize)) ? Number(settings.fontSize) : 26;
@@ -2200,7 +2206,7 @@ function openSong(idx) {
   setTimeout(loadNotes, 10);
 }
   
-  async function saveCurrentSongSettings() {
+async function saveCurrentSongSettings() {
   if (!isLeader) return;
   if (!currentFileName) return;
 
@@ -2222,6 +2228,12 @@ function openSong(idx) {
     });
 
     if (res.ok) {
+      songSettingsCache.set(currentFileName, {
+        fontSize,
+        speed: Number(speedInput.value) || 50,
+        transpose: transposeValue
+      });
+
       showToast("Réglages du morceau enregistrés ✅");
     } else if (res.status === 403) {
       alert("PIN invalide");
@@ -2234,8 +2246,28 @@ function openSong(idx) {
   }
 }
   
-  async function loadSongSettings(fileName) {
+async function loadSongSettings(fileName, forceRefresh = false) {
   try {
+    if (!forceRefresh && songSettingsCache.has(fileName)) {
+      const cached = songSettingsCache.get(fileName);
+
+      currentSongSettings = {
+        fontSize: Number.isFinite(Number(cached?.fontSize)) ? Number(cached.fontSize) : 26,
+        speed: Number.isFinite(Number(cached?.speed)) ? Number(cached.speed) : 50,
+        transpose: Number.isFinite(Number(cached?.transpose)) ? Number(cached.transpose) : 0
+      };
+
+      fontSize = currentSongSettings.fontSize;
+      transposeValue = currentSongSettings.transpose;
+      speedInput.value = currentSongSettings.speed;
+      updateSpeedPercent();
+
+      document.getElementById('transposeVal').innerText =
+        (transposeValue > 0 ? '+' : '') + transposeValue;
+
+      return;
+    }
+
     const res = await fetch('/song-settings?fileName=' + encodeURIComponent(fileName), {
       cache: 'no-store'
     });
@@ -2248,15 +2280,18 @@ function openSong(idx) {
       transpose: Number.isFinite(Number(data?.transpose)) ? Number(data.transpose) : 0
     };
 
+    songSettingsCache.set(fileName, currentSongSettings);
+
     fontSize = currentSongSettings.fontSize;
     transposeValue = currentSongSettings.transpose;
     speedInput.value = currentSongSettings.speed;
-	updateSpeedPercent();
+    updateSpeedPercent();
 
     document.getElementById('transposeVal').innerText =
       (transposeValue > 0 ? '+' : '') + transposeValue;
   } catch (err) {
     console.error(err);
+
     currentSongSettings = {
       fontSize: 26,
       speed: 50,
@@ -2266,7 +2301,7 @@ function openSong(idx) {
     fontSize = 26;
     transposeValue = 0;
     speedInput.value = 50;
-	updateSpeedPercent();
+    updateSpeedPercent();
     document.getElementById('transposeVal').innerText = "0";
   }
 }
