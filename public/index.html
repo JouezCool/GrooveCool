@@ -1082,6 +1082,7 @@ let concertMode = false;
   let songMetaMode = 'edit';
 let currentSongOpenedAt = 0;
 let playedTonightSet = new Set();
+let currentLoadToken = 0;
 let deviceId = localStorage.getItem('bandapp_deviceId') || "";
 if (!deviceId) {
   deviceId = (crypto?.randomUUID?.() || ('dev-' + Date.now() + '-' + Math.random().toString(36).slice(2)));
@@ -2146,35 +2147,34 @@ function resetSongFilters() {
   });
 }
 
-  function openSong(idx) {
-    if (idx < 0 || idx >= allSongs.length) return;
+function openSong(idx) {
+  if (idx < 0 || idx >= allSongs.length) return;
 
-    stopAutoScroll();
+  stopAutoScroll();
+  autoMarkCurrentSongAsPlayed();
 
-autoMarkCurrentSongAsPlayed();
-    currentIndex = idx;
-    currentFileName = allSongs[idx];
-	currentSongOpenedAt = Date.now();
-	updatePlayedButton();
+  currentIndex = idx;
+  const targetFileName = allSongs[idx];
+  currentSongOpenedAt = Date.now();
 
-    notesPanel.style.display = 'none';
+  notesPanel.style.display = 'none';
 
-    document.getElementById('library').style.display = 'none';
-    document.getElementById('viewer-container').style.display = 'block';
-	updateConcertFloatingVisibility();
+  document.getElementById('library').style.display = 'none';
+  document.getElementById('viewer-container').style.display = 'block';
+  updateConcertFloatingVisibility();
 
-    if (isLeader) {
-      socket.emit('sync-autoscroll', {
-        active: false,
-        speed: Number(speedInput.value) || 50
-      });
+  if (isLeader) {
+    socket.emit('sync-autoscroll', {
+      active: false,
+      speed: Number(speedInput.value) || 50
+    });
 
-      socket.emit('change-song', currentFileName);
-    }
-
-    loadSong(currentFileName);
-    setTimeout(loadNotes, 10);
+    socket.emit('change-song', targetFileName);
   }
+
+  loadSong(targetFileName);
+  setTimeout(loadNotes, 10);
+}
   
   async function saveCurrentSongSettings() {
   if (!isLeader) return;
@@ -2248,6 +2248,8 @@ autoMarkCurrentSongAsPlayed();
 }
 
 async function loadSong(f) {
+  const loadToken = ++currentLoadToken;
+
   try {
     isLoadingSong = true;
 
@@ -2259,27 +2261,38 @@ async function loadSong(f) {
     pendingRemoteScrollTop = 0;
     isRemoteScrolling = false;
 
-const res = await fetch('/partitions/' + encodeURIComponent(f), { cache: 'no-store' });
-currentRaw = await res.text();
+    const res = await fetch('/partitions/' + encodeURIComponent(f), { cache: 'no-store' });
+    const raw = await res.text();
 
-await loadSongSettings(f);
-updatePlayedButton();
+    if (loadToken !== currentLoadToken) return;
 
-renderChordPro();
+    await loadSongSettings(f);
+    if (loadToken !== currentLoadToken) return;
+
+    currentRaw = raw;
+    currentFileName = f;
+
+    updatePlayedButton();
+    renderChordPro();
 
     viewerElement.scrollTop = 0;
 
     requestAnimationFrame(() => {
+      if (loadToken !== currentLoadToken) return;
       viewerElement.scrollTop = 0;
+
       requestAnimationFrame(() => {
+        if (loadToken !== currentLoadToken) return;
         viewerElement.scrollTop = 0;
 
         setTimeout(() => {
+          if (loadToken !== currentLoadToken) return;
           isLoadingSong = false;
         }, 150);
       });
     });
   } catch (err) {
+    if (loadToken !== currentLoadToken) return;
     console.error(err);
     isLoadingSong = false;
     showToast("Erreur de chargement");
