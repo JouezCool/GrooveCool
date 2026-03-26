@@ -1060,6 +1060,7 @@ nav{
 
 <script>
   const socket = io();
+  console.log("VERSION TEST 1");
   
   let isLeader = false, allSongs = [], currentIndex = -1;
   let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
@@ -2317,15 +2318,14 @@ async function loadSong(f) {
       songTextCache.set(f, raw);
     }
 
-    console.log('Temps texte:', Math.round(performance.now() - tFetchStart), 'ms');
-
     if (loadToken !== currentLoadToken) return;
+    console.log('Temps texte:', Math.round(performance.now() - tFetchStart), 'ms');
 
     const tSettingsStart = performance.now();
     await loadSongSettings(f);
-    console.log('Temps settings:', Math.round(performance.now() - tSettingsStart), 'ms');
 
     if (loadToken !== currentLoadToken) return;
+    console.log('Temps settings:', Math.round(performance.now() - tSettingsStart), 'ms');
 
     currentRaw = raw;
     currentFileName = f;
@@ -2346,11 +2346,8 @@ async function loadSong(f) {
         if (loadToken !== currentLoadToken) return;
         viewerElement.scrollTop = 0;
 
-        setTimeout(() => {
-          if (loadToken !== currentLoadToken) return;
-          isLoadingSong = false;
-          console.log('Temps total loadSong:', Math.round(performance.now() - t0), 'ms');
-        }, 150);
+        isLoadingSong = false;
+        console.log('Temps total loadSong:', Math.round(performance.now() - t0), 'ms');
       });
     });
   } catch (err) {
