@@ -2293,6 +2293,7 @@ async function loadSongSettings(fileName, forceRefresh = false) {
 
 async function loadSong(f) {
   const loadToken = ++currentLoadToken;
+  const t0 = performance.now();
 
   try {
     isLoadingSong = true;
@@ -2305,26 +2306,35 @@ async function loadSong(f) {
     pendingRemoteScrollTop = 0;
     isRemoteScrolling = false;
 
-let raw;
+    let raw;
+    const tFetchStart = performance.now();
 
-if (songTextCache.has(f)) {
-  raw = songTextCache.get(f);
-} else {
-  const res = await fetch('/partitions/' + encodeURIComponent(f), { cache: 'no-store' });
-  raw = await res.text();
-  songTextCache.set(f, raw);
-}
+    if (songTextCache.has(f)) {
+      raw = songTextCache.get(f);
+    } else {
+      const res = await fetch('/partitions/' + encodeURIComponent(f), { cache: 'no-store' });
+      raw = await res.text();
+      songTextCache.set(f, raw);
+    }
+
+    console.log('Temps texte:', Math.round(performance.now() - tFetchStart), 'ms');
 
     if (loadToken !== currentLoadToken) return;
 
+    const tSettingsStart = performance.now();
     await loadSongSettings(f);
+    console.log('Temps settings:', Math.round(performance.now() - tSettingsStart), 'ms');
+
     if (loadToken !== currentLoadToken) return;
 
     currentRaw = raw;
     currentFileName = f;
 
     updatePlayedButton();
+
+    const tRenderStart = performance.now();
     renderChordPro();
+    console.log('Temps renderChordPro:', Math.round(performance.now() - tRenderStart), 'ms');
 
     viewerElement.scrollTop = 0;
 
@@ -2339,6 +2349,7 @@ if (songTextCache.has(f)) {
         setTimeout(() => {
           if (loadToken !== currentLoadToken) return;
           isLoadingSong = false;
+          console.log('Temps total loadSong:', Math.round(performance.now() - t0), 'ms');
         }, 150);
       });
     });
