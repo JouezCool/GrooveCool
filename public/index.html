@@ -1068,6 +1068,7 @@ nav{
   const songTextCache = new Map();
   const songSettingsCache = new Map();
 
+let resumeAutoScrollAfterTouch = false;
   let isRemoteScrolling = false;
 let isScrolling = false;
 let rafId = null;
@@ -2526,7 +2527,7 @@ viewerElement.addEventListener('scroll', () => {
 
   const now = Date.now();
   if (
-    now - lastEmitAt < 120 &&
+    now - lastEmitAt < 40 &&
     state.anchor === lastEmitAnchor &&
     Math.abs(state.progress - lastEmitProg) < 0.05
   ) {
@@ -2570,7 +2571,7 @@ socket.on('apply-scroll', data => {
   remoteScrollRaf = requestAnimationFrame(() => {
     isRemoteScrolling = true;
     viewerElement.scrollTop = pendingRemoteScrollTop;
-    setTimeout(() => { isRemoteScrolling = false; }, 120);
+    setTimeout(() => { isRemoteScrolling = false; }, 50);
   });
 });
 
@@ -2601,17 +2602,33 @@ function shouldBlockFollowerManualScroll(target) {
     if (blockedKeys.includes(e.key)) e.preventDefault();
   }, { passive:false });
 
-  viewerElement.addEventListener('touchstart', (e) => {
-    if (!isViewerOpen() || isEditorOpen()) return;
-    if (e.target && e.target.id === 'notesTextarea') return;
+viewerElement.addEventListener('touchstart', (e) => {
+  if (!isViewerOpen() || isEditorOpen()) return;
+  if (e.target && e.target.id === 'notesTextarea') return;
 
-    const t = e.changedTouches[0];
-    touchStartX = t.screenX;
-    touchStartY = t.screenY;
-  }, { passive: true });
+  if (isLeader && isScrolling) {
+    resumeAutoScrollAfterTouch = true;
+    stopAutoScroll();
+
+    socket.emit('sync-autoscroll', {
+      active: false,
+      speed: Number(speedInput.value) || 50
+    });
+  } else {
+    resumeAutoScrollAfterTouch = false;
+  }
+}, { passive: true });
 
 viewerElement.addEventListener('touchend', () => {
-  // swipe désactivé
+  if (isLeader && resumeAutoScrollAfterTouch) {
+    resumeAutoScrollAfterTouch = false;
+    startAutoScroll();
+
+    socket.emit('sync-autoscroll', {
+      active: true,
+      speed: Number(speedInput.value) || 50
+    });
+  }
 }, { passive: true });
 
   function sliderToPxPerSecond(value) {
