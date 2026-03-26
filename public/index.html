@@ -2521,6 +2521,7 @@ function songMatchesFilters(song, query) {
 
 viewerElement.addEventListener('scroll', () => {
   if (!isLeader || isRemoteScrolling) return;
+  if (isScrolling) return; // très important : pas de sync manuelle pendant autoplay
 
   const state = getTopLyricAnchorState();
   if (!state) return;
@@ -2529,7 +2530,7 @@ viewerElement.addEventListener('scroll', () => {
   if (
     now - lastEmitAt < 40 &&
     state.anchor === lastEmitAnchor &&
-    Math.abs(state.progress - lastEmitProg) < 0.05
+    Math.abs(state.progress - lastEmitProg) < 0.02
   ) {
     return;
   }
@@ -2621,6 +2622,11 @@ viewerElement.addEventListener('touchstart', (e) => {
 
 viewerElement.addEventListener('touchend', () => {
   if (isLeader && resumeAutoScrollAfterTouch) {
+    const state = getTopLyricAnchorState();
+    if (state) {
+      socket.emit('scroll-sync', state);
+    }
+
     resumeAutoScrollAfterTouch = false;
     startAutoScroll();
 
@@ -2701,24 +2707,26 @@ function stopAutoScroll() {
   scrollCarry = 0;
 }
 
-  function toggleAutoScroll(emitSync) {
-    if (isScrolling) {
-      stopAutoScroll();
-    } else {
-      if (isLeader && emitSync) {
-        const state = getTopLyricAnchorState();
-        if (state) socket.emit('scroll-sync', state);
-      }
-      startAutoScroll();
-    }
-
+function toggleAutoScroll(emitSync) {
+  if (isScrolling) {
+    stopAutoScroll();
+  } else {
     if (isLeader && emitSync) {
-      socket.emit('sync-autoscroll', {
-        active: isScrolling,
-        speed: Number(speedInput.value) || 50
-      });
+      const state = getTopLyricAnchorState();
+      if (state) {
+        socket.emit('scroll-sync', state); // une seule fois au départ
+      }
     }
+    startAutoScroll();
   }
+
+  if (isLeader && emitSync) {
+    socket.emit('sync-autoscroll', {
+      active: isScrolling,
+      speed: Number(speedInput.value) || 50
+    });
+  }
+}
 
   function handleSpeedChange() {
     if (!isLeader) return;
