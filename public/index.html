@@ -1063,7 +1063,6 @@ nav{
   
   let isLeader = false, allSongs = [], currentIndex = -1;
   let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
-  let songContentCache = {};
   
   const songTextCache = new Map();
   const songSettingsCache = new Map();
@@ -1142,10 +1141,6 @@ const userColorBackdrop = document.getElementById('userColorBackdrop');
 const userColorInput = document.getElementById('userColorInput');
 const userColorPreview = document.getElementById('userColorPreview');
 const userColorCurrentName = document.getElementById('userColorCurrentName');
-
-  let touchStartX = 0, touchStartY = 0;
-  const SWIPE_MIN_X = 110;
-  const SWIPE_RATIO = 1.4;
 
   const DEFAULT_USERS = ["Nemo","Estelle","Gillou","Bubu","Christian","Christophe"];
   let currentUser = "";
@@ -1746,16 +1741,6 @@ socket.on('song-deleted', async ({ fileName }) => {
   await fetchSongMeta();
   await fetchSongs();
   filterSongList(songSearchInput?.value || "");
-});
-
-socket.on('song-deleted', async ({ fileName }) => {
-  await fetchSongMeta();
-  await fetchSongs();
-  filterSongList(songSearchInput?.value || "");
-
-  if (normName(fileName) === normName(currentFileName)) {
-    closeViewer();
-  }
 });
 
   socket.on('connect', () => {
@@ -3330,6 +3315,10 @@ async function restoreHistoryVersion(historyId) {
     if (res.ok) {
       closeHistoryModal();
       stopAutoScroll();
+	  
+	  songTextCache.delete(currentFileName);
+	songSettingsCache.delete(currentFileName);
+	
       await loadSong(currentFileName);
 
       if (isLeader) socket.emit('change-song', currentFileName);
