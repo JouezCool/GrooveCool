@@ -24,6 +24,25 @@ const GOOGLE_OAUTH_SCOPES = (process.env.GOOGLE_OAUTH_SCOPES || 'https://www.goo
 const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
 const OAUTH_TOKENS_FILE_NAME = 'oauth-tokens.json';
 
+const memoryCache = {
+  songsList: null,
+  songsListAt: 0,
+  songMeta: null,
+  songMetaAt: 0,
+  userColors: null,
+  userColorsAt: 0,
+  songSettings: new Map(),
+  partitions: new Map()
+};
+
+const CACHE_TTL = {
+  songsList: 10000,     // 10 sec
+  songMeta: 10000,      // 10 sec
+  userColors: 10000,    // 10 sec
+  songSettings: 10000,  // 10 sec
+  partition: 10000      // 10 sec
+};
+
 const auth = new google.auth.JWT(
   GOOGLE_SERVICE_ACCOUNT_EMAIL,
   null,
@@ -57,6 +76,7 @@ function getDriveClient() {
 }
 
 let playedTonight = new Set();
+let playedTonightSaveTimer = null;
 const connectedUsers = new Map();
 
 let leaderSocketId = null;
@@ -65,12 +85,7 @@ let leaderDeviceId = null;
 
 app.use(express.json({ limit: '1mb' }));
 
-app.use((req, res, next) => {
-  res.setHeader('Cache-Control', 'no-store');
-  next();
-});
-
-app.use(express.static('public', { etag: false, maxAge: 0 }));
+app.use(express.static('public', { etag: true, maxAge: '1d' }));
 
 async function readPlayedTonight() {
   const data = await readDriveJsonFileByName(
@@ -88,6 +103,19 @@ async function writePlayedTonight(setValue) {
     'played-tonight.json',
     [...setValue]
   );
+}
+
+function schedulePlayedTonightSave() {
+  if (playedTonightSaveTimer) clearTimeout(playedTonightSaveTimer);
+
+  playedTonightSaveTimer = setTimeout(async () => {
+    try {
+      await writePlayedTonight(playedTonight);
+      console.log('✅ played-tonight.json sauvegardé');
+    } catch (err) {
+      console.error('❌ Erreur sauvegarde played-tonight.json:', err);
+    }
+  }, 2000);
 }
 
 function pinOk(pin) {
@@ -240,16 +268,29 @@ async function listDriveFiles(folderId) {
 }
 
 async function listDriveSongs() {
-	const drive = getDriveClient();
+  const now = Date.now();
+
+  if (
+    memoryCache.songsList &&
+    (now - memoryCache.songsListAt) < CACHE_TTL.songsList
+  ) {
+    return memoryCache.songsList;
+  }
+
   const files = await listDriveFiles(GOOGLE_DRIVE_PARTITIONS_FOLDER_ID);
 
-  return files
+  const songs = files
     .map(f => f.name)
     .filter(name => {
       const lower = String(name || '').toLowerCase();
       return lower.endsWith('.pro') || lower.endsWith('.cho');
     })
     .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+
+  memoryCache.songsList = songs;
+  memoryCache.songsListAt = now;
+
+  return songs;
 }
 
 async function readDriveTextFile(fileId) {
@@ -404,13 +445,27 @@ async function writeOauthTokensToDrive(tokens) {
 }
 
 async function readSongMeta() {
+  const now = Date.now();
+
+  if (
+    memoryCache.songMeta &&
+    (now - memoryCache.songMetaAt) < CACHE_TTL.songMeta
+  ) {
+    return memoryCache.songMeta;
+  }
+
   const data = await readDriveJsonFileByName(
     GOOGLE_DRIVE_META_FOLDER_ID,
     'song-meta.json',
     {}
   );
 
-  return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+  const meta = data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+
+  memoryCache.songMeta = meta;
+  memoryCache.songMetaAt = now;
+
+  return meta;
 }
 
 async function writeSongMeta(meta) {
@@ -420,18 +475,35 @@ async function writeSongMeta(meta) {
     meta
   );
 
+  memoryCache.songMeta = meta;
+  memoryCache.songMetaAt = Date.now();
+
   console.log('✅ song-meta.json mis à jour sur Google Drive');
   console.log('✅ Nombre d’entrées meta :', Object.keys(meta).length);
 }
 
 async function readUserColors() {
+  const now = Date.now();
+
+  if (
+    memoryCache.userColors &&
+    (now - memoryCache.userColorsAt) < CACHE_TTL.userColors
+  ) {
+    return memoryCache.userColors;
+  }
+
   const data = await readDriveJsonFileByName(
     GOOGLE_DRIVE_META_FOLDER_ID,
     'user-colors.json',
     {}
   );
 
-  return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+  const colors = data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+
+  memoryCache.userColors = colors;
+  memoryCache.userColorsAt = now;
+
+  return colors;
 }
 
 async function writeUserColors(colors) {
@@ -440,9 +512,19 @@ async function writeUserColors(colors) {
     'user-colors.json',
     colors
   );
+
+  memoryCache.userColors = colors;
+  memoryCache.userColorsAt = Date.now();
 }
 
 async function readSongSettings(fileName) {
+  const now = Date.now();
+  const cached = memoryCache.songSettings.get(fileName);
+
+  if (cached && (now - cached.at) < CACHE_TTL.songSettings) {
+    return cached.value;
+  }
+
   const data = await readDriveJsonFileByName(
     GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID,
     settingsFileName(fileName),
@@ -453,11 +535,18 @@ async function readSongSettings(fileName) {
     }
   );
 
-  return {
+  const settings = {
     fontSize: Number.isFinite(Number(data?.fontSize)) ? Number(data.fontSize) : 26,
     speed: Number.isFinite(Number(data?.speed)) ? Number(data.speed) : 50,
     transpose: Number.isFinite(Number(data?.transpose)) ? Number(data.transpose) : 0
   };
+
+  memoryCache.songSettings.set(fileName, {
+    value: settings,
+    at: now
+  });
+
+  return settings;
 }
 
 async function writeSongSettings(fileName, settings) {
@@ -472,6 +561,11 @@ async function writeSongSettings(fileName, settings) {
     settingsFileName(fileName),
     clean
   );
+
+  memoryCache.songSettings.set(fileName, {
+    value: clean,
+    at: Date.now()
+  });
 
   return clean;
 }
@@ -501,18 +595,40 @@ async function appendHistory(fileName, entry) {
 }
 
 async function readPartition(fileName) {
+  const now = Date.now();
+  const cached = memoryCache.partitions.get(fileName);
+
+  if (cached && (now - cached.at) < CACHE_TTL.partition) {
+    return cached.value;
+  }
+
   const file = await findDriveFileByName(GOOGLE_DRIVE_PARTITIONS_FOLDER_ID, fileName);
   if (!file) return null;
-  return readDriveTextFile(file.id);
+
+  const content = await readDriveTextFile(file.id);
+
+  memoryCache.partitions.set(fileName, {
+    value: content,
+    at: now
+  });
+
+  return content;
 }
 
 async function writePartition(fileName, content) {
-  return upsertDriveTextFile(
+  const result = await upsertDriveTextFile(
     GOOGLE_DRIVE_PARTITIONS_FOLDER_ID,
     fileName,
     content,
     'text/plain'
   );
+
+  memoryCache.partitions.set(fileName, {
+    value: content,
+    at: Date.now()
+  });
+
+  return result;
 }
 
 function broadcastConnectedUsers() {
@@ -1062,20 +1178,20 @@ io.on('connection', (socket) => {
     broadcastLeaderState();
   });
 
-socket.on('mark-played', async ({ fileName, played }) => {
+socket.on('mark-played', ({ fileName, played }) => {
   const name = String(fileName || '').trim();
   if (!name) return;
 
   if (played) playedTonight.add(name);
   else playedTonight.delete(name);
 
-  await writePlayedTonight(playedTonight);
+  schedulePlayedTonightSave();
   broadcastPlayedTonight();
 });
 
-socket.on('reset-played-tonight', async () => {
+socket.on('reset-played-tonight', () => {
   playedTonight.clear();
-  await writePlayedTonight(playedTonight);
+  schedulePlayedTonightSave();
   broadcastPlayedTonight();
 });
 
