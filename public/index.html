@@ -1072,6 +1072,7 @@ let resumeAutoScrollAfterTouch = false;
   let isRemoteScrolling = false;
 let isScrolling = false;
 let isLeaderManualDragging = false;
+let leaderDragReleaseTimer = null;
 let rafId = null;
 let lastRafTime = 0;
 let scrollCarry = 0;
@@ -2614,6 +2615,11 @@ viewerElement.addEventListener('touchstart', (e) => {
   if (e.target && e.target.id === 'notesTextarea') return;
 
   if (isLeader) {
+    if (leaderDragReleaseTimer) {
+      clearTimeout(leaderDragReleaseTimer);
+      leaderDragReleaseTimer = null;
+    }
+
     isLeaderManualDragging = true;
   }
 
@@ -2631,49 +2637,61 @@ viewerElement.addEventListener('touchstart', (e) => {
 }, { passive: true });
 
 viewerElement.addEventListener('touchend', () => {
-  if (isLeader) {
-    isLeaderManualDragging = false;
+  if (!isLeader) return;
+
+  if (leaderDragReleaseTimer) {
+    clearTimeout(leaderDragReleaseTimer);
   }
 
-  if (isLeader) {
+  leaderDragReleaseTimer = setTimeout(() => {
+    isLeaderManualDragging = false;
+
     const state = getTopLyricAnchorState();
     if (state) {
       socket.emit('scroll-sync', state);
     }
-  }
 
-  if (isLeader && resumeAutoScrollAfterTouch) {
-    resumeAutoScrollAfterTouch = false;
-    startAutoScroll();
+    if (resumeAutoScrollAfterTouch) {
+      resumeAutoScrollAfterTouch = false;
+      startAutoScroll();
 
-    socket.emit('sync-autoscroll', {
-      active: true,
-      speed: Number(speedInput.value) || 50
-    });
-  }
+      socket.emit('sync-autoscroll', {
+        active: true,
+        speed: Number(speedInput.value) || 50
+      });
+    }
+
+    leaderDragReleaseTimer = null;
+  }, 220);
 }, { passive: true });
 
 viewerElement.addEventListener('touchcancel', () => {
-  if (isLeader) {
-    isLeaderManualDragging = false;
+  if (!isLeader) return;
+
+  if (leaderDragReleaseTimer) {
+    clearTimeout(leaderDragReleaseTimer);
   }
 
-  if (isLeader) {
+  leaderDragReleaseTimer = setTimeout(() => {
+    isLeaderManualDragging = false;
+
     const state = getTopLyricAnchorState();
     if (state) {
       socket.emit('scroll-sync', state);
     }
-  }
 
-  if (isLeader && resumeAutoScrollAfterTouch) {
-    resumeAutoScrollAfterTouch = false;
-    startAutoScroll();
+    if (resumeAutoScrollAfterTouch) {
+      resumeAutoScrollAfterTouch = false;
+      startAutoScroll();
 
-    socket.emit('sync-autoscroll', {
-      active: true,
-      speed: Number(speedInput.value) || 50
-    });
-  }
+      socket.emit('sync-autoscroll', {
+        active: true,
+        speed: Number(speedInput.value) || 50
+      });
+    }
+
+    leaderDragReleaseTimer = null;
+  }, 220);
 }, { passive: true });
 
   function sliderToPxPerSecond(value) {
