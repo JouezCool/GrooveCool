@@ -166,6 +166,21 @@ function settingsFileName(fileName) {
   return `${safe}.json`;
 }
 
+function getSongSettingsFolderId() {
+  return GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID || GOOGLE_DRIVE_META_FOLDER_ID;
+}
+
+function getSongSettingsFallbackFolderId() {
+  if (
+    GOOGLE_DRIVE_META_FOLDER_ID &&
+    GOOGLE_DRIVE_META_FOLDER_ID !== GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID
+  ) {
+    return GOOGLE_DRIVE_META_FOLDER_ID;
+  }
+
+  return '';
+}
+
 function createHistoryEntry({ fileName, previousContent, userName }) {
   return {
     id: crypto.randomUUID(),
@@ -311,6 +326,10 @@ async function readDriveTextFile(fileId) {
 
 async function createDriveTextFile(folderId, fileName, content, mimeType = 'text/plain') {
 	const drive = getDriveClient();
+  if (!folderId) {
+    throw new Error(`Dossier Google Drive manquant pour ${fileName}`);
+  }
+
   const buffer = Buffer.from(String(content || ''), 'utf8');
 
   const res = await drive.files.create({
@@ -526,7 +545,7 @@ async function readSongSettings(fileName) {
   }
 
   const data = await readDriveJsonFileByName(
-    GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID,
+    getSongSettingsFolderId(),
     settingsFileName(fileName),
     {
       fontSize: 26,
@@ -556,11 +575,23 @@ async function writeSongSettings(fileName, settings) {
     transpose: Number.isFinite(Number(settings?.transpose)) ? Number(settings.transpose) : 0
   };
 
-  await writeDriveJsonFileByName(
-    GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID,
-    settingsFileName(fileName),
-    clean
-  );
+  try {
+    await writeDriveJsonFileByName(
+      getSongSettingsFolderId(),
+      settingsFileName(fileName),
+      clean
+    );
+  } catch (err) {
+    const fallbackFolderId = getSongSettingsFallbackFolderId();
+    if (!fallbackFolderId) throw err;
+
+    console.warn('⚠️ Écriture réglages impossible dans le dossier settings, tentative dans meta:', err?.message || err);
+    await writeDriveJsonFileByName(
+      fallbackFolderId,
+      settingsFileName(fileName),
+      clean
+    );
+  }
 
   memoryCache.songSettings.set(fileName, {
     value: clean,
@@ -1133,7 +1164,7 @@ if (historyFile) {
 }
 
 const settingsFile = await findDriveFileByName(
-  GOOGLE_DRIVE_SONG_SETTINGS_FOLDER_ID,
+  getSongSettingsFolderId(),
   settingsFileName(fileName)
 );
 if (settingsFile) {
