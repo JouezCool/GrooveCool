@@ -533,6 +533,41 @@ nav{
 
     .chordline{ color:var(--accent); font-weight:bold; }
 
+    .chord-row{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:flex-end;
+      row-gap:.2em;
+      column-gap:0;
+      line-height:1.25;
+      white-space:normal;
+      overflow-wrap:anywhere;
+    }
+
+    .chord-cell{
+      display:inline-flex;
+      flex-direction:column;
+      align-items:flex-start;
+      min-width:0;
+      max-width:100%;
+      vertical-align:bottom;
+    }
+
+    .chord-cell .chord{
+      min-height:1.15em;
+      color:var(--accent);
+      font-weight:bold;
+      font-size:.78em;
+      line-height:1.05;
+      white-space:nowrap;
+    }
+
+    .chord-cell .lyric{
+      white-space:pre-wrap;
+      overflow-wrap:anywhere;
+      line-height:1.25;
+    }
+
     .commentwrap{ margin:12px 0; }
 
     .commentline{
@@ -2910,34 +2945,39 @@ socket.on('apply-speed', value => {
   }
 
   function parseChordProLine(line) {
-    let chordLine = '';
+    const segments = [];
+    let pendingChord = '';
+    let text = '';
     let lyricLine = '';
-
     let i = 0;
+
     while (i < line.length) {
       const ch = line[i];
 
       if (ch === '[') {
         const end = line.indexOf(']', i);
         if (end !== -1) {
-          const chordRaw = line.slice(i + 1, end);
-          const chord = transChord(chordRaw, transposeValue);
+          if (text || pendingChord) {
+            segments.push({ chord: pendingChord, text });
+          }
 
-          const pos = lyricLine.length;
-          if (chordLine.length < pos) chordLine += ' '.repeat(pos - chordLine.length);
-          chordLine = chordLine.slice(0, pos) + chord + chordLine.slice(pos + chord.length);
+          pendingChord = transChord(line.slice(i + 1, end), transposeValue);
+          text = '';
           i = end + 1;
           continue;
         }
       }
 
+      text += ch;
       lyricLine += ch;
-      chordLine += (ch === '\t') ? '\t' : ' ';
       i++;
     }
 
-    if (chordLine.length < lyricLine.length) chordLine += ' '.repeat(lyricLine.length - chordLine.length);
-    return { chordLine, lyricLine };
+    if (text || pendingChord || !segments.length) {
+      segments.push({ chord: pendingChord, text });
+    }
+
+    return { segments, lyricLine };
   }
 
   function clearSongContent() {
@@ -2973,23 +3013,44 @@ socket.on('apply-speed', value => {
     targetEl.appendChild(wrap);
   }
 
-  function addChordBlock(chordLine, lyricLine, targetEl, anchorId) {
+  function addChordBlock(segments, lyricLine, targetEl, anchorId) {
     const block = document.createElement('div');
     block.className = 'block';
     block.style.fontSize = (fontSize * currentSongZoom) + 'px';
     block.dataset.kind = 'lyric';
     if (anchorId) block.dataset.anchor = anchorId;
 
-    const preChord = document.createElement('pre');
-    preChord.className = 'chordline';
-    preChord.textContent = chordLine;
+    const hasChords = segments.some(segment => String(segment.chord || '').trim());
+    if (!hasChords) {
+      const preLyric = document.createElement('pre');
+      preLyric.className = 'lyricline';
+      preLyric.textContent = lyricLine;
+      block.appendChild(preLyric);
+      targetEl.appendChild(block);
+      return;
+    }
 
-    const preLyric = document.createElement('pre');
-    preLyric.className = 'lyricline';
-    preLyric.textContent = lyricLine;
+    const row = document.createElement('span');
+    row.className = 'chord-row';
 
-    if (chordLine.trim().length > 0) block.appendChild(preChord);
-    block.appendChild(preLyric);
+    for (const segment of segments) {
+      const cell = document.createElement('span');
+      cell.className = 'chord-cell';
+
+      const chord = document.createElement('span');
+      chord.className = 'chord';
+      chord.textContent = segment.chord || '\u00a0';
+
+      const lyric = document.createElement('span');
+      lyric.className = 'lyric';
+      lyric.textContent = segment.text || '\u00a0';
+
+      cell.appendChild(chord);
+      cell.appendChild(lyric);
+      row.appendChild(cell);
+    }
+
+    block.appendChild(row);
     targetEl.appendChild(block);
   }
 
@@ -3128,11 +3189,11 @@ function renderPUBlock(targetEl, showContent, label, text){
         continue;
       }
 
-      const { chordLine, lyricLine } = parseChordProLine(line);
+      const { segments, lyricLine } = parseChordProLine(line);
       const key = normAnchorText(lyricLine);
       renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
       const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
-      addChordBlock(chordLine, lyricLine, target, anchorId);
+      addChordBlock(segments, lyricLine, target, anchorId);
     }
   }
 
