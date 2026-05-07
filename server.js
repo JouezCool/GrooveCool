@@ -23,6 +23,7 @@ const GOOGLE_OAUTH_SCOPES = (process.env.GOOGLE_OAUTH_SCOPES || 'https://www.goo
 
 const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
 const OAUTH_TOKENS_FILE_NAME = 'oauth-tokens.json';
+const SONG_SETTINGS_META_KEY = '__songSettings';
 
 const memoryCache = {
   songsList: null,
@@ -187,6 +188,14 @@ function getSongSettingsFallbackFolderId() {
   }
 
   return '';
+}
+
+function normalizeSongSettings(settings) {
+  return {
+    fontSize: Number.isFinite(Number(settings?.fontSize)) ? Number(settings.fontSize) : 26,
+    speed: Number.isFinite(Number(settings?.speed)) ? Number(settings.speed) : 50,
+    transpose: Number.isFinite(Number(settings?.transpose)) ? Number(settings.transpose) : 0
+  };
 }
 
 function createHistoryEntry({ fileName, previousContent, userName }) {
@@ -509,6 +518,12 @@ async function writeSongMeta(meta) {
   console.log('✅ Nombre d’entrées meta :', Object.keys(meta).length);
 }
 
+function publicSongMeta(meta) {
+  const copy = { ...meta };
+  delete copy[SONG_SETTINGS_META_KEY];
+  return copy;
+}
+
 async function readUserColors() {
   const now = Date.now();
 
@@ -552,21 +567,24 @@ async function readSongSettings(fileName) {
     return cached.value;
   }
 
-  const data = await readDriveJsonFileByName(
-    getSongSettingsFolderId(),
-    settingsFileName(fileName),
-    {
-      fontSize: 26,
-      speed: 50,
-      transpose: 0
-    }
-  );
+  let data = null;
 
-  const settings = {
-    fontSize: Number.isFinite(Number(data?.fontSize)) ? Number(data.fontSize) : 26,
-    speed: Number.isFinite(Number(data?.speed)) ? Number(data.speed) : 50,
-    transpose: Number.isFinite(Number(data?.transpose)) ? Number(data.transpose) : 0
-  };
+  try {
+    data = await readDriveJsonFileByName(
+      getSongSettingsFolderId(),
+      settingsFileName(fileName),
+      null
+    );
+  } catch (err) {
+    console.warn('⚠️ Lecture réglages fichier individuel impossible:', err?.message || err);
+  }
+
+  if (!data) {
+    const meta = await readSongMeta();
+    data = meta?.[SONG_SETTINGS_META_KEY]?.[fileName] || null;
+  }
+
+  const settings = normalizeSongSettings(data);
 
   memoryCache.songSettings.set(fileName, {
     value: settings,
@@ -577,11 +595,7 @@ async function readSongSettings(fileName) {
 }
 
 async function writeSongSettings(fileName, settings) {
-  const clean = {
-    fontSize: Number.isFinite(Number(settings?.fontSize)) ? Number(settings.fontSize) : 26,
-    speed: Number.isFinite(Number(settings?.speed)) ? Number(settings.speed) : 50,
-    transpose: Number.isFinite(Number(settings?.transpose)) ? Number(settings.transpose) : 0
-  };
+  const clean = normalizeSongSettings(settings);
 
   try {
     await writeDriveJsonFileByName(
@@ -591,14 +605,26 @@ async function writeSongSettings(fileName, settings) {
     );
   } catch (err) {
     const fallbackFolderId = getSongSettingsFallbackFolderId();
-    if (!fallbackFolderId) throw err;
+    if (!fallbackFolderId) {
+      await writeSongSettingsToMeta(fileName, clean, err);
+      memoryCache.songSettings.set(fileName, {
+        value: clean,
+        at: Date.now()
+      });
 
-    console.warn('⚠️ Écriture réglages impossible dans le dossier settings, tentative dans meta:', err?.message || err);
-    await writeDriveJsonFileByName(
-      fallbackFolderId,
-      settingsFileName(fileName),
-      clean
-    );
+      return clean;
+    }
+
+    try {
+      console.warn('⚠️ Écriture réglages impossible dans le dossier settings, tentative dans meta:', err?.message || err);
+      await writeDriveJsonFileByName(
+        fallbackFolderId,
+        settingsFileName(fileName),
+        clean
+      );
+    } catch (fallbackErr) {
+      await writeSongSettingsToMeta(fileName, clean, fallbackErr);
+    }
   }
 
   memoryCache.songSettings.set(fileName, {
@@ -607,6 +633,21 @@ async function writeSongSettings(fileName, settings) {
   });
 
   return clean;
+}
+
+async function writeSongSettingsToMeta(fileName, clean, cause) {
+  console.warn('⚠️ Écriture réglages fichier impossible, sauvegarde dans song-meta:', cause?.message || cause);
+  const meta = await readSongMeta();
+  const allSettings =
+    meta[SONG_SETTINGS_META_KEY] &&
+    typeof meta[SONG_SETTINGS_META_KEY] === 'object' &&
+    !Array.isArray(meta[SONG_SETTINGS_META_KEY])
+      ? meta[SONG_SETTINGS_META_KEY]
+      : {};
+
+  allSettings[fileName] = clean;
+  meta[SONG_SETTINGS_META_KEY] = allSettings;
+  await writeSongMeta(meta);
 }
 
 async function readHistory(fileName) {
@@ -809,7 +850,7 @@ app.get('/partitions/:fileName', async (req, res) => {
 app.get('/song-meta.json', async (req, res) => {
   try {
     const meta = await readSongMeta();
-    res.json(meta);
+    res.json(publicSongMeta(meta));
   } catch (err) {
     console.error('❌ Erreur /song-meta.json:', err);
     res.status(500).json({});
