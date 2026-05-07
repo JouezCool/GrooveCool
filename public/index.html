@@ -971,6 +971,7 @@ nav{
         <button class="btn" onclick="openUserFromSettings()">👤 Utilisateur</button>
         <button class="btn" id="settingsLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
         <button class="btn" id="settingsChordBtn" onclick="toggleChordStyle()">Accords: Do</button>
+        <button class="btn" id="settingsAccidentalBtn" onclick="toggleAccidentalStyle()">Altérations: #</button>
         <button class="btn" id="settingsThemeBtn" onclick="toggleTheme()">Thème: Sombre</button>
 		<button class="btn" onclick="openUserColorModal()">🎨 Ma couleur</button>
 		<button class="btn" onclick="openCreateSongModal()">➕ Nouveau morceau</button>
@@ -1188,6 +1189,7 @@ const userColorCurrentName = document.getElementById('userColorCurrentName');
   let users = [];
   let toastTimer = null;
   let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin';
+  let accidentalStyle = localStorage.getItem('bandapp_accidentalStyle') || 'sharp';
   let themeMode = localStorage.getItem('bandapp_theme') || 'dark';
 
 function getAutoUserColor(userName) {
@@ -1375,6 +1377,9 @@ function openSettings() {
 
     const cb = document.getElementById('settingsChordBtn');
     if (cb) cb.innerText = (chordStyle === 'latin') ? "Accords: Do" : "Accords: C";
+
+    const ab = document.getElementById('settingsAccidentalBtn');
+    if (ab) ab.innerText = (accidentalStyle === 'flat') ? "Altérations: b" : "Altérations: #";
 
     const tb = document.getElementById('settingsThemeBtn');
     if (tb) tb.innerText = (themeMode === 'dark') ? "Thème: Sombre" : "Thème: Clair";
@@ -2921,26 +2926,43 @@ socket.on('apply-speed', value => {
     renderGrids();
   }
 
-  const scale = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-  const scaleLat = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
+  function toggleAccidentalStyle() {
+    accidentalStyle = (accidentalStyle === 'flat') ? 'sharp' : 'flat';
+    localStorage.setItem('bandapp_accidentalStyle', accidentalStyle);
+    syncSettingsUI();
+    renderChordPro();
+    renderGrids();
+  }
+
+  const scaleSharp = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const scaleFlat = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+  const scaleLatSharp = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
+  const scaleLatFlat = ['Do','Réb','Ré','Mib','Mi','Fa','Solb','Sol','Lab','La','Sib','Si'];
 
   function normalizeNote(note) {
     return note
+      .replace('Cb','B')
       .replace('Bb','A#')
       .replace('Db','C#')
       .replace('Eb','D#')
       .replace('Gb','F#')
-      .replace('Ab','G#');
+      .replace('Ab','G#')
+      .replace('Fb','E')
+      .replace('E#','F')
+      .replace('B#','C');
   }
 
   function transChord(chord, steps) {
     return chord.replace(/([A-G][#b]?)/g, (match) => {
       const n = normalizeNote(match);
-      const idx = scale.indexOf(n);
+      const idx = scaleSharp.indexOf(n);
       if (idx === -1) return match;
       let newIdx = (idx + steps) % 12;
       if (newIdx < 0) newIdx += 12;
-      return (chordStyle === 'latin' ? scaleLat[newIdx] : scale[newIdx]);
+      const targetScale = chordStyle === 'latin'
+        ? (accidentalStyle === 'flat' ? scaleLatFlat : scaleLatSharp)
+        : (accidentalStyle === 'flat' ? scaleFlat : scaleSharp);
+      return targetScale[newIdx];
     });
   }
 
