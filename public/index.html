@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="/icon-512.png">
 
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 
@@ -2237,7 +2238,8 @@ async function saveCurrentSongSettings() {
     } else if (res.status === 403) {
       alert("PIN invalide");
     } else {
-      alert("Erreur d'enregistrement des réglages");
+      const message = await res.text().catch(() => "");
+      alert("Erreur d'enregistrement des réglages" + (message ? " : " + message : ""));
     }
   } catch (err) {
     console.error(err);
@@ -3041,6 +3043,10 @@ function renderPUBlock(targetEl, showContent, label, text){
   wrap.appendChild(pre);
   targetEl.appendChild(wrap);
 }
+
+  function renderGrids() {
+    // Legacy refresh hook kept for font-size/transpose controls.
+  }
 
   function renderChordPro() {
     clearSongContent();
