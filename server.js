@@ -85,7 +85,15 @@ let leaderDeviceId = null;
 
 app.use(express.json({ limit: '1mb' }));
 
-app.use(express.static('public', { etag: true, maxAge: '1d' }));
+app.use(express.static('public', {
+  etag: true,
+  maxAge: '1d',
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 async function readPlayedTonight() {
   const data = await readDriveJsonFileByName(
