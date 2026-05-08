@@ -2342,6 +2342,26 @@ async function loadSongSettings(fileName, forceRefresh = false) {
   }
 }
 
+function applySongSettingsData(data, fileName) {
+  currentSongSettings = {
+    fontSize: Number.isFinite(Number(data?.fontSize)) ? Number(data.fontSize) : 26,
+    speed: Number.isFinite(Number(data?.speed)) ? Number(data.speed) : 50,
+    transpose: Number.isFinite(Number(data?.transpose)) ? Number(data.transpose) : 0
+  };
+
+  if (fileName) {
+    songSettingsCache.set(fileName, currentSongSettings);
+  }
+
+  fontSize = currentSongSettings.fontSize;
+  transposeValue = currentSongSettings.transpose;
+  speedInput.value = currentSongSettings.speed;
+  updateSpeedPercent();
+
+  document.getElementById('transposeVal').innerText =
+    (transposeValue > 0 ? '+' : '') + transposeValue;
+}
+
 async function loadSong(f) {
   const loadToken = ++currentLoadToken;
   const t0 = performance.now();
@@ -2359,23 +2379,44 @@ async function loadSong(f) {
 
     let raw;
     const tFetchStart = performance.now();
+    const hasTextCache = songTextCache.has(f);
+    const hasSettingsCache = songSettingsCache.has(f);
 
-    if (songTextCache.has(f)) {
+    if (hasTextCache && hasSettingsCache) {
       raw = songTextCache.get(f);
-    } else {
-      const res = await fetch('/partitions/' + encodeURIComponent(f), { cache: 'no-store' });
-      raw = await res.text();
+      applySongSettingsData(songSettingsCache.get(f), f);
+    } else if (!hasTextCache && !hasSettingsCache) {
+      const res = await fetch('/song-bundle?fileName=' + encodeURIComponent(f), {
+        cache: 'no-store'
+      });
+
+      if (!res.ok) {
+        throw new Error('Chargement bundle impossible');
+      }
+
+      const bundle = await res.json();
+      raw = String(bundle?.content || '');
       songTextCache.set(f, raw);
+      applySongSettingsData(bundle?.settings, f);
+    } else {
+      if (hasTextCache) {
+        raw = songTextCache.get(f);
+      } else {
+        const res = await fetch('/partitions/' + encodeURIComponent(f), { cache: 'no-store' });
+        raw = await res.text();
+        songTextCache.set(f, raw);
+      }
+
+      if (hasSettingsCache) {
+        applySongSettingsData(songSettingsCache.get(f), f);
+      } else {
+        await loadSongSettings(f);
+      }
     }
 
     if (loadToken !== currentLoadToken) return;
     console.log('Temps texte:', Math.round(performance.now() - tFetchStart), 'ms');
-
-    const tSettingsStart = performance.now();
-    await loadSongSettings(f);
-
-    if (loadToken !== currentLoadToken) return;
-    console.log('Temps settings:', Math.round(performance.now() - tSettingsStart), 'ms');
+    console.log('Temps settings:', Math.round(performance.now() - tFetchStart), 'ms');
 
     currentRaw = raw;
     currentFileName = f;
