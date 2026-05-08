@@ -3376,9 +3376,20 @@ function renderPUBlock(targetEl, showContent, label, text){
         continue;
       }
 
-      const comment = line.match(/\{c\s*:\s*(.*?)\}/i);
+      const comment = line.match(/^\{c\s*:\s*(.*?)\}(.*)$/i);
       if (comment) {
         addCommentLine(comment[1], target);
+
+        const trailingLine = String(comment[2] || '');
+        if (!trailingLine.trim()) {
+          continue;
+        }
+
+        const { segments, lyricLine } = parseChordProLine(trailingLine);
+        const key = normAnchorText(lyricLine);
+        renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
+        const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
+        addChordBlock(segments, lyricLine, target, anchorId);
         continue;
       }
 
