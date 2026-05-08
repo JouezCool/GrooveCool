@@ -532,7 +532,10 @@ nav{
     }
 
     .chordline{ color:var(--accent); font-weight:bold; }
-    .lyricline{ font-weight:500; }
+    .lyricline{
+      font-weight:500;
+      -webkit-text-stroke:0.2px currentColor;
+    }
 
     .chord-row{
       display:flex;
@@ -568,6 +571,7 @@ nav{
       overflow-wrap:anywhere;
       line-height:1.25;
       font-weight:500;
+      -webkit-text-stroke:0.2px currentColor;
     }
 
     .commentwrap{ margin:12px 0; }
