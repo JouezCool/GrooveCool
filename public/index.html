@@ -1103,6 +1103,7 @@ nav{
   
   const songTextCache = new Map();
   const songSettingsCache = new Map();
+  const songBundlePrefetches = new Map();
 
 let resumeAutoScrollAfterTouch = false;
   let isRemoteScrolling = false;
@@ -2362,6 +2363,85 @@ function applySongSettingsData(data, fileName) {
     (transposeValue > 0 ? '+' : '') + transposeValue;
 }
 
+async function fetchSongBundle(fileName) {
+  if (!fileName) {
+    throw new Error('Nom de morceau manquant');
+  }
+
+  const res = await fetch('/song-bundle?fileName=' + encodeURIComponent(fileName), {
+    cache: 'no-store'
+  });
+
+  if (!res.ok) {
+    throw new Error('Chargement bundle impossible');
+  }
+
+  const bundle = await res.json();
+  const content = String(bundle?.content || '');
+  const settings = {
+    fontSize: Number.isFinite(Number(bundle?.settings?.fontSize)) ? Number(bundle.settings.fontSize) : 26,
+    speed: Number.isFinite(Number(bundle?.settings?.speed)) ? Number(bundle.settings.speed) : 50,
+    transpose: Number.isFinite(Number(bundle?.settings?.transpose)) ? Number(bundle.settings.transpose) : 0
+  };
+
+  songTextCache.set(fileName, content);
+  songSettingsCache.set(fileName, settings);
+
+  return { content, settings };
+}
+
+function prefetchSongBundle(fileName) {
+  if (!fileName) return;
+  if (songTextCache.has(fileName) && songSettingsCache.has(fileName)) return;
+  if (songBundlePrefetches.has(fileName)) return;
+
+  const promise = fetchSongBundle(fileName)
+    .catch(err => {
+      console.warn('Préchargement ignoré pour', fileName, err);
+    })
+    .finally(() => {
+      songBundlePrefetches.delete(fileName);
+    });
+
+  songBundlePrefetches.set(fileName, promise);
+}
+
+function getPrefetchSongIndexes(centerIndex) {
+  const filteredIndexes = getFilteredSongIndexes();
+  const pos = filteredIndexes.indexOf(centerIndex);
+
+  if (pos !== -1) {
+    return [
+      filteredIndexes[pos + 1],
+      filteredIndexes[pos - 1]
+    ].filter(idx => Number.isInteger(idx) && idx >= 0 && idx < allSongs.length);
+  }
+
+  return [
+    centerIndex + 1,
+    centerIndex - 1
+  ].filter(idx => Number.isInteger(idx) && idx >= 0 && idx < allSongs.length);
+}
+
+function scheduleSongPrefetch(centerIndex) {
+  const targets = getPrefetchSongIndexes(centerIndex)
+    .map(idx => allSongs[idx])
+    .filter(Boolean);
+
+  if (!targets.length) return;
+
+  const runPrefetch = () => {
+    targets.forEach(prefetchSongBundle);
+  };
+
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(runPrefetch, { timeout: 1200 });
+    return;
+  }
+
+  setTimeout(runPrefetch, 150);
+}
+
 async function loadSong(f) {
   const loadToken = ++currentLoadToken;
   const t0 = performance.now();
@@ -2378,26 +2458,18 @@ async function loadSong(f) {
     isRemoteScrolling = false;
 
     let raw;
-    const tFetchStart = performance.now();
+    const tTextStart = performance.now();
     const hasTextCache = songTextCache.has(f);
     const hasSettingsCache = songSettingsCache.has(f);
+    const usedCombinedPath = (hasTextCache && hasSettingsCache) || (!hasTextCache && !hasSettingsCache);
 
     if (hasTextCache && hasSettingsCache) {
       raw = songTextCache.get(f);
       applySongSettingsData(songSettingsCache.get(f), f);
     } else if (!hasTextCache && !hasSettingsCache) {
-      const res = await fetch('/song-bundle?fileName=' + encodeURIComponent(f), {
-        cache: 'no-store'
-      });
-
-      if (!res.ok) {
-        throw new Error('Chargement bundle impossible');
-      }
-
-      const bundle = await res.json();
-      raw = String(bundle?.content || '');
-      songTextCache.set(f, raw);
-      applySongSettingsData(bundle?.settings, f);
+      const bundle = await fetchSongBundle(f);
+      raw = bundle.content;
+      applySongSettingsData(bundle.settings, f);
     } else {
       if (hasTextCache) {
         raw = songTextCache.get(f);
@@ -2407,16 +2479,27 @@ async function loadSong(f) {
         songTextCache.set(f, raw);
       }
 
+      const textElapsed = Math.round(performance.now() - tTextStart);
+      const tSettingsStart = performance.now();
+
       if (hasSettingsCache) {
         applySongSettingsData(songSettingsCache.get(f), f);
       } else {
         await loadSongSettings(f);
       }
+
+      if (loadToken !== currentLoadToken) return;
+      console.log('Temps texte:', textElapsed, 'ms');
+      console.log('Temps settings:', Math.round(performance.now() - tSettingsStart), 'ms');
     }
 
     if (loadToken !== currentLoadToken) return;
-    console.log('Temps texte:', Math.round(performance.now() - tFetchStart), 'ms');
-    console.log('Temps settings:', Math.round(performance.now() - tFetchStart), 'ms');
+
+    if (usedCombinedPath) {
+      const elapsed = Math.round(performance.now() - tTextStart);
+      console.log('Temps texte:', elapsed, 'ms');
+      console.log('Temps settings:', elapsed, 'ms');
+    }
 
     currentRaw = raw;
     currentFileName = f;
@@ -2438,6 +2521,7 @@ async function loadSong(f) {
         viewerElement.scrollTop = 0;
 
         isLoadingSong = false;
+        scheduleSongPrefetch(currentIndex);
         console.log('Temps total loadSong:', Math.round(performance.now() - t0), 'ms');
       });
     });
