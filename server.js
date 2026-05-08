@@ -847,6 +847,51 @@ app.get('/partitions/:fileName', async (req, res) => {
   }
 });
 
+app.get('/song-bundle', async (req, res) => {
+  try {
+    const fileName = String(req.query.fileName || '');
+    if (!isValidSongName(fileName)) {
+      return res.status(400).json({
+        fileName,
+        content: '',
+        settings: {
+          fontSize: 26,
+          speed: 50,
+          transpose: 0
+        }
+      });
+    }
+
+    const [content, settings] = await Promise.all([
+      readPartition(fileName),
+      readSongSettings(fileName)
+    ]);
+
+    if (content === null) {
+      return res.status(404).json({
+        error: 'Fichier introuvable'
+      });
+    }
+
+    res.json({
+      fileName,
+      content,
+      settings
+    });
+  } catch (err) {
+    console.error('❌ Erreur /song-bundle:', err);
+    res.status(500).json({
+      error: 'Erreur',
+      content: '',
+      settings: {
+        fontSize: 26,
+        speed: 50,
+        transpose: 0
+      }
+    });
+  }
+});
+
 app.get('/song-meta.json', async (req, res) => {
   try {
     const meta = await readSongMeta();
