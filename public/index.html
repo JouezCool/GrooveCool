@@ -1127,6 +1127,9 @@ let currentSongOpenedAt = 0;
 let playedTonightSet = new Set();
 let currentLoadToken = 0;
 let ignoreRemoteScrollUntil = 0;
+let wakeLockSentinel = null;
+let wakeLockSupportChecked = false;
+let wakeLockNoticeShown = false;
 let deviceId = localStorage.getItem('bandapp_deviceId') || "";
 if (!deviceId) {
   deviceId = (crypto?.randomUUID?.() || ('dev-' + Date.now() + '-' + Math.random().toString(36).slice(2)));
@@ -1230,6 +1233,59 @@ function hexToRgba(hex, alpha) {
   const b = parseInt(clean.slice(4, 6), 16);
 
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function canUseWakeLock() {
+  return typeof window !== 'undefined'
+    && window.isSecureContext
+    && 'wakeLock' in navigator;
+}
+
+function showWakeLockFallbackNotice() {
+  if (wakeLockNoticeShown) return;
+  wakeLockNoticeShown = true;
+  showToast("Anti-veille non disponible sur cet appareil");
+}
+
+async function requestWakeLock() {
+  wakeLockSupportChecked = true;
+
+  if (!canUseWakeLock()) return false;
+  if (document.visibilityState !== 'visible') return false;
+  if (wakeLockSentinel && !wakeLockSentinel.released) return true;
+
+  try {
+    wakeLockSentinel = await navigator.wakeLock.request('screen');
+    wakeLockSentinel.addEventListener('release', () => {
+      wakeLockSentinel = null;
+      if (document.visibilityState === 'visible') {
+        setTimeout(() => {
+          requestWakeLock().catch(() => {});
+        }, 250);
+      }
+    }, { once: true });
+    return true;
+  } catch (err) {
+    console.warn('Wake lock non obtenu', err);
+    showWakeLockFallbackNotice();
+    return false;
+  }
+}
+
+async function releaseWakeLock() {
+  if (!wakeLockSentinel) return;
+
+  try {
+    await wakeLockSentinel.release();
+  } catch (err) {
+    console.warn('Wake lock release ignoré', err);
+  } finally {
+    wakeLockSentinel = null;
+  }
+}
+
+function ensureWakeLockSoon() {
+  requestWakeLock().catch(() => {});
 }
 
 function rebuildSongMetaIndex() {
@@ -3648,7 +3704,30 @@ async function restoreHistoryVersion(historyId) {
   updateLeaderPlayButton();
 updateSpeedPercent();
   filterSongList(songSearchInput?.value || "");
+  ensureWakeLockSoon();
 })();
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    ensureWakeLockSoon();
+  } else {
+    releaseWakeLock().catch(() => {});
+  }
+});
+
+window.addEventListener('focus', ensureWakeLockSoon);
+window.addEventListener('pageshow', ensureWakeLockSoon);
+window.addEventListener('pagehide', () => {
+  releaseWakeLock().catch(() => {});
+});
+
+['pointerdown', 'touchstart', 'keydown'].forEach(eventName => {
+  window.addEventListener(eventName, () => {
+    if (!wakeLockSupportChecked || !wakeLockSentinel) {
+      ensureWakeLockSoon();
+    }
+  }, { passive: true });
+});
 
 if (songSearchInput) {
   songSearchInput.addEventListener('input', () => filterSongList(songSearchInput.value));
