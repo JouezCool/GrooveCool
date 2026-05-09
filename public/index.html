@@ -579,6 +579,8 @@ nav{
       line-height:1.25;
       white-space:normal;
       overflow-wrap:normal;
+      font-weight:var(--lyric-weight);
+      -webkit-text-stroke:var(--lyric-stroke) currentColor;
     }
 
     .chord-cell{
@@ -596,6 +598,8 @@ nav{
       break-inside:avoid;
       page-break-inside:avoid;
       -webkit-column-break-inside:avoid;
+      font-weight:var(--lyric-weight);
+      -webkit-text-stroke:var(--lyric-stroke) currentColor;
     }
 
     .chord-cell .chord{
@@ -614,8 +618,8 @@ nav{
       overflow-wrap:normal !important;
       hyphens:none;
       line-height:1.25;
-      font-weight:var(--lyric-chord-weight);
-      -webkit-text-stroke:var(--lyric-chord-stroke) currentColor;
+      font-weight:var(--lyric-weight);
+      -webkit-text-stroke:var(--lyric-stroke) currentColor;
       -webkit-line-break:normal;
       width:max-content;
       min-width:max-content;
@@ -3382,13 +3386,17 @@ socket.on('apply-speed', value => {
 
   function expandSegmentsForWordWrapping(segments) {
     const expanded = [];
+    let carrySpaces = '';
 
     for (const segment of segments) {
       const chordText = String(segment.chord || '');
-      const text = String(segment.text || '');
+      const rawText = carrySpaces + String(segment.text || '');
+      const trailingSpaces = rawText.match(/\s+$/)?.[0] || '';
+      const text = trailingSpaces ? rawText.slice(0, -trailingSpaces.length) : rawText;
+      carrySpaces = trailingSpaces;
 
       if (!text) {
-        expanded.push({ chord: chordText, text: '' });
+        if (chordText) expanded.push({ chord: chordText, text: '' });
         continue;
       }
 
