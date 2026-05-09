@@ -585,11 +585,14 @@ nav{
       display:inline-flex;
       flex-direction:column;
       align-items:flex-start;
-      min-width:min-content;
+      width:max-content;
+      min-width:max-content;
       vertical-align:bottom;
       flex:0 0 auto;
       white-space:pre;
       break-inside:avoid;
+      page-break-inside:avoid;
+      -webkit-column-break-inside:avoid;
     }
 
     .chord-cell .chord{
@@ -611,6 +614,8 @@ nav{
       font-weight:var(--lyric-chord-weight);
       -webkit-text-stroke:var(--lyric-chord-stroke) currentColor;
       -webkit-line-break:normal;
+      width:max-content;
+      min-width:max-content;
     }
 
     .commentwrap{ margin:12px 0; }
@@ -3376,14 +3381,17 @@ socket.on('apply-speed', value => {
         continue;
       }
 
-      const chunks = text.match(/\s*\S+\s*|\s+/g) || [text];
+      const chunks = text.match(/\s*\S+/g) || [text];
       let chordUsed = false;
 
       for (const chunk of chunks) {
         const isWhitespaceOnly = !/\S/.test(chunk);
         const chord = (!chordUsed && !isWhitespaceOnly) ? chordText : '';
         if (chord) chordUsed = true;
-        expanded.push({ chord, text: chunk });
+
+        const leadingSpaces = (chunk.match(/^\s+/)?.[0] || '').length;
+        const cleanText = chunk.replace(/^\s+/, '');
+        expanded.push({ chord, text: cleanText, leadingSpaces });
       }
 
       if (chordText && !chordUsed) {
@@ -3417,6 +3425,7 @@ socket.on('apply-speed', value => {
     for (const segment of expandSegmentsForWordWrapping(segments)) {
       const cell = document.createElement('span');
       cell.className = 'chord-cell';
+      cell.style.marginLeft = ((Number(segment.leadingSpaces) || 0) * 0.62) + 'em';
 
       const chord = document.createElement('span');
       chord.className = 'chord';
@@ -3497,9 +3506,9 @@ function renderTabBlock(targetEl, text) {
 
   const lines = String(text || "").split('\n');
   const longestLineLength = Math.max(1, ...lines.map(line => line.length));
-  const availableWidth = Math.max(220, viewerElement.clientWidth - 74);
+  const availableWidth = Math.max(220, viewerElement.clientWidth - 92);
   const maxFontSize = Math.max(18, Math.min(42, fontSize * currentSongZoom * 1.05));
-  const estimatedCharWidth = 0.6;
+  const estimatedCharWidth = 0.64;
   const fitFontSize = availableWidth / (longestLineLength * estimatedCharWidth);
   const finalFontSize = Math.max(7, Math.min(maxFontSize, fitFontSize));
 
