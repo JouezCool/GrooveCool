@@ -79,10 +79,8 @@ function getDriveClient() {
 let playedTonight = new Set();
 let playedTonightSaveTimer = null;
 const connectedUsers = new Map();
-
-let leaderSocketId = null;
-let leaderUserName = null;
-let leaderDeviceId = null;
+const MAX_LEADERS = 2;
+const leadersByDeviceId = new Map();
 
 app.use(express.json({ limit: '1mb' }));
 
@@ -722,10 +720,18 @@ function broadcastConnectedUsers() {
 }
 
 function broadcastLeaderState() {
+  const leaders = [...leadersByDeviceId.values()];
+  const leaderSocketIds = leaders.map(leader => leader.socketId).filter(Boolean);
+  const leaderUserNames = leaders.map(leader => leader.userName).filter(Boolean);
+
   io.emit('leader-state', {
-    leaderSocketId,
-    leaderUserName,
-    hasLeader: !!leaderSocketId
+    leaderSocketId: leaderSocketIds[0] || null,
+    leaderSocketIds,
+    leaderUserName: leaderUserNames[0] || '',
+    leaderUserNames,
+    leaderCount: leaderSocketIds.length,
+    maxLeaders: MAX_LEADERS,
+    hasLeader: leaderSocketIds.length > 0
   });
 }
 
@@ -1294,9 +1300,11 @@ io.on('connection', (socket) => {
       deviceId: cleanDeviceId
     });
 
-    if (leaderDeviceId && cleanDeviceId === leaderDeviceId) {
-      leaderSocketId = socket.id;
-      leaderUserName = cleanUser;
+    if (leadersByDeviceId.has(cleanDeviceId)) {
+      leadersByDeviceId.set(cleanDeviceId, {
+        socketId: socket.id,
+        userName: cleanUser
+      });
     }
 
     broadcastConnectedUsers();
@@ -1326,23 +1334,29 @@ socket.on('reset-played-tonight', () => {
 
     if (!deviceId) return;
 
-    if (!leaderDeviceId || leaderDeviceId === deviceId || !leaderSocketId) {
-      leaderSocketId = socket.id;
-      leaderDeviceId = deviceId;
-      leaderUserName = userName;
+    if (leadersByDeviceId.has(deviceId) || leadersByDeviceId.size < MAX_LEADERS) {
+      leadersByDeviceId.set(deviceId, {
+        socketId: socket.id,
+        userName
+      });
       broadcastLeaderState();
     } else {
-      socket.emit('leader-denied', { leaderUserName });
+      socket.emit('leader-denied', {
+        leaderUserName: [...leadersByDeviceId.values()].map(leader => leader.userName).filter(Boolean).join(', '),
+        maxLeaders: MAX_LEADERS
+      });
     }
   });
 
   socket.on('release-leader', () => {
-    if (leaderSocketId === socket.id) {
-      leaderSocketId = null;
-      leaderDeviceId = null;
-      leaderUserName = '';
+    const deviceId = String(socket.data.deviceId || '').trim();
+
+    if (deviceId && leadersByDeviceId.has(deviceId)) {
+      leadersByDeviceId.delete(deviceId);
       broadcastLeaderState();
-      io.emit('apply-autoscroll', { active: false, speed: 50 });
+      if (leadersByDeviceId.size === 0) {
+        io.emit('apply-autoscroll', { active: false, speed: 50 });
+      }
     }
   });
 
@@ -1384,17 +1398,18 @@ socket.on('reset-played-tonight', () => {
   socket.on('disconnect', () => {
     console.log('❌ déconnecté', socket.id);
 
-    const wasLeader = leaderSocketId === socket.id;
+    const deviceId = String(socket.data.deviceId || '').trim();
+    const wasLeader = deviceId && leadersByDeviceId.has(deviceId);
 
     connectedUsers.delete(socket.id);
     broadcastConnectedUsers();
 
     if (wasLeader) {
-      leaderSocketId = null;
-      leaderDeviceId = null;
-      leaderUserName = '';
+      leadersByDeviceId.delete(deviceId);
       broadcastLeaderState();
-      io.emit('apply-autoscroll', { active: false, speed: 50 });
+      if (leadersByDeviceId.size === 0) {
+        io.emit('apply-autoscroll', { active: false, speed: 50 });
+      }
     }
   });
 });

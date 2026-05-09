@@ -26,6 +26,8 @@
       --text:#eee;
       --accent:#ff9800;
       --edit:#2196F3;
+      --lyric-weight:600;
+      --lyric-stroke:0.2px;
 
       --pu-bg: rgba(168, 85, 247, 0.16);
       --pu-border: rgba(168, 85, 247, 0.55);
@@ -245,6 +247,11 @@ body.concert-mode #settingsFixedWrap{
       background:rgba(255,255,255,0.08);
       color:var(--text);
       white-space:nowrap;
+    }
+
+    #leaderBadge{
+      cursor:pointer;
+      user-select:none;
     }
 
     .version-badge.perso{
@@ -557,8 +564,8 @@ nav{
 
     .chordline{ color:var(--accent); font-weight:bold; }
     .lyricline{
-      font-weight:500;
-      -webkit-text-stroke:0.2px currentColor;
+      font-weight:var(--lyric-weight);
+      -webkit-text-stroke:var(--lyric-stroke) currentColor;
     }
 
     .chord-row{
@@ -597,8 +604,8 @@ nav{
       overflow-wrap:normal;
       hyphens:none;
       line-height:1.25;
-      font-weight:500;
-      -webkit-text-stroke:0.2px currentColor;
+      font-weight:var(--lyric-weight);
+      -webkit-text-stroke:var(--lyric-stroke) currentColor;
     }
 
     .commentwrap{ margin:12px 0; }
@@ -790,7 +797,7 @@ nav{
 
 <body>
 <div id="settingsFixedWrap">
-  <span id="leaderBadge" class="version-badge off">SUIVEUR</span>
+  <span id="leaderBadge" class="version-badge off" onclick="toggleLeader()" title="Changer le mode leader">FOLLOW</span>
   <button id="settingsBtnFixed" onclick="openSettings()">⚙️ Utilisateur</button>
 </div>
 
@@ -995,7 +1002,6 @@ nav{
 
       <div style="padding:14px 16px; display:grid; gap:10px;">
         <button class="btn" onclick="openUserFromSettings()">👤 Utilisateur</button>
-        <button class="btn" id="settingsLeaderBtn" onclick="toggleLeader()">Mode Solo</button>
         <button class="btn" id="settingsChordBtn" onclick="toggleChordStyle()">Accords: Do</button>
         <button class="btn" id="settingsThemeBtn" onclick="toggleTheme()">Thème: Sombre</button>
 		<button class="btn" onclick="openUserColorModal()">🎨 Ma couleur</button>
@@ -1460,9 +1466,6 @@ function openSettings() {
   }
 
   function syncSettingsUI() {
-    const lb = document.getElementById('settingsLeaderBtn');
-    if (lb) lb.innerText = isLeader ? "Quitter le mode Leader" : "Devenir leader";
-
     const cb = document.getElementById('settingsChordBtn');
     if (cb) cb.innerText = (chordStyle === 'latin') ? "Accords: Do" : "Accords: C";
 
@@ -1736,10 +1739,12 @@ function applyLeaderUI() {
 
   if (isLeader) {
     badge.textContent = "LEADER";
+    badge.title = "Quitter le mode leader";
     badge.classList.remove('off');
     badge.classList.add('perso');
   } else {
     badge.textContent = "FOLLOW";
+    badge.title = "Devenir leader";
     badge.classList.remove('perso');
     badge.classList.add('off');
   }
@@ -1935,7 +1940,10 @@ socket.on('connected-users', (data) => {
 
   socket.on('leader-state', (data) => {
     const wasLeader = isLeader;
-    isLeader = data?.leaderSocketId === socket.id;
+    const leaderSocketIds = Array.isArray(data?.leaderSocketIds)
+      ? data.leaderSocketIds
+      : [data?.leaderSocketId].filter(Boolean);
+    isLeader = leaderSocketIds.includes(socket.id);
 
     if (wasLeader && !isLeader) {
       stopAutoScroll();
@@ -1946,7 +1954,8 @@ socket.on('connected-users', (data) => {
   });
 
   socket.on('leader-denied', (data) => {
-    showToast(`Leader déjà pris par ${data?.leaderUserName || 'un autre appareil'}`);
+    const names = String(data?.leaderUserName || '').trim();
+    showToast(`Déjà ${data?.maxLeaders || 2} leaders actifs${names ? ' : ' + names : ''}`);
   });
   
 function populateSongFilters() {
