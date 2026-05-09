@@ -81,6 +81,11 @@ let playedTonightSaveTimer = null;
 const connectedUsers = new Map();
 const MAX_LEADERS = 2;
 const leadersByDeviceId = new Map();
+let currentSongFileName = '';
+let currentAutoScrollState = {
+  active: false,
+  speed: 50
+};
 
 app.use(express.json({ limit: '1mb' }));
 
@@ -1309,6 +1314,18 @@ io.on('connection', (socket) => {
 
     broadcastConnectedUsers();
     broadcastLeaderState();
+
+    if (currentSongFileName) {
+      socket.emit('load-song', {
+        fileName: currentSongFileName,
+        replay: true
+      });
+    }
+
+    socket.emit('apply-autoscroll', {
+      ...currentAutoScrollState,
+      replay: true
+    });
   });
 
 socket.on('mark-played', ({ fileName, played }) => {
@@ -1355,13 +1372,31 @@ socket.on('reset-played-tonight', () => {
       leadersByDeviceId.delete(deviceId);
       broadcastLeaderState();
       if (leadersByDeviceId.size === 0) {
-        io.emit('apply-autoscroll', { active: false, speed: 50 });
+        currentAutoScrollState = { active: false, speed: 50 };
+        io.emit('apply-autoscroll', currentAutoScrollState);
       }
     }
   });
 
   socket.on('change-song', (fileName) => {
-    io.emit('load-song', fileName);
+    const cleanFileName = String(fileName || '').trim();
+    if (!isValidSongName(cleanFileName)) return;
+
+    currentSongFileName = cleanFileName;
+    currentAutoScrollState = {
+      active: false,
+      speed: currentAutoScrollState.speed || 50
+    };
+
+    io.emit('apply-autoscroll', {
+      ...currentAutoScrollState,
+      sourceSocketId: socket.id
+    });
+
+    io.emit('load-song', {
+      fileName: cleanFileName,
+      sourceSocketId: socket.id
+    });
   });
 
   let lastScrollAt = 0;
@@ -1377,9 +1412,14 @@ socket.on('reset-played-tonight', () => {
   });
 
   socket.on('sync-autoscroll', (d) => {
-    socket.broadcast.emit('apply-autoscroll', {
+    currentAutoScrollState = {
       active: !!d.active,
-      speed: d.speed
+      speed: Number(d.speed) || 50
+    };
+
+    socket.broadcast.emit('apply-autoscroll', {
+      ...currentAutoScrollState,
+      sourceSocketId: socket.id
     });
   });
 
@@ -1408,7 +1448,8 @@ socket.on('reset-played-tonight', () => {
       leadersByDeviceId.delete(deviceId);
       broadcastLeaderState();
       if (leadersByDeviceId.size === 0) {
-        io.emit('apply-autoscroll', { active: false, speed: 50 });
+        currentAutoScrollState = { active: false, speed: 50 };
+        io.emit('apply-autoscroll', currentAutoScrollState);
       }
     }
   });

@@ -1159,6 +1159,8 @@ let currentSongOpenedAt = 0;
 let playedTonightSet = new Set();
 let currentLoadToken = 0;
 let ignoreRemoteScrollUntil = 0;
+let pendingRemoteSongFileName = "";
+let pendingAutoScrollState = null;
 let wakeLockSentinel = null;
 let wakeLockSupportChecked = false;
 let wakeLockNoticeShown = false;
@@ -2149,6 +2151,12 @@ async function fetchSongs() {
   renderSongList();
   populateSongFilters();
   updateSongCount();
+
+  if (pendingRemoteSongFileName) {
+    const fileName = pendingRemoteSongFileName;
+    pendingRemoteSongFileName = "";
+    openRemoteSong(fileName);
+  }
 }
 
 function renderSongList() {
@@ -2307,8 +2315,9 @@ function resetSongFilters() {
   });
 }
 
-function openSong(idx) {
+function openSong(idx, options = {}) {
   if (idx < 0 || idx >= allSongs.length) return;
+  const shouldEmitChange = options.emitChange !== false;
 
   stopAutoScroll();
   autoMarkCurrentSongAsPlayed();
@@ -2324,7 +2333,7 @@ function openSong(idx) {
   document.getElementById('viewer-container').style.display = 'block';
   updateConcertFloatingVisibility();
 
-  if (isLeader) {
+  if (isLeader && shouldEmitChange) {
     socket.emit('sync-autoscroll', {
       active: false,
       speed: Number(speedInput.value) || 50
@@ -2343,6 +2352,21 @@ viewerElement.scrollTop = 0;
 
   loadSong(targetFileName);
   setTimeout(loadNotes, 10);
+}
+
+function openRemoteSong(fileName) {
+  const cleanFileName = String(fileName || '').trim();
+  if (!cleanFileName) return;
+
+  stopAutoScroll();
+
+  const idx = allSongs.indexOf(cleanFileName);
+  if (idx === -1) {
+    pendingRemoteSongFileName = cleanFileName;
+    return;
+  }
+
+  openSong(idx, { emitChange: false });
 }
   
 async function saveCurrentSongSettings() {
@@ -2624,6 +2648,17 @@ async function loadSong(f) {
         viewerElement.scrollTop = 0;
 
         isLoadingSong = false;
+        if (pendingAutoScrollState) {
+          const nextAutoScrollState = pendingAutoScrollState;
+          pendingAutoScrollState = null;
+
+          speedInput.value = nextAutoScrollState.speed;
+          updateSpeedPercent();
+
+          if (nextAutoScrollState.active && !isScrolling) {
+            startAutoScroll();
+          }
+        }
         scheduleSongPrefetch(currentIndex);
         console.log('Temps total loadSong:', Math.round(performance.now() - t0), 'ms');
       });
@@ -2636,12 +2671,15 @@ async function loadSong(f) {
   }
 }
 
-  socket.on('load-song', f => {
-    if (!isLeader) {
-      stopAutoScroll();
-      const idx = allSongs.indexOf(f);
-      if (idx !== -1) openSong(idx);
-    }
+  socket.on('load-song', payload => {
+    const fileName = typeof payload === 'string'
+      ? payload
+      : String(payload?.fileName || '');
+
+    if (!fileName) return;
+    if (payload?.sourceSocketId === socket.id) return;
+
+    openRemoteSong(fileName);
   });
 
 function normalizeText(value) {
@@ -2816,7 +2854,6 @@ viewerElement.addEventListener('scroll', () => {
 
 socket.on('apply-scroll', data => {
   if (Date.now() < ignoreRemoteScrollUntil) return;
-  if (isLeader) return;
   if (isLoadingSong) return;
 
   const anchor = data?.anchor;
@@ -3111,20 +3148,32 @@ function toggleAutoScroll(emitSync) {
 });
 
 socket.on('apply-autoscroll', d => {
-  if (!isLeader) {
-    speedInput.value = d.speed;
-    updateSpeedPercent();
+  if (d?.sourceSocketId === socket.id) return;
 
-    const wantActive = !!d.active;
-    if (wantActive && !isScrolling) startAutoScroll();
-    if (!wantActive && isScrolling) stopAutoScroll();
-    updateLeaderPlayButton();
+  const speed = Number(d.speed) || 50;
+  const wantActive = !!d.active;
+
+  speedInput.value = speed;
+  updateSpeedPercent();
+
+  if (wantActive && (!isViewerOpen() || isLoadingSong || !currentFileName)) {
+    pendingAutoScrollState = {
+      active: true,
+      speed
+    };
+    return;
   }
+
+  if (!wantActive) {
+    pendingAutoScrollState = null;
+  }
+
+  if (wantActive && !isScrolling) startAutoScroll();
+  if (!wantActive && isScrolling) stopAutoScroll();
+  updateLeaderPlayButton();
 });
 
   socket.on('apply-fontsize', value => {
-    if (isLeader) return;
-
     const v = Number(value);
     if (!isFinite(v)) return;
 
@@ -3134,8 +3183,6 @@ socket.on('apply-autoscroll', d => {
   });
 
   socket.on('apply-transpose', value => {
-    if (isLeader) return;
-
     const v = Number(value);
     if (!isFinite(v)) return;
 
@@ -3148,8 +3195,6 @@ socket.on('apply-autoscroll', d => {
   });
 
 socket.on('apply-speed', value => {
-  if (isLeader) return;
-
   const v = Number(value);
   if (!isFinite(v)) return;
 
