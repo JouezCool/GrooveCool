@@ -26,10 +26,10 @@
       --text:#eee;
       --accent:#ff9800;
       --edit:#2196F3;
-      --lyric-weight:480;
-      --lyric-stroke:0.2px;
-      --lyric-chord-weight:520;
-      --lyric-chord-stroke:0.24px;
+      --lyric-weight:450;
+      --lyric-stroke:0.18px;
+      --lyric-chord-weight:450;
+      --lyric-chord-stroke:0.18px;
 
       --pu-bg: rgba(168, 85, 247, 0.16);
       --pu-border: rgba(168, 85, 247, 0.55);
@@ -587,9 +587,12 @@ nav{
       align-items:flex-start;
       width:max-content;
       min-width:max-content;
+      max-width:none;
       vertical-align:bottom;
-      flex:0 0 auto;
-      white-space:pre;
+      flex:0 0 max-content;
+      white-space:nowrap;
+      word-break:normal !important;
+      overflow-wrap:normal !important;
       break-inside:avoid;
       page-break-inside:avoid;
       -webkit-column-break-inside:avoid;
@@ -606,7 +609,7 @@ nav{
 
     .chord-cell .lyric{
       display:block;
-      white-space:pre;
+      white-space:nowrap;
       word-break:normal !important;
       overflow-wrap:normal !important;
       hyphens:none;
@@ -616,6 +619,7 @@ nav{
       -webkit-line-break:normal;
       width:max-content;
       min-width:max-content;
+      max-width:none;
     }
 
     .commentwrap{ margin:12px 0; }
@@ -3391,6 +3395,8 @@ socket.on('apply-speed', value => {
 
         const leadingSpaces = (chunk.match(/^\s+/)?.[0] || '').length;
         const cleanText = chunk.replace(/^\s+/, '');
+
+        if (!cleanText) continue;
         expanded.push({ chord, text: cleanText, leadingSpaces });
       }
 
