@@ -44,15 +44,17 @@
       --chorus-bg:#111827;
       --chorus-border:#60a5fa;
       --chorus-text: var(--text);
-      --verse-bg:rgba(34,197,94,0.12);
-      --verse-border:#22c55e;
+      --verse-bg:rgba(120,120,120,0.12);
+      --verse-border:#8a8a8a;
       --verse-text: var(--text);
-      --bridge-bg:rgba(245,158,11,0.12);
-      --bridge-border:#f59e0b;
+      --bridge-bg:rgba(168,85,247,0.13);
+      --bridge-border:#a855f7;
       --bridge-text: var(--text);
 
       --comment-bg:#ffd54f;
       --comment-text:#000;
+      --detail-comment-bg:#4b5563;
+      --detail-comment-text:#fff;
     }
 	
 	.meta-form{
@@ -659,6 +661,11 @@ nav{
       line-height:1.2;
     }
 
+    .commentline.detail{
+      background:var(--detail-comment-bg);
+      color:var(--detail-comment-text);
+    }
+
     .chorus-block,
     .verse-block,
     .bridge-block{
@@ -1055,13 +1062,11 @@ nav{
 
 <div id="editor-toolbar">
   <button class="btn" onclick="insertTemplatePU()">+ {pu}</button>
-  <button class="btn" onclick="insertAtCursor('{soc}\n')">+ {soc}</button>
-  <button class="btn" onclick="insertAtCursor('\n{eoc}\n')">+ {eoc}</button>
-  <button class="btn" onclick="insertAtCursor('{sov}\n')">+ {sov}</button>
-  <button class="btn" onclick="insertAtCursor('\n{eov}\n')">+ {eov}</button>
-  <button class="btn" onclick="insertAtCursor('{sob}\n')">+ {sob}</button>
-  <button class="btn" onclick="insertAtCursor('\n{eob}\n')">+ {eob}</button>
+  <button class="btn" onclick="insertTemplateSection('soc', 'eoc')">+ {soc}</button>
+  <button class="btn" onclick="insertTemplateSection('sov', 'eov')">+ {sov}</button>
+  <button class="btn" onclick="insertTemplateSection('sob', 'eob')">+ {sob}</button>
   <button class="btn" onclick="insertTemplateComment()">+ {c:}</button>
+  <button class="btn" onclick="insertTemplateDetail()">+ {d:}</button>
   <button class="btn" onclick="insertTemplateTab()">+ {tab}</button>
   <button class="btn" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
 
@@ -1506,14 +1511,16 @@ async function deleteCurrentSong() {
       root.style.setProperty('--chorus-bg', '#eaf2ff');
       root.style.setProperty('--chorus-border', '#3b82f6');
       root.style.setProperty('--chorus-text', '#111');
-      root.style.setProperty('--verse-bg', '#eaf8ef');
-      root.style.setProperty('--verse-border', '#22c55e');
+      root.style.setProperty('--verse-bg', '#eeeeee');
+      root.style.setProperty('--verse-border', '#9ca3af');
       root.style.setProperty('--verse-text', '#111');
-      root.style.setProperty('--bridge-bg', '#fff4dd');
-      root.style.setProperty('--bridge-border', '#f59e0b');
+      root.style.setProperty('--bridge-bg', '#f3e8ff');
+      root.style.setProperty('--bridge-border', '#a855f7');
       root.style.setProperty('--bridge-text', '#111');
       root.style.setProperty('--comment-bg', '#ffe08a');
       root.style.setProperty('--comment-text', '#111');
+      root.style.setProperty('--detail-comment-bg', '#6b7280');
+      root.style.setProperty('--detail-comment-text', '#fff');
       settingsBtnFixed.style.background = 'rgba(255,255,255,0.7)';
     } else {
       root.style.setProperty('--bg', '#000');
@@ -1525,14 +1532,16 @@ async function deleteCurrentSong() {
       root.style.setProperty('--chorus-bg', '#111827');
       root.style.setProperty('--chorus-border', '#60a5fa');
       root.style.setProperty('--chorus-text', '#eee');
-      root.style.setProperty('--verse-bg', 'rgba(34,197,94,0.12)');
-      root.style.setProperty('--verse-border', '#22c55e');
+      root.style.setProperty('--verse-bg', 'rgba(120,120,120,0.12)');
+      root.style.setProperty('--verse-border', '#8a8a8a');
       root.style.setProperty('--verse-text', '#eee');
-      root.style.setProperty('--bridge-bg', 'rgba(245,158,11,0.12)');
-      root.style.setProperty('--bridge-border', '#f59e0b');
+      root.style.setProperty('--bridge-bg', 'rgba(168,85,247,0.13)');
+      root.style.setProperty('--bridge-border', '#a855f7');
       root.style.setProperty('--bridge-text', '#eee');
       root.style.setProperty('--comment-bg', '#ffd54f');
       root.style.setProperty('--comment-text', '#000');
+      root.style.setProperty('--detail-comment-bg', '#4b5563');
+      root.style.setProperty('--detail-comment-text', '#fff');
       settingsBtnFixed.style.background = 'rgba(0,0,0,0.25)';
     }
   }
@@ -3424,12 +3433,12 @@ socket.on('apply-speed', value => {
     songContentEl.appendChild(el);
   }
 
-  function addCommentLine(text, targetEl) {
+  function addCommentLine(text, targetEl, type = 'comment') {
     const wrap = document.createElement('div');
     wrap.className = 'commentwrap';
 
     const span = document.createElement('span');
-    span.className = 'commentline';
+    span.className = type === 'detail' ? 'commentline detail' : 'commentline';
     span.textContent = text;
 
     wrap.appendChild(span);
@@ -3442,13 +3451,19 @@ socket.on('apply-speed', value => {
 
     for (const segment of segments) {
       const chordText = String(segment.chord || '');
-      const rawText = carrySpaces + String(segment.text || '');
+      const incomingSpaces = carrySpaces;
+      const segmentText = String(segment.text || '');
+      const rawText = incomingSpaces + segmentText;
       const trailingSpaces = rawText.match(/\s+$/)?.[0] || '';
       const text = trailingSpaces ? rawText.slice(0, -trailingSpaces.length) : rawText;
       carrySpaces = trailingSpaces;
 
       if (!text) {
-        if (chordText) expanded.push({ chord: chordText, text: '' });
+        if (chordText) {
+          const leadingSpaces = incomingSpaces.length;
+          expanded.push({ chord: chordText, text: '\u00a0', leadingSpaces });
+          carrySpaces = segmentText.trim() ? '' : segmentText;
+        }
         continue;
       }
 
@@ -3716,6 +3731,23 @@ function renderTabBlock(targetEl, text) {
         continue;
       }
 
+      const detail = line.match(/^\{d\s*:\s*(.*?)\}(.*)$/i);
+      if (detail) {
+        addCommentLine(detail[1], target, 'detail');
+
+        const trailingLine = String(detail[2] || '');
+        if (!trailingLine.trim()) {
+          continue;
+        }
+
+        const { segments, lyricLine } = parseChordProLine(trailingLine);
+        const key = normAnchorText(lyricLine);
+        renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
+        const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
+        addChordBlock(segments, lyricLine, target, anchorId);
+        continue;
+      }
+
       const comment = line.match(/^\{c\s*:\s*(.*?)\}(.*)$/i);
       if (comment) {
         addCommentLine(comment[1], target);
@@ -3926,6 +3958,14 @@ function insertAtCursor(text){
 
   function insertTemplateComment(){
     insertAtCursor(`{c: }\n`);
+  }
+
+  function insertTemplateDetail(){
+    insertAtCursor(`{d: }\n`);
+  }
+
+  function insertTemplateSection(startTag, endTag){
+    insertAtCursor(`{${startTag}}\n\n{${endTag}}\n`);
   }
 
   function insertTemplateTab(){
