@@ -26,10 +26,10 @@
       --text:#eee;
       --accent:#ff9800;
       --edit:#2196F3;
-      --lyric-weight:450;
-      --lyric-stroke:0.18px;
-      --lyric-chord-weight:490;
-      --lyric-chord-stroke:0.22px;
+      --lyric-weight:480;
+      --lyric-stroke:0.2px;
+      --lyric-chord-weight:520;
+      --lyric-chord-stroke:0.24px;
 
       --pu-bg: rgba(168, 85, 247, 0.16);
       --pu-border: rgba(168, 85, 247, 0.55);
@@ -586,9 +586,10 @@ nav{
       flex-direction:column;
       align-items:flex-start;
       min-width:min-content;
-      max-width:100%;
       vertical-align:bottom;
       flex:0 0 auto;
+      white-space:pre;
+      break-inside:avoid;
     }
 
     .chord-cell .chord{
@@ -601,13 +602,15 @@ nav{
     }
 
     .chord-cell .lyric{
-      white-space:pre-wrap;
-      word-break:keep-all;
-      overflow-wrap:normal;
+      display:block;
+      white-space:pre;
+      word-break:normal !important;
+      overflow-wrap:normal !important;
       hyphens:none;
       line-height:1.25;
       font-weight:var(--lyric-chord-weight);
       -webkit-text-stroke:var(--lyric-chord-stroke) currentColor;
+      -webkit-line-break:normal;
     }
 
     .commentwrap{ margin:12px 0; }
@@ -3495,7 +3498,7 @@ function renderTabBlock(targetEl, text) {
   const lines = String(text || "").split('\n');
   const longestLineLength = Math.max(1, ...lines.map(line => line.length));
   const availableWidth = Math.max(220, viewerElement.clientWidth - 74);
-  const maxFontSize = Math.max(11, Math.min(22, fontSize * currentSongZoom * 0.72));
+  const maxFontSize = Math.max(18, Math.min(42, fontSize * currentSongZoom * 1.05));
   const estimatedCharWidth = 0.6;
   const fitFontSize = availableWidth / (longestLineLength * estimatedCharWidth);
   const finalFontSize = Math.max(7, Math.min(maxFontSize, fitFontSize));
