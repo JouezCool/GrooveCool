@@ -28,6 +28,8 @@
       --edit:#2196F3;
       --lyric-weight:450;
       --lyric-stroke:0.18px;
+      --lyric-chord-weight:490;
+      --lyric-chord-stroke:0.22px;
 
       --pu-bg: rgba(168, 85, 247, 0.16);
       --pu-border: rgba(168, 85, 247, 0.55);
@@ -604,8 +606,8 @@ nav{
       overflow-wrap:normal;
       hyphens:none;
       line-height:1.25;
-      font-weight:var(--lyric-weight);
-      -webkit-text-stroke:var(--lyric-stroke) currentColor;
+      font-weight:var(--lyric-chord-weight);
+      -webkit-text-stroke:var(--lyric-chord-stroke) currentColor;
     }
 
     .commentwrap{ margin:12px 0; }
@@ -665,6 +667,7 @@ nav{
       background:rgba(255,152,0,0.08);
       color:var(--text);
       max-width:100%;
+      width:100%;
       box-sizing:border-box;
       overflow:hidden;
     }
@@ -679,6 +682,10 @@ nav{
       letter-spacing:0;
       font-weight:500;
       transform-origin:left top;
+    }
+
+    .song-end-spacer{
+      height:33vh;
     }
 
     #editor-container{
@@ -999,6 +1006,7 @@ nav{
   <button class="btn" onclick="insertAtCursor('{soc}\n')">+ {soc}</button>
   <button class="btn" onclick="insertAtCursor('\n{eoc}\n')">+ {eoc}</button>
   <button class="btn" onclick="insertTemplateComment()">+ {c:}</button>
+  <button class="btn" onclick="insertTemplateTab()">+ {tab}</button>
   <button class="btn" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
 
   <div style="flex:1"></div>
@@ -3028,8 +3036,7 @@ viewerElement.addEventListener('touchcancel', () => {
 
   function getViewerMaxSongScrollTop() {
     const contentBottom = songContentEl.offsetTop + songContentEl.offsetHeight;
-    const finalTextOffset = viewerElement.clientHeight / 3;
-    return Math.max(0, contentBottom - viewerElement.clientHeight + finalTextOffset);
+    return Math.max(0, contentBottom - viewerElement.clientHeight);
   }
 
   function autoScrollLoop(t) {
@@ -3488,8 +3495,8 @@ function renderTabBlock(targetEl, text) {
   const lines = String(text || "").split('\n');
   const longestLineLength = Math.max(1, ...lines.map(line => line.length));
   const availableWidth = Math.max(220, viewerElement.clientWidth - 74);
-  const maxFontSize = Math.max(9, Math.min(14, fontSize * currentSongZoom * 0.42));
-  const estimatedCharWidth = 0.62;
+  const maxFontSize = Math.max(11, Math.min(22, fontSize * currentSongZoom * 0.72));
+  const estimatedCharWidth = 0.6;
   const fitFontSize = availableWidth / (longestLineLength * estimatedCharWidth);
   const finalFontSize = Math.max(7, Math.min(maxFontSize, fitFontSize));
 
@@ -3625,6 +3632,10 @@ function renderTabBlock(targetEl, text) {
       const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
       renderTabBlock(target, tabBuffer.join("\n"));
     }
+
+    const endSpacer = document.createElement('div');
+    endSpacer.className = 'song-end-spacer';
+    songContentEl.appendChild(endSpacer);
   }
 
   function openEditor() {
@@ -3803,6 +3814,10 @@ function insertAtCursor(text){
 
   function insertTemplateComment(){
     insertAtCursor(`{c: }\n`);
+  }
+
+  function insertTemplateTab(){
+    insertAtCursor(`{tab}\n\n{/tab}\n`);
   }
 
   function extractChordsFromText(text){
