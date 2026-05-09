@@ -583,6 +583,10 @@ nav{
       -webkit-text-stroke:var(--lyric-stroke) currentColor;
     }
 
+    .chord-row.no-chords{
+      line-height:1.6;
+    }
+
     .chord-cell{
       display:inline-flex;
       flex-direction:column;
@@ -611,6 +615,10 @@ nav{
       white-space:nowrap;
     }
 
+    .chord-row.no-chords .chord{
+      display:none;
+    }
+
     .chord-cell .lyric{
       display:block;
       white-space:nowrap;
@@ -624,6 +632,10 @@ nav{
       width:max-content;
       min-width:max-content;
       max-width:none;
+    }
+
+    .chord-row.no-chords .lyric{
+      line-height:1.6;
     }
 
     .commentwrap{ margin:12px 0; }
@@ -3431,19 +3443,11 @@ socket.on('apply-speed', value => {
     if (anchorId) block.dataset.anchor = anchorId;
 
     const hasChords = segments.some(segment => String(segment.chord || '').trim());
-    if (!hasChords) {
-      const preLyric = document.createElement('pre');
-      preLyric.className = 'lyricline';
-      preLyric.textContent = lyricLine;
-      block.appendChild(preLyric);
-      targetEl.appendChild(block);
-      return;
-    }
-
     const row = document.createElement('span');
-    row.className = 'chord-row';
+    row.className = hasChords ? 'chord-row' : 'chord-row no-chords';
+    const renderSegments = hasChords ? segments : [{ chord: '', text: lyricLine }];
 
-    for (const segment of expandSegmentsForWordWrapping(segments)) {
+    for (const segment of expandSegmentsForWordWrapping(renderSegments)) {
       const cell = document.createElement('span');
       cell.className = 'chord-cell';
       cell.style.marginLeft = ((Number(segment.leadingSpaces) || 0) * 0.62) + 'em';
