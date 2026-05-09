@@ -579,6 +579,7 @@ nav{
       min-width:min-content;
       max-width:100%;
       vertical-align:bottom;
+      flex:0 0 auto;
     }
 
     .chord-cell .chord{
@@ -3271,6 +3272,36 @@ socket.on('apply-speed', value => {
     targetEl.appendChild(wrap);
   }
 
+  function expandSegmentsForWordWrapping(segments) {
+    const expanded = [];
+
+    for (const segment of segments) {
+      const chordText = String(segment.chord || '');
+      const text = String(segment.text || '');
+
+      if (!text) {
+        expanded.push({ chord: chordText, text: '' });
+        continue;
+      }
+
+      const chunks = text.match(/\s*\S+\s*|\s+/g) || [text];
+      let chordUsed = false;
+
+      for (const chunk of chunks) {
+        const isWhitespaceOnly = !/\S/.test(chunk);
+        const chord = (!chordUsed && !isWhitespaceOnly) ? chordText : '';
+        if (chord) chordUsed = true;
+        expanded.push({ chord, text: chunk });
+      }
+
+      if (chordText && !chordUsed) {
+        expanded.push({ chord: chordText, text: '\u00a0' });
+      }
+    }
+
+    return expanded;
+  }
+
   function addChordBlock(segments, lyricLine, targetEl, anchorId) {
     const block = document.createElement('div');
     block.className = 'block';
@@ -3291,7 +3322,7 @@ socket.on('apply-speed', value => {
     const row = document.createElement('span');
     row.className = 'chord-row';
 
-    for (const segment of segments) {
+    for (const segment of expandSegmentsForWordWrapping(segments)) {
       const cell = document.createElement('span');
       cell.className = 'chord-cell';
 
