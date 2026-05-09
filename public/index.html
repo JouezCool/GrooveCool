@@ -26,10 +26,11 @@
       --text:#eee;
       --accent:#ff9800;
       --edit:#2196F3;
-      --lyric-weight:500;
-      --lyric-stroke:0.24px;
-      --lyric-chord-weight:500;
-      --lyric-chord-stroke:0.24px;
+      --lyric-weight:450;
+      --lyric-stroke:0.18px;
+      --lyric-shadow:0.012em 0 0 currentColor;
+      --lyric-chord-weight:450;
+      --lyric-chord-stroke:0.18px;
 
       --pu-bg: rgba(168, 85, 247, 0.16);
       --pu-border: rgba(168, 85, 247, 0.55);
@@ -43,6 +44,12 @@
       --chorus-bg:#111827;
       --chorus-border:#60a5fa;
       --chorus-text: var(--text);
+      --verse-bg:rgba(34,197,94,0.12);
+      --verse-border:#22c55e;
+      --verse-text: var(--text);
+      --bridge-bg:rgba(245,158,11,0.12);
+      --bridge-border:#f59e0b;
+      --bridge-text: var(--text);
 
       --comment-bg:#ffd54f;
       --comment-text:#000;
@@ -568,6 +575,7 @@ nav{
     .lyricline{
       font-weight:var(--lyric-weight);
       -webkit-text-stroke:var(--lyric-stroke) currentColor;
+      text-shadow:var(--lyric-shadow);
     }
 
     .chord-row{
@@ -580,7 +588,6 @@ nav{
       white-space:normal;
       overflow-wrap:normal;
       font-weight:var(--lyric-weight);
-      -webkit-text-stroke:var(--lyric-stroke) currentColor;
     }
 
     .chord-row.no-chords{
@@ -603,7 +610,6 @@ nav{
       page-break-inside:avoid;
       -webkit-column-break-inside:avoid;
       font-weight:var(--lyric-weight);
-      -webkit-text-stroke:var(--lyric-stroke) currentColor;
     }
 
     .chord-cell .chord{
@@ -628,6 +634,7 @@ nav{
       line-height:1.25;
       font-weight:var(--lyric-weight);
       -webkit-text-stroke:var(--lyric-stroke) currentColor;
+      text-shadow:var(--lyric-shadow);
       -webkit-line-break:normal;
       width:max-content;
       min-width:max-content;
@@ -652,13 +659,30 @@ nav{
       line-height:1.2;
     }
 
-    .chorus-block{
-      background:var(--chorus-bg);
-      border-left:4px solid var(--chorus-border);
+    .chorus-block,
+    .verse-block,
+    .bridge-block{
       padding:12px 12px;
       border-radius:12px;
       margin:14px 0;
+    }
+
+    .chorus-block{
+      background:var(--chorus-bg);
+      border-left:4px solid var(--chorus-border);
       color:var(--chorus-text);
+    }
+
+    .verse-block{
+      background:var(--verse-bg);
+      border-left:4px solid var(--verse-border);
+      color:var(--verse-text);
+    }
+
+    .bridge-block{
+      background:var(--bridge-bg);
+      border-left:4px solid var(--bridge-border);
+      color:var(--bridge-text);
     }
 
     .pu-block{
@@ -1033,6 +1057,10 @@ nav{
   <button class="btn" onclick="insertTemplatePU()">+ {pu}</button>
   <button class="btn" onclick="insertAtCursor('{soc}\n')">+ {soc}</button>
   <button class="btn" onclick="insertAtCursor('\n{eoc}\n')">+ {eoc}</button>
+  <button class="btn" onclick="insertAtCursor('{sov}\n')">+ {sov}</button>
+  <button class="btn" onclick="insertAtCursor('\n{eov}\n')">+ {eov}</button>
+  <button class="btn" onclick="insertAtCursor('{sob}\n')">+ {sob}</button>
+  <button class="btn" onclick="insertAtCursor('\n{eob}\n')">+ {eob}</button>
   <button class="btn" onclick="insertTemplateComment()">+ {c:}</button>
   <button class="btn" onclick="insertTemplateTab()">+ {tab}</button>
   <button class="btn" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
@@ -1478,6 +1506,12 @@ async function deleteCurrentSong() {
       root.style.setProperty('--chorus-bg', '#eaf2ff');
       root.style.setProperty('--chorus-border', '#3b82f6');
       root.style.setProperty('--chorus-text', '#111');
+      root.style.setProperty('--verse-bg', '#eaf8ef');
+      root.style.setProperty('--verse-border', '#22c55e');
+      root.style.setProperty('--verse-text', '#111');
+      root.style.setProperty('--bridge-bg', '#fff4dd');
+      root.style.setProperty('--bridge-border', '#f59e0b');
+      root.style.setProperty('--bridge-text', '#111');
       root.style.setProperty('--comment-bg', '#ffe08a');
       root.style.setProperty('--comment-text', '#111');
       settingsBtnFixed.style.background = 'rgba(255,255,255,0.7)';
@@ -1491,6 +1525,12 @@ async function deleteCurrentSong() {
       root.style.setProperty('--chorus-bg', '#111827');
       root.style.setProperty('--chorus-border', '#60a5fa');
       root.style.setProperty('--chorus-text', '#eee');
+      root.style.setProperty('--verse-bg', 'rgba(34,197,94,0.12)');
+      root.style.setProperty('--verse-border', '#22c55e');
+      root.style.setProperty('--verse-text', '#eee');
+      root.style.setProperty('--bridge-bg', 'rgba(245,158,11,0.12)');
+      root.style.setProperty('--bridge-border', '#f59e0b');
+      root.style.setProperty('--bridge-text', '#eee');
       root.style.setProperty('--comment-bg', '#ffd54f');
       root.style.setProperty('--comment-text', '#000');
       settingsBtnFixed.style.background = 'rgba(0,0,0,0.25)';
@@ -3547,6 +3587,13 @@ function renderTabBlock(targetEl, text) {
     // Legacy refresh hook kept for font-size/transpose controls.
   }
 
+  function startSectionBlock(className) {
+    const container = document.createElement('div');
+    container.className = className;
+    songContentEl.appendChild(container);
+    return container;
+  }
+
   function renderChordPro() {
     clearSongContent();
     renderChordPro._occ = {};
@@ -3566,8 +3613,8 @@ function renderTabBlock(targetEl, text) {
     overlayLayer.id = 'overlayLayer';
     songContentEl.appendChild(overlayLayer);
 
-    let inChorus = false;
-    let chorusContainer = null;
+    let sectionType = '';
+    let sectionContainer = null;
     let inPU = false;
     let puUser = "";
     let puBuffer = [];
@@ -3578,7 +3625,7 @@ function renderTabBlock(targetEl, text) {
       const line = String(lineRaw || "");
       if (parseZoomIpadDirective(line) !== null) continue;
 
-      const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
+      const target = sectionContainer || songContentEl;
 
       if (inTab) {
         if (/^\{\/tab\s*\}$/i.test(line.trim())) {
@@ -3628,16 +3675,44 @@ function renderTabBlock(targetEl, text) {
       if (subtitle) { addCenteredTitle(subtitle[1], 2); continue; }
 
       if (/\{soc\s*:\s*\}/i.test(line) || /\{soc\s*\}/i.test(line)) {
-        inChorus = true;
-        chorusContainer = document.createElement('div');
-        chorusContainer.className = 'chorus-block';
-        songContentEl.appendChild(chorusContainer);
+        sectionType = 'chorus';
+        sectionContainer = startSectionBlock('chorus-block');
         continue;
       }
 
       if (/\{eoc\s*:\s*\}/i.test(line) || /\{eoc\s*\}/i.test(line)) {
-        inChorus = false;
-        chorusContainer = null;
+        if (sectionType === 'chorus') {
+          sectionType = '';
+          sectionContainer = null;
+        }
+        continue;
+      }
+
+      if (/\{sov\s*:\s*\}/i.test(line) || /\{sov\s*\}/i.test(line)) {
+        sectionType = 'verse';
+        sectionContainer = startSectionBlock('verse-block');
+        continue;
+      }
+
+      if (/\{eov\s*:\s*\}/i.test(line) || /\{eov\s*\}/i.test(line)) {
+        if (sectionType === 'verse') {
+          sectionType = '';
+          sectionContainer = null;
+        }
+        continue;
+      }
+
+      if (/\{sob\s*:\s*\}/i.test(line) || /\{sob\s*\}/i.test(line)) {
+        sectionType = 'bridge';
+        sectionContainer = startSectionBlock('bridge-block');
+        continue;
+      }
+
+      if (/\{eob\s*:\s*\}/i.test(line) || /\{eob\s*\}/i.test(line)) {
+        if (sectionType === 'bridge') {
+          sectionType = '';
+          sectionContainer = null;
+        }
         continue;
       }
 
@@ -3666,7 +3741,7 @@ function renderTabBlock(targetEl, text) {
     }
 
     if (inTab) {
-      const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
+      const target = sectionContainer || songContentEl;
       renderTabBlock(target, tabBuffer.join("\n"));
     }
 
