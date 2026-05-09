@@ -1,6 +1,5 @@
-{title: Rock Indé - I'm a Believer}
-{subtitle: Smashmouth}
-{zoom-ipad:1.103656}
+{title: I'm a Believer}
+
 {c:piano N264 - progA97}
 
 [Intro]
