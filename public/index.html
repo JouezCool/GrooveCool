@@ -26,8 +26,8 @@
       --text:#eee;
       --accent:#ff9800;
       --edit:#2196F3;
-      --lyric-weight:600;
-      --lyric-stroke:0.2px;
+      --lyric-weight:550;
+      --lyric-stroke:0.18px;
 
       --pu-bg: rgba(168, 85, 247, 0.16);
       --pu-border: rgba(168, 85, 247, 0.55);
@@ -820,7 +820,7 @@ nav{
     <div class="category-title-wrap">
       <h2 id="categoryTitle">Répertoire</h2>
       <select id="categoryFilter" aria-label="Catégorie du répertoire">
-        <option value="">Répertoire</option>
+        <option value="Répertoire">Répertoire</option>
       </select>
     </div>
 
@@ -1270,7 +1270,7 @@ function hexToRgba(hex, alpha) {
 
 function updateCategoryTitle() {
   if (!categoryTitleEl) return;
-  const label = String(categoryFilterEl?.value || '').trim() || 'Répertoire';
+  const label = String(categoryFilterEl?.value || 'Répertoire').trim() || 'Répertoire';
   categoryTitleEl.textContent = label;
 }
 
@@ -1986,20 +1986,23 @@ function populateSongFilters() {
     (Array.isArray(meta.chanteur) ? meta.chanteur : []).forEach(v => addToMap(chanteursMap, v));
   });
 
-  const currentCategory = categoryFilterEl.value;
+  const currentCategory = categoryFilterEl.value || 'Répertoire';
   const currentStyle = styleFilterEl.value;
   const currentAmbiance = ambianceFilterEl.value;
   const currentAudience = audienceFilterEl.value;
   const currentSinger = singerFilterEl.value;
 
-  const sortedCategories = [...categoriesMap.values()].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  const defaultCategories = ['Répertoire', 'En travail', '1 minute', 'Archives'];
+  const sortedCategories = [...new Set([
+    ...defaultCategories,
+    ...[...categoriesMap.values()].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }))
+  ])];
   const sortedStyles = [...stylesMap.values()].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   const sortedAmbiances = [...ambiancesMap.values()].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   const sortedAudiences = [...audiencesMap.values()].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   const sortedChanteurs = [...chanteursMap.values()].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
 
   categoryFilterEl.innerHTML =
-    `<option value="">Répertoire</option>` +
     sortedCategories.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
 
   styleFilterEl.innerHTML =
@@ -2018,7 +2021,7 @@ function populateSongFilters() {
     `<option value="">Tous les chanteurs</option>` +
     sortedChanteurs.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
 
-  categoryFilterEl.value = [...categoryFilterEl.options].some(opt => opt.value === currentCategory) ? currentCategory : "";
+  categoryFilterEl.value = [...categoryFilterEl.options].some(opt => opt.value === currentCategory) ? currentCategory : "Répertoire";
   styleFilterEl.value = [...styleFilterEl.options].some(opt => opt.value === currentStyle) ? currentStyle : "";
   ambianceFilterEl.value = [...ambianceFilterEl.options].some(opt => opt.value === currentAmbiance) ? currentAmbiance : "";
   audienceFilterEl.value = [...audienceFilterEl.options].some(opt => opt.value === currentAudience) ? currentAudience : "";
@@ -2265,7 +2268,7 @@ function filterSongList(q) {
 
 function resetSongFilters() {
   if (songSearchInput) songSearchInput.value = "";
-  if (categoryFilterEl) categoryFilterEl.value = "";
+  if (categoryFilterEl) categoryFilterEl.value = "Répertoire";
   if (styleFilterEl) styleFilterEl.value = "";
   if (ambianceFilterEl) ambianceFilterEl.value = "";
   if (audienceFilterEl) audienceFilterEl.value = "";
@@ -2697,7 +2700,7 @@ function debugMetaMatching() {
 function songMatchesFilters(song, query) {
   const meta = getMetaForSong(song);
 
-  const selectedCategory = normalizeText(categoryFilterEl?.value || "");
+  const selectedCategory = normalizeText(categoryFilterEl?.value || "Répertoire");
   const selectedStyle = normalizeText(styleFilterEl?.value || "");
   const selectedAmbiance = normalizeText(ambianceFilterEl?.value || "");
   const selectedAudience = normalizeText(audienceFilterEl?.value || "");
@@ -2716,7 +2719,7 @@ function songMatchesFilters(song, query) {
     ...(Array.isArray(meta.chanteur) ? meta.chanteur : [])
   ].join(' '));
 
-  const category = normalizeText(meta.category || '');
+  const category = normalizeText(meta.category || 'Répertoire');
   const ambiance = normalizeText(meta.ambiance || '');
   const styleValues = normalizeMetaArray(meta.style);
   const audienceValues = normalizeMetaArray(meta.audience);
@@ -2726,7 +2729,7 @@ function songMatchesFilters(song, query) {
 
   return (
     (!normalizedQuery || searchableText.includes(normalizedQuery)) &&
-    (!selectedCategory || category === selectedCategory) &&
+    category === selectedCategory &&
     (!selectedStyle || styleValues.includes(selectedStyle)) &&
     (!selectedAmbiance || ambiance === selectedAmbiance) &&
     (!selectedAudience || audienceValues.includes(selectedAudience)) &&
