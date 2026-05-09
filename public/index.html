@@ -657,6 +657,30 @@ nav{
       line-height: calc(17.5px * var(--song-zoom, 1));
     }
 
+    .tab-block{
+      margin:16px 0 22px;
+      padding:10px 12px;
+      border-left:4px solid var(--accent);
+      border-radius:10px;
+      background:rgba(255,152,0,0.08);
+      color:var(--text);
+      max-width:100%;
+      box-sizing:border-box;
+      overflow:hidden;
+    }
+
+    .tab-pre{
+      margin:0;
+      white-space:pre;
+      overflow:hidden;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      font-size:var(--tab-font-size, 13px);
+      line-height:1.25;
+      letter-spacing:0;
+      font-weight:500;
+      transform-origin:left top;
+    }
+
     #editor-container{
       display:none;
       position:fixed;
@@ -3452,6 +3476,29 @@ function renderPUBlock(targetEl, showContent, label, text){
   targetEl.appendChild(wrap);
 }
 
+function renderTabBlock(targetEl, text) {
+  const wrap = document.createElement('div');
+  wrap.className = 'tab-block';
+  wrap.style.fontSize = (fontSize * currentSongZoom) + 'px';
+
+  const pre = document.createElement('pre');
+  pre.className = 'tab-pre';
+  pre.textContent = text || "";
+
+  const lines = String(text || "").split('\n');
+  const longestLineLength = Math.max(1, ...lines.map(line => line.length));
+  const availableWidth = Math.max(220, viewerElement.clientWidth - 74);
+  const maxFontSize = Math.max(9, Math.min(14, fontSize * currentSongZoom * 0.42));
+  const estimatedCharWidth = 0.62;
+  const fitFontSize = availableWidth / (longestLineLength * estimatedCharWidth);
+  const finalFontSize = Math.max(7, Math.min(maxFontSize, fitFontSize));
+
+  pre.style.setProperty('--tab-font-size', finalFontSize.toFixed(2) + 'px');
+
+  wrap.appendChild(pre);
+  targetEl.appendChild(wrap);
+}
+
   function renderGrids() {
     // Legacy refresh hook kept for font-size/transpose controls.
   }
@@ -3480,12 +3527,32 @@ function renderPUBlock(targetEl, showContent, label, text){
     let inPU = false;
     let puUser = "";
     let puBuffer = [];
+    let inTab = false;
+    let tabBuffer = [];
 
     for (const lineRaw of lines) {
       const line = String(lineRaw || "");
       if (parseZoomIpadDirective(line) !== null) continue;
 
       const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
+
+      if (inTab) {
+        if (/^\{\/tab\s*\}$/i.test(line.trim())) {
+          renderTabBlock(target, tabBuffer.join("\n"));
+          inTab = false;
+          tabBuffer = [];
+          continue;
+        }
+
+        tabBuffer.push(line);
+        continue;
+      }
+
+      if (/^\{tab\s*\}$/i.test(line.trim())) {
+        inTab = true;
+        tabBuffer = [];
+        continue;
+      }
 
       if (!inPU) {
         const start = parsePUStart(line.trim());
@@ -3552,6 +3619,11 @@ function renderPUBlock(targetEl, showContent, label, text){
       renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
       const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
       addChordBlock(segments, lyricLine, target, anchorId);
+    }
+
+    if (inTab) {
+      const target = (inChorus && chorusContainer) ? chorusContainer : songContentEl;
+      renderTabBlock(target, tabBuffer.join("\n"));
     }
   }
 
