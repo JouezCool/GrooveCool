@@ -390,6 +390,29 @@ body.concert-mode #settingsFixedWrap{
       gap:12px;
     }
 
+    .category-title-wrap{
+      position:relative;
+      display:inline-flex;
+      align-items:center;
+      flex:0 0 auto;
+    }
+
+    #categoryTitle{
+      margin:0;
+      white-space:nowrap;
+      color:var(--nav-text);
+      font-size:1.5em;
+      font-weight:700;
+      pointer-events:none;
+    }
+
+    #categoryFilter{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      cursor:pointer;
+    }
+
     .song-item{
       padding:20px;
       border-bottom:1px solid #222;
@@ -525,8 +548,8 @@ nav{
 
     .chordline,.lyricline{
       white-space:pre-wrap;
-      word-break:break-word;
-      overflow-wrap:anywhere;
+      word-break:normal;
+      overflow-wrap:normal;
       line-height:1.6;
       margin:0;
     }
@@ -545,7 +568,7 @@ nav{
       column-gap:0;
       line-height:1.25;
       white-space:normal;
-      overflow-wrap:anywhere;
+      overflow-wrap:normal;
     }
 
     .chord-cell{
@@ -568,7 +591,7 @@ nav{
 
     .chord-cell .lyric{
       white-space:pre-wrap;
-      overflow-wrap:anywhere;
+      overflow-wrap:normal;
       line-height:1.25;
       font-weight:500;
       -webkit-text-stroke:0.2px currentColor;
@@ -783,7 +806,12 @@ nav{
 
 <div id="library">
   <div class="lib-header">
-    <h2 style="margin:0; white-space:nowrap;">Répertoire</h2>
+    <div class="category-title-wrap">
+      <h2 id="categoryTitle">Répertoire</h2>
+      <select id="categoryFilter" aria-label="Catégorie du répertoire">
+        <option value="">Répertoire</option>
+      </select>
+    </div>
 
     <input id="songSearch" type="search" placeholder="Rechercher un morceau..."
       style="flex:1; margin:0 12px; padding:10px 12px; border-radius:10px;
@@ -802,17 +830,6 @@ nav{
     background:var(--nav-bg);
     border-bottom:1px solid var(--panel-border);
   ">
-    <select id="categoryFilter" style="
-  padding:10px 12px;
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,0.15);
-  background:rgba(0,0,0,0.25);
-  color:var(--nav-text);
-  outline:none;
-">
-  <option value="">Toutes les catégories</option>
-</select>
-
     <select id="ambianceFilter" style="
       padding:10px 12px;
       border-radius:10px;
@@ -934,7 +951,6 @@ nav{
 
     <div id="viewer">
       <div id="songContent"></div>
-      <div style="height: 85vh;"></div>
     </div>
   </div>
 
@@ -1154,6 +1170,7 @@ let currentSongSettings = {
   const notesTextarea = document.getElementById('notesTextarea');
   const songSearchInput = document.getElementById('songSearch');
   const songCountEl = document.getElementById('songCount');
+  const categoryTitleEl = document.getElementById('categoryTitle');
   const userOverlay = document.getElementById('userOverlay');
   const userGrid = document.getElementById('userGrid');
   const settingsBackdrop = document.getElementById('settingsBackdrop');
@@ -1239,6 +1256,12 @@ function hexToRgba(hex, alpha) {
   const b = parseInt(clean.slice(4, 6), 16);
 
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function updateCategoryTitle() {
+  if (!categoryTitleEl) return;
+  const label = String(categoryFilterEl?.value || '').trim() || 'Répertoire';
+  categoryTitleEl.textContent = label;
 }
 
 function canUseWakeLock() {
@@ -1963,7 +1986,7 @@ function populateSongFilters() {
   const sortedChanteurs = [...chanteursMap.values()].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
 
   categoryFilterEl.innerHTML =
-    `<option value="">Toutes les catégories</option>` +
+    `<option value="">Répertoire</option>` +
     sortedCategories.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
 
   styleFilterEl.innerHTML =
@@ -1987,6 +2010,7 @@ function populateSongFilters() {
   ambianceFilterEl.value = [...ambianceFilterEl.options].some(opt => opt.value === currentAmbiance) ? currentAmbiance : "";
   audienceFilterEl.value = [...audienceFilterEl.options].some(opt => opt.value === currentAudience) ? currentAudience : "";
   singerFilterEl.value = [...singerFilterEl.options].some(opt => opt.value === currentSinger) ? currentSinger : "";
+  updateCategoryTitle();
 }
 
 async function fetchUserColors() {
@@ -2234,6 +2258,7 @@ function resetSongFilters() {
   if (audienceFilterEl) audienceFilterEl.value = "";
   if (singerFilterEl) singerFilterEl.value = "";
   if (playedFilterEl) playedFilterEl.value = "";
+  updateCategoryTitle();
   filterSongList("");
 }
 
@@ -2924,6 +2949,11 @@ viewerElement.addEventListener('touchcancel', () => {
     return 1000 / delayMs;
   }
 
+  function getViewerMaxSongScrollTop() {
+    const contentBottom = songContentEl.offsetTop + songContentEl.offsetHeight;
+    return Math.max(0, contentBottom - viewerElement.clientHeight);
+  }
+
   function autoScrollLoop(t) {
     if (!isScrolling) return;
 
@@ -2936,10 +2966,42 @@ viewerElement.addEventListener('touchcancel', () => {
 
     scrollCarry += deltaPx;
     const step = Math.floor(scrollCarry);
+    const maxScrollTop = getViewerMaxSongScrollTop();
+
+    if (viewerElement.scrollTop >= maxScrollTop - 1) {
+      viewerElement.scrollTop = maxScrollTop;
+      stopAutoScroll();
+
+      if (isLeader) {
+        const state = getTopLyricAnchorState();
+        if (state) socket.emit('scroll-sync', state);
+        socket.emit('sync-autoscroll', {
+          active: false,
+          speed: Number(speedInput.value) || 50
+        });
+      }
+      return;
+    }
 
     if (step >= 1) {
-      viewerElement.scrollTop += step;
-      scrollCarry -= step;
+      const prevScrollTop = viewerElement.scrollTop;
+      const nextScrollTop = Math.min(maxScrollTop, prevScrollTop + step);
+      viewerElement.scrollTop = nextScrollTop;
+      scrollCarry -= (nextScrollTop - prevScrollTop);
+
+      if (nextScrollTop >= maxScrollTop) {
+        stopAutoScroll();
+
+        if (isLeader) {
+          const state = getTopLyricAnchorState();
+          if (state) socket.emit('scroll-sync', state);
+          socket.emit('sync-autoscroll', {
+            active: false,
+            speed: Number(speedInput.value) || 50
+          });
+        }
+        return;
+      }
     }
 
     rafId = requestAnimationFrame(autoScrollLoop);
@@ -3720,6 +3782,7 @@ async function restoreHistoryVersion(historyId) {
   updateConcertModeUI();
   updateLeaderPlayButton();
 updateSpeedPercent();
+  updateCategoryTitle();
   filterSongList(songSearchInput?.value || "");
   ensureWakeLockSoon();
 })();
@@ -3752,7 +3815,10 @@ if (songSearchInput) {
 }
 
 if (categoryFilterEl) {
-  categoryFilterEl.addEventListener('change', () => filterSongList(songSearchInput?.value || ""));
+  categoryFilterEl.addEventListener('change', () => {
+    updateCategoryTitle();
+    filterSongList(songSearchInput?.value || "");
+  });
 }
 
 if (ambianceFilterEl) {
