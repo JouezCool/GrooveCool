@@ -3317,15 +3317,11 @@ socket.on('apply-speed', value => {
       if (ch === '[') {
         const end = line.indexOf(']', i);
         if (end !== -1) {
-          let wordPrefix = '';
+          const match = text.match(/(\S+)$/);
+          const wordPrefix = match ? match[1] : '';
 
-          if (!pendingChord) {
-            const match = text.match(/(\S+)$/);
-            wordPrefix = match ? match[1] : '';
-
-            if (wordPrefix) {
-              text = text.slice(0, -wordPrefix.length);
-            }
+          if (wordPrefix) {
+            text = text.slice(0, -wordPrefix.length);
           }
 
           if (text || pendingChord) {
