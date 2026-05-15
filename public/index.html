@@ -1257,6 +1257,8 @@ let pendingAutoScrollState = null;
 let wakeLockSentinel = null;
 let wakeLockSupportChecked = false;
 let wakeLockNoticeShown = false;
+let wantsLeader = localStorage.getItem('bandapp_wantsLeader') === '1';
+let leaderReleaseRequested = false;
 let deviceId = localStorage.getItem('bandapp_deviceId') || "";
 if (!deviceId) {
   deviceId = (crypto?.randomUUID?.() || ('dev-' + Date.now() + '-' + Math.random().toString(36).slice(2)));
@@ -2004,6 +2006,14 @@ if (currentUser) {
     userName: currentUser,
     deviceId
   });
+
+  if (wantsLeader) {
+    setTimeout(() => {
+      if (socket.connected && currentUser && wantsLeader) {
+        socket.emit('request-leader');
+      }
+    }, 300);
+  }
 }
   });
 
@@ -2054,7 +2064,21 @@ socket.on('connected-users', (data) => {
     const leaderSocketIds = Array.isArray(data?.leaderSocketIds)
       ? data.leaderSocketIds
       : [data?.leaderSocketId].filter(Boolean);
-    isLeader = leaderSocketIds.includes(socket.id);
+    const leaderDeviceIds = Array.isArray(data?.leaderDeviceIds)
+      ? data.leaderDeviceIds
+      : [];
+
+    isLeader = leaderDeviceIds.includes(deviceId) || leaderSocketIds.includes(socket.id);
+
+    if (isLeader) {
+      wantsLeader = true;
+      leaderReleaseRequested = false;
+      localStorage.setItem('bandapp_wantsLeader', '1');
+    } else if (leaderReleaseRequested) {
+      wantsLeader = false;
+      leaderReleaseRequested = false;
+      localStorage.removeItem('bandapp_wantsLeader');
+    }
 
     if (wasLeader && !isLeader) {
       stopAutoScroll();
@@ -2065,6 +2089,10 @@ socket.on('connected-users', (data) => {
   });
 
   socket.on('leader-denied', (data) => {
+    wantsLeader = false;
+    leaderReleaseRequested = false;
+    localStorage.removeItem('bandapp_wantsLeader');
+
     const names = String(data?.leaderUserName || '').trim();
     showToast(`Déjà ${data?.maxLeaders || 2} leaders actifs${names ? ' : ' + names : ''}`);
   });
@@ -2404,8 +2432,14 @@ function resetSongFilters() {
 
   function toggleLeader() {
     if (isLeader) {
+      wantsLeader = false;
+      leaderReleaseRequested = true;
+      localStorage.removeItem('bandapp_wantsLeader');
       socket.emit('release-leader');
     } else {
+      wantsLeader = true;
+      leaderReleaseRequested = false;
+      localStorage.setItem('bandapp_wantsLeader', '1');
       socket.emit('request-leader');
     }
   }
