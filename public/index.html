@@ -25,6 +25,8 @@
       --bg:#000;
       --text:#eee;
       --accent:#ff9800;
+      --chord-color:#ff9800;
+      --chord-size:.86em;
       --edit:#2196F3;
       --lyric-weight:450;
       --lyric-stroke:0.18px;
@@ -616,9 +618,9 @@ nav{
 
     .chord-cell .chord{
       min-height:1.15em;
-      color:var(--accent);
+      color:var(--chord-color);
       font-weight:bold;
-      font-size:.78em;
+      font-size:var(--chord-size);
       line-height:1.05;
       white-space:nowrap;
     }
@@ -1096,6 +1098,11 @@ nav{
       <div style="padding:14px 16px; display:grid; gap:10px;">
         <button class="btn" onclick="openUserFromSettings()">👤 Utilisateur</button>
         <button class="btn" id="settingsChordBtn" onclick="toggleChordStyle()">Accords: Do</button>
+        <label class="btn" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <span>Couleur accords</span>
+          <input id="settingsChordColorInput" type="color" value="#ff9800" oninput="setChordColor(this.value)"
+            style="width:42px; height:32px; border:none; background:none; padding:0;">
+        </label>
         <button class="btn" id="settingsThemeBtn" onclick="toggleTheme()">Thème: Sombre</button>
 		<button class="btn" onclick="openUserColorModal()">🎨 Ma couleur</button>
 		<button class="btn" onclick="openCreateSongModal()">➕ Nouveau morceau</button>
@@ -1252,6 +1259,7 @@ let currentSongOpenedAt = 0;
 let playedTonightSet = new Set();
 let currentLoadToken = 0;
 let ignoreRemoteScrollUntil = 0;
+let forceTopUntil = 0;
 let pendingRemoteSongFileName = "";
 let pendingAutoScrollState = null;
 let wakeLockSentinel = null;
@@ -1323,6 +1331,7 @@ const userColorCurrentName = document.getElementById('userColorCurrentName');
   let toastTimer = null;
   let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin';
   let themeMode = localStorage.getItem('bandapp_theme') || 'dark';
+  let chordColor = localStorage.getItem('bandapp_chordColor') || '#ff9800';
 
 function getAutoUserColor(userName) {
   if (!userName) return "#c7b6ff";
@@ -1502,6 +1511,7 @@ async function deleteCurrentSong() {
 
   function applyTheme() {
     const root = document.documentElement;
+    root.style.setProperty('--chord-color', chordColor);
 
     if (themeMode === 'light') {
       root.style.setProperty('--bg', '#f7f7f7');
@@ -1563,6 +1573,16 @@ async function deleteCurrentSong() {
     syncSettingsUI();
   }
 
+  function setChordColor(value) {
+    const clean = String(value || '').trim();
+    if (!/^#[0-9A-Fa-f]{6}$/.test(clean)) return;
+
+    chordColor = clean;
+    localStorage.setItem('bandapp_chordColor', chordColor);
+    document.documentElement.style.setProperty('--chord-color', chordColor);
+    syncSettingsUI();
+  }
+
 function openSettings() {
   syncSettingsUI();
   renderConnectedUsers(lastConnectedUsers);
@@ -1584,6 +1604,9 @@ function openSettings() {
 
     const tb = document.getElementById('settingsThemeBtn');
     if (tb) tb.innerText = (themeMode === 'dark') ? "Thème: Sombre" : "Thème: Clair";
+
+    const chordColorInput = document.getElementById('settingsChordColorInput');
+    if (chordColorInput) chordColorInput.value = chordColor;
   }
   
   function joinMetaArray(value) {
@@ -2464,7 +2487,8 @@ function openSong(idx, options = {}) {
 
   stopAutoScroll();
   autoMarkCurrentSongAsPlayed();
-  ignoreRemoteScrollUntil = Date.now() + 500;
+  pendingAutoScrollState = null;
+  ignoreRemoteScrollUntil = Date.now() + 2500;
 
   currentIndex = idx;
   const targetFileName = allSongs[idx];
@@ -2492,6 +2516,7 @@ if (remoteScrollRaf) {
 pendingRemoteScrollTop = 0;
 isRemoteScrolling = false;
 viewerElement.scrollTop = 0;
+forceViewerTopForNewSong(2500);
 
   loadSong(targetFileName);
   setTimeout(loadNotes, 10);
@@ -2712,6 +2737,20 @@ function scheduleSongPrefetch(centerIndex) {
   setTimeout(runPrefetch, 150);
 }
 
+function forceViewerTopForNewSong(durationMs = 1800) {
+  forceTopUntil = Date.now() + durationMs;
+  ignoreRemoteScrollUntil = Math.max(ignoreRemoteScrollUntil, forceTopUntil);
+
+  const resetTop = () => {
+    viewerElement.scrollTop = 0;
+  };
+
+  resetTop();
+  requestAnimationFrame(resetTop);
+  setTimeout(resetTop, 60);
+  setTimeout(resetTop, 180);
+}
+
 async function loadSong(f) {
   const loadToken = ++currentLoadToken;
   const t0 = performance.now();
@@ -2780,7 +2819,7 @@ async function loadSong(f) {
     renderChordPro();
     console.log('Temps renderChordPro:', Math.round(performance.now() - tRenderStart), 'ms');
 
-    viewerElement.scrollTop = 0;
+    forceViewerTopForNewSong();
 
     requestAnimationFrame(() => {
       if (loadToken !== currentLoadToken) return;
@@ -2997,6 +3036,7 @@ viewerElement.addEventListener('scroll', () => {
 
 socket.on('apply-scroll', data => {
   if (Date.now() < ignoreRemoteScrollUntil) return;
+  if (Date.now() < forceTopUntil) return;
   if (isLoadingSong) return;
 
   const anchor = data?.anchor;
