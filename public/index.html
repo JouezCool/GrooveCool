@@ -3006,20 +3006,14 @@ function songMatchesFilters(song, query) {
   let lastEmitAnchor = "";
   let lastEmitProg = -1;
 
-viewerElement.addEventListener('scroll', () => {
+function emitLeaderScrollSync(force = false) {
   if (!isLeader || isRemoteScrolling) return;
-
-  // pendant l'autoplay local du leader, on n'envoie rien
-  if (isScrolling) return;
-
-  // pendant que le leader glisse avec le doigt, on n'envoie rien non plus
-  if (isLeaderManualDragging) return;
 
   const state = getTopLyricAnchorState();
   if (!state) return;
 
   const now = Date.now();
-  if (
+  if (!force &&
     now - lastEmitAt < 40 &&
     state.anchor === lastEmitAnchor &&
     Math.abs(state.progress - lastEmitProg) < 0.02
@@ -3032,6 +3026,15 @@ viewerElement.addEventListener('scroll', () => {
   lastEmitProg = state.progress;
 
   socket.emit('scroll-sync', state);
+}
+
+viewerElement.addEventListener('scroll', () => {
+  if (!isLeader || isRemoteScrolling) return;
+
+  // pendant l'autoplay normal du leader, on laisse l'ordre de play faire avancer tout le monde
+  if (isScrolling && !isLeaderManualDragging) return;
+
+  emitLeaderScrollSync();
 });
 
 socket.on('apply-scroll', data => {
@@ -3111,14 +3114,14 @@ viewerElement.addEventListener('touchstart', (e) => {
   if (isLeader && isScrolling) {
     resumeAutoScrollAfterTouch = true;
     stopAutoScroll();
-
-    socket.emit('sync-autoscroll', {
-      active: false,
-      speed: Number(speedInput.value) || 50
-    });
   } else {
     resumeAutoScrollAfterTouch = false;
   }
+}, { passive: true });
+
+viewerElement.addEventListener('touchmove', () => {
+  if (!isLeader || !isLeaderManualDragging) return;
+  emitLeaderScrollSync();
 }, { passive: true });
 
 viewerElement.addEventListener('touchend', () => {
