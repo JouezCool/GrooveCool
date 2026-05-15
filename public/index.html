@@ -3639,14 +3639,66 @@ function renderPUBlock(targetEl, showContent, label, text){
     wrap.appendChild(lab);
   }
 
-  const pre = document.createElement('pre');
-  pre.className = 'pu-pre';
-  pre.textContent = showContent
-    ? (text || "")
-    : Array.from({ length: linesCount }, () => " ").join("\n");
+  if (showContent) {
+    renderPUContent(wrap, text || "");
+  } else {
+    const pre = document.createElement('pre');
+    pre.className = 'pu-pre';
+    pre.textContent = Array.from({ length: linesCount }, () => " ").join("\n");
+    wrap.appendChild(pre);
+  }
 
-  wrap.appendChild(pre);
   targetEl.appendChild(wrap);
+}
+
+function renderPUContent(targetEl, text) {
+  const lines = String(text || "").split('\n');
+  let textBuffer = [];
+  let tabBuffer = [];
+  let inPersonalTab = false;
+
+  const flushText = () => {
+    if (!textBuffer.length) return;
+
+    const pre = document.createElement('pre');
+    pre.className = 'pu-pre';
+    pre.textContent = textBuffer.join('\n');
+    targetEl.appendChild(pre);
+    textBuffer = [];
+  };
+
+  for (const lineRaw of lines) {
+    const line = String(lineRaw || "");
+
+    if (inPersonalTab) {
+      if (/^\{\/tab\s*\}$/i.test(line.trim())) {
+        flushText();
+        renderTabBlock(targetEl, tabBuffer.join("\n"));
+        inPersonalTab = false;
+        tabBuffer = [];
+        continue;
+      }
+
+      tabBuffer.push(line);
+      continue;
+    }
+
+    if (/^\{tab\s*\}$/i.test(line.trim())) {
+      flushText();
+      inPersonalTab = true;
+      tabBuffer = [];
+      continue;
+    }
+
+    textBuffer.push(line);
+  }
+
+  if (inPersonalTab) {
+    flushText();
+    renderTabBlock(targetEl, tabBuffer.join("\n"));
+  }
+
+  flushText();
 }
 
 function renderTabBlock(targetEl, text) {
@@ -3716,24 +3768,6 @@ function renderTabBlock(targetEl, text) {
 
       const target = sectionContainer || songContentEl;
 
-      if (inTab) {
-        if (/^\{\/tab\s*\}$/i.test(line.trim())) {
-          renderTabBlock(target, tabBuffer.join("\n"));
-          inTab = false;
-          tabBuffer = [];
-          continue;
-        }
-
-        tabBuffer.push(line);
-        continue;
-      }
-
-      if (/^\{tab\s*\}$/i.test(line.trim())) {
-        inTab = true;
-        tabBuffer = [];
-        continue;
-      }
-
       if (!inPU) {
         const start = parsePUStart(line.trim());
         if (start) {
@@ -3754,6 +3788,24 @@ function renderTabBlock(targetEl, text) {
         }
 
         puBuffer.push(line);
+        continue;
+      }
+
+      if (inTab) {
+        if (/^\{\/tab\s*\}$/i.test(line.trim())) {
+          renderTabBlock(target, tabBuffer.join("\n"));
+          inTab = false;
+          tabBuffer = [];
+          continue;
+        }
+
+        tabBuffer.push(line);
+        continue;
+      }
+
+      if (/^\{tab\s*\}$/i.test(line.trim())) {
+        inTab = true;
+        tabBuffer = [];
         continue;
       }
 
