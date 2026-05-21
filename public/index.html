@@ -1985,6 +1985,7 @@ socket.emit('register-user', {
   
   socket.on('song-meta-updated', async ({ fileName }) => {
   await fetchSongMeta();
+  sortSongsForLibrary();
   renderSongList();
   populateSongFilters();
   filterSongList(songSearchInput?.value || "");
@@ -2313,7 +2314,8 @@ function toggleConcertMode() {
 
 async function fetchSongs() {
   const res = await fetch('/list-songs');
-  allSongs = (await res.json()).sort();
+  allSongs = await res.json();
+  sortSongsForLibrary();
 
   renderSongList();
   populateSongFilters();
@@ -2326,20 +2328,47 @@ async function fetchSongs() {
   }
 }
 
+function getSongDisplayInfo(song) {
+  const meta = getMetaForSong(song);
+  const fileBase = String(song || '').replace(/\.(pro|cho)$/i, '');
+  const parts = fileBase.split(' - ');
+  const fallbackTitle = parts[0] || fileBase;
+  const fallbackArtist = parts.length > 1 ? parts.slice(1).join(' - ') : '';
+
+  return {
+    title: String(meta.title || fallbackTitle).trim(),
+    artist: String(meta.artist || fallbackArtist).trim(),
+    fileBase
+  };
+}
+
+function sortSongsForLibrary() {
+  allSongs.sort((a, b) => {
+    const infoA = getSongDisplayInfo(a);
+    const infoB = getSongDisplayInfo(b);
+    const labelA = `${infoA.title} ${infoA.artist}`.trim() || infoA.fileBase;
+    const labelB = `${infoB.title} ${infoB.artist}`.trim() || infoB.fileBase;
+
+    return labelA.localeCompare(labelB, 'fr', {
+      sensitivity: 'base',
+      numeric: true
+    }) || String(a).localeCompare(String(b), 'fr', {
+      sensitivity: 'base',
+      numeric: true
+    });
+  });
+
+  if (currentFileName) {
+    currentIndex = allSongs.indexOf(currentFileName);
+  }
+}
+
 function renderSongList() {
   const listEl = document.getElementById('songList');
 
   listEl.innerHTML = allSongs.map((s, idx) => {
-    const meta = getMetaForSong(s);
     const played = isPlayedTonight(s);
-
-    const fileBase = String(s || '').replace(/\.(pro|cho)$/i, '');
-    const parts = fileBase.split(' - ');
-    const fallbackTitle = parts[0] || fileBase;
-    const fallbackArtist = parts.length > 1 ? parts.slice(1).join(' - ') : '';
-
-    const title = String(meta.title || fallbackTitle).trim();
-    const artist = String(meta.artist || fallbackArtist).trim();
+    const { title, artist } = getSongDisplayInfo(s);
 
     return `
       <div class="song-item ${played ? 'played' : ''}"
