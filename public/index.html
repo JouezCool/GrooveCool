@@ -3027,7 +3027,9 @@ function songMatchesFilters(song, query) {
     if (!blocks.length) return null;
 
     const st = viewerElement.scrollTop;
-    const baseState = { top: st };
+    const max = Math.max(0, getViewerMaxSongScrollTop());
+    const scrollRatio = max > 0 ? clamp01(st / max) : 0;
+    const baseState = { top: st, scrollRatio };
     const first = blocks[0];
     if (st < first.offsetTop - 8) {
       return { ...baseState, anchor: '', progress: 0 };
@@ -3092,13 +3094,17 @@ socket.on('apply-scroll', data => {
   const anchor = data?.anchor;
   const progress = clamp01(Number(data?.progress) || 0);
   const top = Number(data?.top);
+  const scrollRatio = Number(data?.scrollRatio);
 
   const el = anchor
     ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`)
     : null;
 
   let targetTop;
-  if (Number.isFinite(top)) {
+  const maxSongScrollTop = getViewerMaxSongScrollTop();
+  if (Number.isFinite(scrollRatio) && maxSongScrollTop > 0) {
+    targetTop = clamp01(scrollRatio) * maxSongScrollTop;
+  } else if (Number.isFinite(top)) {
     targetTop = Math.max(0, top);
   } else if (el) {
     const top = el.offsetTop;
@@ -3107,6 +3113,16 @@ socket.on('apply-scroll', data => {
   } else {
     const max = viewerElement.scrollHeight - viewerElement.clientHeight;
     targetTop = progress * (max > 0 ? max : 0);
+  }
+
+  if (
+    isScrolling &&
+    playbackActive &&
+    targetTop < 12 &&
+    viewerElement.scrollTop > 120 &&
+    anchor
+  ) {
+    return;
   }
 
   if (Math.abs(viewerElement.scrollTop - targetTop) < 8) return;
