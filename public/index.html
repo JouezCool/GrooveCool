@@ -3027,9 +3027,10 @@ function songMatchesFilters(song, query) {
     if (!blocks.length) return null;
 
     const st = viewerElement.scrollTop;
+    const baseState = { top: st };
     const first = blocks[0];
     if (st < first.offsetTop - 8) {
-      return { top: st, anchor: '', progress: 0 };
+      return { ...baseState, anchor: '', progress: 0 };
     }
 
     for (const el of blocks) {
@@ -3037,12 +3038,12 @@ function songMatchesFilters(song, query) {
       const h = el.offsetHeight || 1;
       if (top + h > st + 8) {
         const progress = clamp01((st - top) / h);
-        return { anchor: el.dataset.anchor, progress };
+        return { ...baseState, anchor: el.dataset.anchor, progress };
       }
     }
 
     const last = blocks[blocks.length - 1];
-    return { anchor: last.dataset.anchor, progress: 1 };
+    return { ...baseState, anchor: last.dataset.anchor, progress: 1 };
   }
 
   let lastEmitAt = 0;
