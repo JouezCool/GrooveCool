@@ -1274,6 +1274,8 @@ let wakeLockSupportChecked = false;
 let wakeLockNoticeShown = false;
 let wantsLeader = localStorage.getItem('bandapp_wantsLeader') === '1';
 let leaderReleaseRequested = false;
+let playbackActive = false;
+let playbackControllerDeviceId = "";
 let deviceId = localStorage.getItem('bandapp_deviceId') || "";
 if (!deviceId) {
   deviceId = (crypto?.randomUUID?.() || ('dev-' + Date.now() + '-' + Math.random().toString(36).slice(2)));
@@ -3048,7 +3050,7 @@ function songMatchesFilters(song, query) {
   let lastEmitProg = -1;
 
 function emitLeaderScrollSync(force = false) {
-  if (!isLeader || isRemoteScrolling) return;
+  if (!canDrivePlayback() || isRemoteScrolling) return;
 
   const state = getTopLyricAnchorState();
   if (!state) return;
@@ -3073,7 +3075,7 @@ function emitLeaderScrollSync(force = false) {
 }
 
 viewerElement.addEventListener('scroll', () => {
-  if (!isLeader || isRemoteScrolling) return;
+  if (!canDrivePlayback() || isRemoteScrolling) return;
 
   // pendant l'autoplay normal du leader, on laisse l'ordre de play faire avancer tout le monde
   if (isScrolling && !isLeaderManualDragging) return;
@@ -3127,7 +3129,15 @@ socket.on('apply-scroll', data => {
   }
 
 function shouldBlockFollowerManualScroll(target) {
-  return false;
+  if (!playbackActive || canDrivePlayback()) return false;
+  if (!isViewerOpen() || isEditorOpen()) return false;
+  if (target && target.id === 'notesTextarea') return false;
+  return true;
+}
+
+function canDrivePlayback() {
+  if (!isLeader) return false;
+  return !playbackActive || !playbackControllerDeviceId || playbackControllerDeviceId === deviceId;
 }
 
   viewerElement.addEventListener('wheel', (e) => {
@@ -3149,7 +3159,9 @@ viewerElement.addEventListener('touchstart', (e) => {
   if (!isViewerOpen() || isEditorOpen()) return;
   if (e.target && e.target.id === 'notesTextarea') return;
 
-  if (isLeader) {
+  const canDrive = canDrivePlayback();
+
+  if (canDrive) {
     if (leaderDragReleaseTimer) {
       clearTimeout(leaderDragReleaseTimer);
       leaderDragReleaseTimer = null;
@@ -3158,7 +3170,7 @@ viewerElement.addEventListener('touchstart', (e) => {
     isLeaderManualDragging = true;
   }
 
-  if (isLeader && isScrolling) {
+  if (canDrive && isScrolling) {
     resumeAutoScrollAfterTouch = true;
     stopAutoScroll();
   } else {
@@ -3167,12 +3179,12 @@ viewerElement.addEventListener('touchstart', (e) => {
 }, { passive: true });
 
 viewerElement.addEventListener('touchmove', () => {
-  if (!isLeader || !isLeaderManualDragging) return;
+  if (!canDrivePlayback() || !isLeaderManualDragging) return;
   emitLeaderScrollSync();
 }, { passive: true });
 
 viewerElement.addEventListener('touchend', () => {
-  if (!isLeader) return;
+  if (!canDrivePlayback()) return;
 
   if (leaderDragReleaseTimer) {
     clearTimeout(leaderDragReleaseTimer);
@@ -3189,11 +3201,6 @@ viewerElement.addEventListener('touchend', () => {
     if (resumeAutoScrollAfterTouch) {
       resumeAutoScrollAfterTouch = false;
       startAutoScroll();
-
-      socket.emit('sync-autoscroll', {
-        active: true,
-        speed: Number(speedInput.value) || 50
-      });
     }
 
     leaderDragReleaseTimer = null;
@@ -3201,7 +3208,7 @@ viewerElement.addEventListener('touchend', () => {
 }, { passive: true });
 
 viewerElement.addEventListener('touchcancel', () => {
-  if (!isLeader) return;
+  if (!canDrivePlayback()) return;
 
   if (leaderDragReleaseTimer) {
     clearTimeout(leaderDragReleaseTimer);
@@ -3218,11 +3225,6 @@ viewerElement.addEventListener('touchcancel', () => {
     if (resumeAutoScrollAfterTouch) {
       resumeAutoScrollAfterTouch = false;
       startAutoScroll();
-
-      socket.emit('sync-autoscroll', {
-        active: true,
-        speed: Number(speedInput.value) || 50
-      });
     }
 
     leaderDragReleaseTimer = null;
@@ -3337,6 +3339,8 @@ function stopAutoScroll() {
 }
 
 function toggleAutoScroll(emitSync) {
+  if (isLeader && emitSync && !canDrivePlayback()) return;
+
   if (isScrolling) {
     stopAutoScroll();
   } else {
@@ -3350,6 +3354,9 @@ function toggleAutoScroll(emitSync) {
   }
 
   if (isLeader && emitSync) {
+    playbackActive = isScrolling;
+    playbackControllerDeviceId = isScrolling ? deviceId : "";
+
     socket.emit('sync-autoscroll', {
       active: isScrolling,
       speed: Number(speedInput.value) || 50
@@ -3358,7 +3365,7 @@ function toggleAutoScroll(emitSync) {
 }
 
   function handleSpeedChange() {
-    if (!isLeader) return;
+    if (!canDrivePlayback()) return;
 
     socket.emit('leader-speed', Number(speedInput.value) || 50);
 
@@ -3381,10 +3388,12 @@ function toggleAutoScroll(emitSync) {
 });
 
 socket.on('apply-autoscroll', d => {
-  if (d?.sourceSocketId === socket.id) return;
-
   const speed = Number(d.speed) || 50;
   const wantActive = !!d.active;
+  const controllerDeviceId = String(d?.controllerDeviceId || '').trim();
+
+  playbackActive = wantActive;
+  playbackControllerDeviceId = wantActive ? controllerDeviceId : "";
 
   speedInput.value = speed;
   updateSpeedPercent();
