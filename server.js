@@ -787,7 +787,10 @@ function pruneDisconnectedLeaders() {
     if (leadersByDeviceId.size === 0) {
       activePlaybackDeviceId = '';
       currentAutoScrollState = { active: false, speed: 50 };
-      io.emit('apply-autoscroll', currentAutoScrollState);
+      io.emit('apply-autoscroll', {
+        ...currentAutoScrollState,
+        controllerDeviceId: ''
+      });
     }
   }
 }
@@ -1387,6 +1390,7 @@ io.on('connection', (socket) => {
 
     socket.emit('apply-autoscroll', {
       ...currentAutoScrollState,
+      controllerDeviceId: currentAutoScrollState.active ? activePlaybackDeviceId : '',
       replay: true
     });
   });
@@ -1441,7 +1445,10 @@ socket.on('reset-played-tonight', () => {
       if (leadersByDeviceId.size === 0) {
         activePlaybackDeviceId = '';
         currentAutoScrollState = { active: false, speed: 50 };
-        io.emit('apply-autoscroll', currentAutoScrollState);
+        io.emit('apply-autoscroll', {
+          ...currentAutoScrollState,
+          controllerDeviceId: ''
+        });
       }
     }
   });
@@ -1461,6 +1468,7 @@ socket.on('reset-played-tonight', () => {
 
     io.emit('apply-autoscroll', {
       ...currentAutoScrollState,
+      controllerDeviceId: '',
       sourceSocketId: socket.id
     });
 
@@ -1510,6 +1518,7 @@ socket.on('reset-played-tonight', () => {
 
     socket.broadcast.emit('apply-autoscroll', {
       ...currentAutoScrollState,
+      controllerDeviceId: currentAutoScrollState.active ? activePlaybackDeviceId : '',
       sourceSocketId: socket.id
     });
   });
