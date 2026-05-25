@@ -3025,6 +3025,11 @@ function songMatchesFilters(song, query) {
     if (!blocks.length) return null;
 
     const st = viewerElement.scrollTop;
+    const first = blocks[0];
+    if (st < first.offsetTop - 8) {
+      return { top: st, anchor: '', progress: 0 };
+    }
+
     for (const el of blocks) {
       const top = el.offsetTop;
       const h = el.offsetHeight || 1;
@@ -3049,17 +3054,20 @@ function emitLeaderScrollSync(force = false) {
   if (!state) return;
 
   const now = Date.now();
+  const emitAnchor = state.top != null ? '__top__' : state.anchor;
+  const emitProgress = state.top != null ? state.top : state.progress;
+
   if (!force &&
     now - lastEmitAt < 40 &&
-    state.anchor === lastEmitAnchor &&
-    Math.abs(state.progress - lastEmitProg) < 0.02
+    emitAnchor === lastEmitAnchor &&
+    Math.abs(emitProgress - lastEmitProg) < 0.02
   ) {
     return;
   }
 
   lastEmitAt = now;
-  lastEmitAnchor = state.anchor;
-  lastEmitProg = state.progress;
+  lastEmitAnchor = emitAnchor;
+  lastEmitProg = emitProgress;
 
   socket.emit('scroll-sync', state);
 }
@@ -3080,13 +3088,16 @@ socket.on('apply-scroll', data => {
 
   const anchor = data?.anchor;
   const progress = clamp01(Number(data?.progress) || 0);
+  const top = Number(data?.top);
 
   const el = anchor
     ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`)
     : null;
 
   let targetTop;
-  if (el) {
+  if (Number.isFinite(top)) {
+    targetTop = Math.max(0, top);
+  } else if (el) {
     const top = el.offsetTop;
     const h = el.offsetHeight || 1;
     targetTop = top + progress * h;

@@ -87,6 +87,7 @@ let currentAutoScrollState = {
   active: false,
   speed: 50
 };
+let activePlaybackDeviceId = '';
 let leaderCleanupTimer = null;
 
 app.use(express.json({ limit: '1mb' }));
@@ -752,6 +753,21 @@ function isLeaderSocket(socket) {
   return !!leader && leader.socketId === socket.id;
 }
 
+function getSocketDeviceId(socket) {
+  return String(socket.data.deviceId || '').trim();
+}
+
+function isActivePlaybackSocket(socket) {
+  const deviceId = getSocketDeviceId(socket);
+  return !!deviceId && !!activePlaybackDeviceId && deviceId === activePlaybackDeviceId;
+}
+
+function canControlPlayback(socket) {
+  if (!isLeaderSocket(socket)) return false;
+  if (!currentAutoScrollState.active || !activePlaybackDeviceId) return true;
+  return isActivePlaybackSocket(socket);
+}
+
 function pruneDisconnectedLeaders() {
   const now = Date.now();
   let changed = false;
@@ -769,6 +785,7 @@ function pruneDisconnectedLeaders() {
   if (changed) {
     broadcastLeaderState();
     if (leadersByDeviceId.size === 0) {
+      activePlaybackDeviceId = '';
       currentAutoScrollState = { active: false, speed: 50 };
       io.emit('apply-autoscroll', currentAutoScrollState);
     }
@@ -1422,6 +1439,7 @@ socket.on('reset-played-tonight', () => {
       leadersByDeviceId.delete(deviceId);
       broadcastLeaderState();
       if (leadersByDeviceId.size === 0) {
+        activePlaybackDeviceId = '';
         currentAutoScrollState = { active: false, speed: 50 };
         io.emit('apply-autoscroll', currentAutoScrollState);
       }
@@ -1435,6 +1453,7 @@ socket.on('reset-played-tonight', () => {
     if (!isValidSongName(cleanFileName)) return;
 
     currentSongFileName = cleanFileName;
+    activePlaybackDeviceId = '';
     currentAutoScrollState = {
       active: false,
       speed: currentAutoScrollState.speed || 50
@@ -1453,7 +1472,7 @@ socket.on('reset-played-tonight', () => {
 
   let lastScrollAt = 0;
   socket.on('scroll-sync', (payload) => {
-    if (!isLeaderSocket(socket)) return;
+    if (!canControlPlayback(socket)) return;
 
     const now = Date.now();
     if (now - lastScrollAt < 60) return;
@@ -1461,15 +1480,31 @@ socket.on('reset-played-tonight', () => {
 
     const anchor = String(payload?.anchor || '');
     const progress = Math.max(0, Math.min(1, Number(payload?.progress) || 0));
+    const top = Number.isFinite(Number(payload?.top)) ? Math.max(0, Number(payload.top)) : null;
 
-    socket.broadcast.emit('apply-scroll', { anchor, progress });
+    socket.broadcast.emit('apply-scroll', { anchor, progress, top });
   });
 
   socket.on('sync-autoscroll', (d) => {
     if (!isLeaderSocket(socket)) return;
 
+    const deviceId = getSocketDeviceId(socket);
+    const nextActive = !!d.active;
+
+    if (currentAutoScrollState.active && activePlaybackDeviceId && activePlaybackDeviceId !== deviceId) {
+      return;
+    }
+
+    if (nextActive) {
+      activePlaybackDeviceId = deviceId;
+    } else if (!activePlaybackDeviceId || activePlaybackDeviceId === deviceId) {
+      activePlaybackDeviceId = '';
+    } else {
+      return;
+    }
+
     currentAutoScrollState = {
-      active: !!d.active,
+      active: nextActive,
       speed: Number(d.speed) || 50
     };
 
@@ -1490,7 +1525,7 @@ socket.on('reset-played-tonight', () => {
   });
 
   socket.on('leader-speed', (value) => {
-    if (!isLeaderSocket(socket)) return;
+    if (!canControlPlayback(socket)) return;
     socket.broadcast.emit('apply-speed', value);
   });
 
@@ -1504,6 +1539,10 @@ socket.on('reset-played-tonight', () => {
     broadcastConnectedUsers();
 
     if (wasLeader) {
+      if (activePlaybackDeviceId === deviceId) {
+        activePlaybackDeviceId = '';
+      }
+
       const leader = leadersByDeviceId.get(deviceId);
       leadersByDeviceId.set(deviceId, {
         ...(leader || {}),
