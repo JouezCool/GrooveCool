@@ -1489,8 +1489,12 @@ socket.on('reset-played-tonight', () => {
     const anchor = String(payload?.anchor || '');
     const progress = Math.max(0, Math.min(1, Number(payload?.progress) || 0));
     const top = Number.isFinite(Number(payload?.top)) ? Math.max(0, Number(payload.top)) : null;
+    const scrollRatio = Number.isFinite(Number(payload?.scrollRatio))
+      ? Math.max(0, Math.min(1, Number(payload.scrollRatio)))
+      : null;
+    const manual = !!payload?.manual;
 
-    socket.broadcast.emit('apply-scroll', { anchor, progress, top });
+    socket.broadcast.emit('apply-scroll', { anchor, progress, top, scrollRatio, manual });
   });
 
   socket.on('sync-autoscroll', (d) => {

@@ -1248,7 +1248,9 @@ let resumeAutoScrollAfterTouch = false;
   let isRemoteScrolling = false;
 let isScrolling = false;
 let isLeaderManualDragging = false;
+let leaderDragStartTop = 0;
 let leaderDragReleaseTimer = null;
+let leaderScrollSyncRaf = null;
 let rafId = null;
 let lastRafTime = 0;
 let scrollCarry = 0;
@@ -3027,9 +3029,12 @@ function songMatchesFilters(song, query) {
     if (!blocks.length) return null;
 
     const st = viewerElement.scrollTop;
+    const max = Math.max(0, getViewerMaxSongScrollTop());
+    const scrollRatio = max > 0 ? clamp01(st / max) : 0;
+    const baseState = { top: st, scrollRatio };
     const first = blocks[0];
     if (st < first.offsetTop - 8) {
-      return { top: st, anchor: '', progress: 0 };
+      return { ...baseState, anchor: '', progress: 0 };
     }
 
     for (const el of blocks) {
@@ -3037,12 +3042,12 @@ function songMatchesFilters(song, query) {
       const h = el.offsetHeight || 1;
       if (top + h > st + 8) {
         const progress = clamp01((st - top) / h);
-        return { anchor: el.dataset.anchor, progress };
+        return { ...baseState, anchor: el.dataset.anchor, progress };
       }
     }
 
     const last = blocks[blocks.length - 1];
-    return { anchor: last.dataset.anchor, progress: 1 };
+    return { ...baseState, anchor: last.dataset.anchor, progress: 1 };
   }
 
   let lastEmitAt = 0;
@@ -3052,8 +3057,13 @@ function songMatchesFilters(song, query) {
 function emitLeaderScrollSync(force = false) {
   if (!canDrivePlayback() || isRemoteScrolling) return;
 
+  if (!force && isLeaderManualDragging && Math.abs(viewerElement.scrollTop - leaderDragStartTop) < 2) {
+    return;
+  }
+
   const state = getTopLyricAnchorState();
   if (!state) return;
+  state.manual = isLeaderManualDragging;
 
   const now = Date.now();
   const emitAnchor = state.top != null ? '__top__' : state.anchor;
@@ -3074,6 +3084,17 @@ function emitLeaderScrollSync(force = false) {
   socket.emit('scroll-sync', state);
 }
 
+function scheduleLeaderScrollSync(force = false) {
+  if (leaderScrollSyncRaf) cancelAnimationFrame(leaderScrollSyncRaf);
+
+  leaderScrollSyncRaf = requestAnimationFrame(() => {
+    leaderScrollSyncRaf = requestAnimationFrame(() => {
+      leaderScrollSyncRaf = null;
+      emitLeaderScrollSync(force);
+    });
+  });
+}
+
 viewerElement.addEventListener('scroll', () => {
   if (!canDrivePlayback() || isRemoteScrolling) return;
 
@@ -3091,13 +3112,18 @@ socket.on('apply-scroll', data => {
   const anchor = data?.anchor;
   const progress = clamp01(Number(data?.progress) || 0);
   const top = Number(data?.top);
+  const scrollRatio = Number(data?.scrollRatio);
+  const isManual = !!data?.manual;
 
   const el = anchor
     ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`)
     : null;
 
   let targetTop;
-  if (Number.isFinite(top)) {
+  const maxSongScrollTop = getViewerMaxSongScrollTop();
+  if (Number.isFinite(scrollRatio) && maxSongScrollTop > 0) {
+    targetTop = clamp01(scrollRatio) * maxSongScrollTop;
+  } else if (Number.isFinite(top)) {
     targetTop = Math.max(0, top);
   } else if (el) {
     const top = el.offsetTop;
@@ -3106,6 +3132,15 @@ socket.on('apply-scroll', data => {
   } else {
     const max = viewerElement.scrollHeight - viewerElement.clientHeight;
     targetTop = progress * (max > 0 ? max : 0);
+  }
+
+  if (
+    isScrolling &&
+    playbackActive &&
+    targetTop < 12 &&
+    (isManual || viewerElement.scrollTop > 120)
+  ) {
+    return;
   }
 
   if (Math.abs(viewerElement.scrollTop - targetTop) < 8) return;
@@ -3168,6 +3203,7 @@ viewerElement.addEventListener('touchstart', (e) => {
     }
 
     isLeaderManualDragging = true;
+    leaderDragStartTop = viewerElement.scrollTop;
   }
 
   if (canDrive && isScrolling) {
@@ -3180,7 +3216,7 @@ viewerElement.addEventListener('touchstart', (e) => {
 
 viewerElement.addEventListener('touchmove', () => {
   if (!canDrivePlayback() || !isLeaderManualDragging) return;
-  emitLeaderScrollSync();
+  scheduleLeaderScrollSync();
 }, { passive: true });
 
 viewerElement.addEventListener('touchend', () => {
@@ -3195,6 +3231,7 @@ viewerElement.addEventListener('touchend', () => {
 
     const state = getTopLyricAnchorState();
     if (state) {
+      state.manual = true;
       socket.emit('scroll-sync', state);
     }
 
@@ -3219,6 +3256,7 @@ viewerElement.addEventListener('touchcancel', () => {
 
     const state = getTopLyricAnchorState();
     if (state) {
+      state.manual = true;
       socket.emit('scroll-sync', state);
     }
 
