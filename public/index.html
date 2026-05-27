@@ -4064,7 +4064,7 @@ function renderTabBlock(targetEl, text) {
         continue;
       }
 
-      const detail = line.match(/^\{d\s*:\s*(.*?)\}(.*)$/i);
+      const detail = line.match(/^\{d\s*:\s*(.*)\}(.*)$/i);
       if (detail) {
         addCommentLine(detail[1], target, 'detail');
 
@@ -4081,7 +4081,7 @@ function renderTabBlock(targetEl, text) {
         continue;
       }
 
-      const comment = line.match(/^\{c\s*:\s*(.*?)\}(.*)$/i);
+      const comment = line.match(/^\{c\s*:\s*(.*)\}(.*)$/i);
       if (comment) {
         addCommentLine(comment[1], target);
 
@@ -4298,11 +4298,11 @@ function insertAtCursor(text){
   }
 
   function insertTemplateChordLine(){
-    insertAtCursor(`{a: [C]   /   [F]   /   [G]   /   [C]}\n`);
+    insertAtCursor(`{a:    }\n`);
   }
 
   function insertTemplateNotesLine(){
-    insertAtCursor(`{n: Do Ré Mi Fa Sol La Si}\n`);
+    insertAtCursor(`{n:    }\n`);
   }
 
   function insertTemplateSection(startTag, endTag){
