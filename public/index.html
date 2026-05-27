@@ -1248,7 +1248,9 @@ let resumeAutoScrollAfterTouch = false;
   let isRemoteScrolling = false;
 let isScrolling = false;
 let isLeaderManualDragging = false;
+let leaderDragStartTop = 0;
 let leaderDragReleaseTimer = null;
+let leaderScrollSyncRaf = null;
 let rafId = null;
 let lastRafTime = 0;
 let scrollCarry = 0;
@@ -3055,8 +3057,13 @@ function songMatchesFilters(song, query) {
 function emitLeaderScrollSync(force = false) {
   if (!canDrivePlayback() || isRemoteScrolling) return;
 
+  if (!force && isLeaderManualDragging && Math.abs(viewerElement.scrollTop - leaderDragStartTop) < 2) {
+    return;
+  }
+
   const state = getTopLyricAnchorState();
   if (!state) return;
+  state.manual = isLeaderManualDragging;
 
   const now = Date.now();
   const emitAnchor = state.top != null ? '__top__' : state.anchor;
@@ -3077,6 +3084,17 @@ function emitLeaderScrollSync(force = false) {
   socket.emit('scroll-sync', state);
 }
 
+function scheduleLeaderScrollSync(force = false) {
+  if (leaderScrollSyncRaf) cancelAnimationFrame(leaderScrollSyncRaf);
+
+  leaderScrollSyncRaf = requestAnimationFrame(() => {
+    leaderScrollSyncRaf = requestAnimationFrame(() => {
+      leaderScrollSyncRaf = null;
+      emitLeaderScrollSync(force);
+    });
+  });
+}
+
 viewerElement.addEventListener('scroll', () => {
   if (!canDrivePlayback() || isRemoteScrolling) return;
 
@@ -3095,6 +3113,7 @@ socket.on('apply-scroll', data => {
   const progress = clamp01(Number(data?.progress) || 0);
   const top = Number(data?.top);
   const scrollRatio = Number(data?.scrollRatio);
+  const isManual = !!data?.manual;
 
   const el = anchor
     ? viewerElement.querySelector(`[data-kind="lyric"][data-anchor="${CSS.escape(anchor)}"]`)
@@ -3119,8 +3138,7 @@ socket.on('apply-scroll', data => {
     isScrolling &&
     playbackActive &&
     targetTop < 12 &&
-    viewerElement.scrollTop > 120 &&
-    anchor
+    (isManual || viewerElement.scrollTop > 120)
   ) {
     return;
   }
@@ -3185,6 +3203,7 @@ viewerElement.addEventListener('touchstart', (e) => {
     }
 
     isLeaderManualDragging = true;
+    leaderDragStartTop = viewerElement.scrollTop;
   }
 
   if (canDrive && isScrolling) {
@@ -3197,7 +3216,7 @@ viewerElement.addEventListener('touchstart', (e) => {
 
 viewerElement.addEventListener('touchmove', () => {
   if (!canDrivePlayback() || !isLeaderManualDragging) return;
-  emitLeaderScrollSync();
+  scheduleLeaderScrollSync();
 }, { passive: true });
 
 viewerElement.addEventListener('touchend', () => {
@@ -3212,6 +3231,7 @@ viewerElement.addEventListener('touchend', () => {
 
     const state = getTopLyricAnchorState();
     if (state) {
+      state.manual = true;
       socket.emit('scroll-sync', state);
     }
 
@@ -3236,6 +3256,7 @@ viewerElement.addEventListener('touchcancel', () => {
 
     const state = getTopLyricAnchorState();
     if (state) {
+      state.manual = true;
       socket.emit('scroll-sync', state);
     }
 
