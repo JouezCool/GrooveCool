@@ -649,6 +649,29 @@ nav{
       line-height:1.6;
     }
 
+    .inline-music-line{
+      white-space:pre-wrap;
+      word-break:keep-all;
+      overflow-wrap:normal;
+      hyphens:none;
+      line-height:1.6;
+      margin:0 0 26px;
+      font-size:calc(var(--song-zoom, 1) * 1em);
+      font-family:'Courier New', Courier, monospace;
+    }
+
+    .inline-music-line.chords-only{
+      color:var(--chord-color);
+      font-weight:bold;
+    }
+
+    .inline-music-line.notes-only{
+      color:var(--text);
+      font-weight:var(--lyric-weight);
+      -webkit-text-stroke:var(--lyric-stroke) currentColor;
+      text-shadow:var(--lyric-shadow);
+    }
+
     .commentwrap{ margin:12px 0; }
 
     .commentline{
@@ -1076,6 +1099,8 @@ nav{
   <button class="btn" onclick="insertTemplateSection('sob', 'eob')">+ {sob}</button>
   <button class="btn" onclick="insertTemplateComment()">+ {c:}</button>
   <button class="btn" onclick="insertTemplateDetail()">+ {d:}</button>
+  <button class="btn" onclick="insertTemplateChordLine()">+ {a:}</button>
+  <button class="btn" onclick="insertTemplateNotesLine()">+ {n:}</button>
   <button class="btn" onclick="insertTemplateTab()">+ {tab}</button>
   <button class="btn" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
 
@@ -3540,6 +3565,49 @@ socket.on('apply-speed', value => {
     });
   }
 
+  const latinNoteToSharp = {
+    'do': 'C',
+    'do#': 'C#',
+    'réb': 'C#',
+    'reb': 'C#',
+    'ré': 'D',
+    're': 'D',
+    'ré#': 'D#',
+    're#': 'D#',
+    'mib': 'D#',
+    'mi': 'E',
+    'fa': 'F',
+    'fa#': 'F#',
+    'solb': 'F#',
+    'sol': 'G',
+    'sol#': 'G#',
+    'lab': 'G#',
+    'la': 'A',
+    'la#': 'A#',
+    'sib': 'A#',
+    'si': 'B'
+  };
+
+  function transposeNoteName(note, steps) {
+    const raw = String(note || '');
+    const key = raw.toLowerCase();
+    const isLatin = Object.prototype.hasOwnProperty.call(latinNoteToSharp, key);
+    const normalized = isLatin ? latinNoteToSharp[key] : normalizeNote(raw);
+    const idx = scaleSharp.indexOf(normalized);
+    if (idx === -1) return raw;
+
+    let newIdx = (idx + steps) % 12;
+    if (newIdx < 0) newIdx += 12;
+    return isLatin || chordStyle === 'latin' ? scaleLatFixed[newIdx] : scaleFixed[newIdx];
+  }
+
+  function transNotesText(text, steps) {
+    const notePattern = /(Réb|Reb|Ré#|Re#|Do#|Fa#|Sol#|Solb|Lab|La#|Sib|Mib|Do|Ré|Re|Mi|Fa|Sol|La|Si|[A-G](?:#|b)?)/gi;
+    return String(text || '').replace(new RegExp(`(^|[^A-Za-zÀ-ÖØ-öø-ÿ#b])${notePattern.source}(?=$|[^A-Za-zÀ-ÖØ-öø-ÿ#b])`, 'gi'), (match, prefix, note) => (
+      prefix + transposeNoteName(note, steps)
+    ));
+  }
+
   function parseChordProLine(line) {
     const segments = [];
     let pendingChord = '';
@@ -3614,6 +3682,14 @@ socket.on('apply-speed', value => {
 
     wrap.appendChild(span);
     targetEl.appendChild(wrap);
+  }
+
+  function addInlineMusicLine(text, targetEl, type = 'chords-only') {
+    const el = document.createElement('div');
+    el.className = `inline-music-line ${type}`;
+    el.style.fontSize = (fontSize * currentSongZoom) + 'px';
+    el.textContent = text;
+    targetEl.appendChild(el);
   }
 
   function expandSegmentsForWordWrapping(segments) {
@@ -3787,6 +3863,21 @@ function renderPUContent(targetEl, text) {
       continue;
     }
 
+    const chordLine = line.match(/^\{a\s*:\s*(.*?)\}\s*$/i);
+    if (chordLine) {
+      flushText();
+      const rendered = chordLine[1].replace(/\[([^\]]+)\]/g, (_, chord) => transChord(chord, transposeValue));
+      addInlineMusicLine(rendered, targetEl, 'chords-only');
+      continue;
+    }
+
+    const notesLine = line.match(/^\{n\s*:\s*(.*?)\}\s*$/i);
+    if (notesLine) {
+      flushText();
+      addInlineMusicLine(transNotesText(notesLine[1], transposeValue), targetEl, 'notes-only');
+      continue;
+    }
+
     textBuffer.push(line);
   }
 
@@ -3951,6 +4042,19 @@ function renderTabBlock(targetEl, text) {
           sectionType = '';
           sectionContainer = null;
         }
+        continue;
+      }
+
+      const chordLine = line.match(/^\{a\s*:\s*(.*?)\}\s*$/i);
+      if (chordLine) {
+        const rendered = chordLine[1].replace(/\[([^\]]+)\]/g, (_, chord) => transChord(chord, transposeValue));
+        addInlineMusicLine(rendered, target, 'chords-only');
+        continue;
+      }
+
+      const notesLine = line.match(/^\{n\s*:\s*(.*?)\}\s*$/i);
+      if (notesLine) {
+        addInlineMusicLine(transNotesText(notesLine[1], transposeValue), target, 'notes-only');
         continue;
       }
 
@@ -4185,6 +4289,14 @@ function insertAtCursor(text){
 
   function insertTemplateDetail(){
     insertAtCursor(`{d: }\n`);
+  }
+
+  function insertTemplateChordLine(){
+    insertAtCursor(`{a: [C]   /   [F]   /   [G]   /   [C]}\n`);
+  }
+
+  function insertTemplateNotesLine(){
+    insertAtCursor(`{n: Do Ré Mi Fa Sol La Si}\n`);
   }
 
   function insertTemplateSection(startTag, endTag){
