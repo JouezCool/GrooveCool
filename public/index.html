@@ -3608,6 +3608,12 @@ socket.on('apply-speed', value => {
     ));
   }
 
+  function renderInlineNotesTags(text) {
+    return String(text || '').replace(/\{n\s*:\s*([^}]*)\}/gi, (_, notes) => (
+      transNotesText(notes, transposeValue)
+    ));
+  }
+
   function parseChordProLine(line) {
     const segments = [];
     let pendingChord = '';
@@ -3678,7 +3684,7 @@ socket.on('apply-speed', value => {
 
     const span = document.createElement('span');
     span.className = type === 'detail' ? 'commentline detail' : 'commentline';
-    span.textContent = text;
+    span.textContent = renderInlineNotesTags(text);
 
     wrap.appendChild(span);
     targetEl.appendChild(wrap);
