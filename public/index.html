@@ -277,6 +277,11 @@ body.concert-mode #settingsFixedWrap{
       background: rgba(255,152,0,0.18);
     }
 
+    .version-badge.turn{
+      border-color: rgba(156,39,176,0.55);
+      background: rgba(156,39,176,0.18);
+    }
+
     #netBadge.off{
       border-color: rgba(244,67,54,0.55);
       background: rgba(244,67,54,0.18);
@@ -854,6 +859,17 @@ nav{
       display:none;
     }
 
+    #resyncLeaderBtn{
+      position:fixed;
+      right:12px;
+      bottom:12px;
+      z-index:80;
+      display:none;
+      opacity:.72;
+      padding:8px 10px;
+      font-size:12px;
+    }
+
     #songContent {
       position: relative;
       padding-top:22vh;
@@ -1078,6 +1094,8 @@ nav{
   >
 </div>
 
+<button class="btn" id="resyncLeaderBtn" onclick="requestLeaderPosition()">↕ LEADER</button>
+
     <div id="notesPanel">
       <textarea id="notesTextarea" placeholder="Tes annotations personnelles..."></textarea>
     </div>
@@ -1262,7 +1280,7 @@ nav{
   const socket = io();
   console.log("VERSION TEST 1");
   
-  let isLeader = false, allSongs = [], currentIndex = -1;
+  let isLeader = false, isTurn = false, allSongs = [], currentIndex = -1;
   let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
   
   const songTextCache = new Map();
@@ -1281,6 +1299,7 @@ let lastRafTime = 0;
 let scrollCarry = 0;
 let remoteScrollRaf = null;
 let pendingRemoteScrollTop = 0;
+let pendingRemoteScrollData = null;
 let currentSongZoom = 1;
 let isLoadingSong = false;
 let lastConnectedUsers = [];
@@ -1301,8 +1320,10 @@ let wakeLockSupportChecked = false;
 let wakeLockNoticeShown = false;
 let wantsLeader = localStorage.getItem('bandapp_wantsLeader') === '1';
 let leaderReleaseRequested = false;
+let desiredRole = localStorage.getItem('bandapp_role') || (wantsLeader ? 'leader' : 'follow');
 let playbackActive = false;
 let playbackControllerDeviceId = "";
+let lastOfficialScrollSyncAt = 0;
 let deviceId = localStorage.getItem('bandapp_deviceId') || "";
 if (!deviceId) {
   deviceId = (crypto?.randomUUID?.() || ('dev-' + Date.now() + '-' + Math.random().toString(36).slice(2)));
@@ -1912,22 +1933,55 @@ function applyLeaderUI() {
   if (isLeader) {
     badge.textContent = "LEADER";
     badge.title = "Quitter le mode leader";
-    badge.classList.remove('off');
+    badge.classList.remove('off', 'turn');
     badge.classList.add('perso');
+  } else if (isTurn) {
+    badge.textContent = "TURN";
+    badge.title = "Passer en leader";
+    badge.classList.remove('off', 'perso');
+    badge.classList.add('turn');
   } else {
     badge.textContent = "FOLLOW";
-    badge.title = "Devenir leader";
-    badge.classList.remove('perso');
+    badge.title = "Passer en turn";
+    badge.classList.remove('perso', 'turn');
     badge.classList.add('off');
+  }
+
+  updateResyncButton();
+}
+
+function canChooseSongs() {
+  return isLeader || isTurn;
+}
+
+function updateResyncButton() {
+  const btn = document.getElementById('resyncLeaderBtn');
+  if (!btn) return;
+  btn.style.display = (playbackActive && !isLeader && isViewerOpen()) ? 'block' : 'none';
+}
+
+function requestLeaderPosition() {
+  socket.emit('request-sync-position');
+}
+
+function requestDesiredRole() {
+  if (!socket.connected || !currentUser) return;
+
+  if (desiredRole === 'leader') {
+    socket.emit('request-leader');
+  } else if (desiredRole === 'turn') {
+    socket.emit('request-turn');
+  } else {
+    socket.emit('release-leader');
+    socket.emit('release-turn');
   }
 }
 
 function updateConcertFloatingVisibility() {
   const concertWrap = document.getElementById('concertFloatingActions');
-  if (!concertWrap) return;
-
   const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
-  concertWrap.style.display = viewerOpen ? 'block' : 'none';
+  if (concertWrap) concertWrap.style.display = viewerOpen ? 'block' : 'none';
+  updateResyncButton();
 }
 
   function loadUsersList() {
@@ -1968,6 +2022,8 @@ socket.emit('register-user', {
   userName: currentUser,
   deviceId
 });
+
+setTimeout(() => requestDesiredRole(), 100);
 
     if (currentFileName) {
       stopAutoScroll();
@@ -2067,12 +2123,8 @@ if (currentUser) {
     deviceId
   });
 
-  if (wantsLeader) {
-    setTimeout(() => {
-      if (socket.connected && currentUser && wantsLeader) {
-        socket.emit('request-leader');
-      }
-    }, 300);
+  if (desiredRole !== 'follow') {
+    setTimeout(() => requestDesiredRole(), 300);
   }
 }
   });
@@ -2127,16 +2179,33 @@ socket.on('connected-users', (data) => {
     const leaderDeviceIds = Array.isArray(data?.leaderDeviceIds)
       ? data.leaderDeviceIds
       : [];
+    const turnSocketIds = Array.isArray(data?.turnSocketIds)
+      ? data.turnSocketIds
+      : [];
+    const turnDeviceIds = Array.isArray(data?.turnDeviceIds)
+      ? data.turnDeviceIds
+      : [];
 
     isLeader = leaderDeviceIds.includes(deviceId) || leaderSocketIds.includes(socket.id);
+    isTurn = !isLeader && (turnDeviceIds.includes(deviceId) || turnSocketIds.includes(socket.id));
 
     if (isLeader) {
+      desiredRole = 'leader';
       wantsLeader = true;
       leaderReleaseRequested = false;
+      localStorage.setItem('bandapp_role', 'leader');
       localStorage.setItem('bandapp_wantsLeader', '1');
-    } else if (leaderReleaseRequested) {
+    } else if (isTurn) {
+      desiredRole = 'turn';
       wantsLeader = false;
       leaderReleaseRequested = false;
+      localStorage.setItem('bandapp_role', 'turn');
+      localStorage.removeItem('bandapp_wantsLeader');
+    } else if (leaderReleaseRequested) {
+      desiredRole = 'follow';
+      wantsLeader = false;
+      leaderReleaseRequested = false;
+      localStorage.setItem('bandapp_role', 'follow');
       localStorage.removeItem('bandapp_wantsLeader');
     }
 
@@ -2154,7 +2223,10 @@ socket.on('connected-users', (data) => {
     localStorage.removeItem('bandapp_wantsLeader');
 
     const names = String(data?.leaderUserName || '').trim();
-    showToast(`Déjà ${data?.maxLeaders || 2} leaders actifs${names ? ' : ' + names : ''}`);
+    desiredRole = 'turn';
+    localStorage.setItem('bandapp_role', 'turn');
+    socket.emit('request-turn');
+    showToast(`Leader déjà actif${names ? ' : ' + names : ''}`);
   });
   
 function populateSongFilters() {
@@ -2520,16 +2592,20 @@ function resetSongFilters() {
 
   function toggleLeader() {
     if (isLeader) {
-      wantsLeader = false;
-      leaderReleaseRequested = true;
-      localStorage.removeItem('bandapp_wantsLeader');
-      socket.emit('release-leader');
+      desiredRole = 'follow';
+    } else if (isTurn) {
+      desiredRole = 'leader';
     } else {
-      wantsLeader = true;
-      leaderReleaseRequested = false;
-      localStorage.setItem('bandapp_wantsLeader', '1');
-      socket.emit('request-leader');
+      desiredRole = 'turn';
     }
+
+    wantsLeader = desiredRole === 'leader';
+    leaderReleaseRequested = desiredRole !== 'leader';
+    localStorage.setItem('bandapp_role', desiredRole);
+    if (wantsLeader) localStorage.setItem('bandapp_wantsLeader', '1');
+    else localStorage.removeItem('bandapp_wantsLeader');
+
+    requestDesiredRole();
   }
   
   function autoMarkCurrentSongAsPlayed() {
@@ -2570,7 +2646,9 @@ function openSong(idx, options = {}) {
       active: false,
       speed: Number(speedInput.value) || 50
     });
+  }
 
+  if (canChooseSongs() && shouldEmitChange) {
     socket.emit('change-song', targetFileName);
   }
 
@@ -2895,6 +2973,11 @@ async function loadSong(f) {
         viewerElement.scrollTop = 0;
 
         isLoadingSong = false;
+        if (pendingRemoteScrollData) {
+          const pendingScroll = pendingRemoteScrollData;
+          pendingRemoteScrollData = null;
+          applyRemoteScroll(pendingScroll);
+        }
         if (pendingAutoScrollState) {
           const nextAutoScrollState = pendingAutoScrollState;
           pendingAutoScrollState = null;
@@ -3129,10 +3212,14 @@ viewerElement.addEventListener('scroll', () => {
   emitLeaderScrollSync();
 });
 
-socket.on('apply-scroll', data => {
-  if (Date.now() < ignoreRemoteScrollUntil) return;
-  if (Date.now() < forceTopUntil) return;
-  if (isLoadingSong) return;
+function applyRemoteScroll(data) {
+  const isOfficialReplay = !!data?.official || !!data?.replay;
+  if (!isOfficialReplay && Date.now() < ignoreRemoteScrollUntil) return;
+  if (!isOfficialReplay && Date.now() < forceTopUntil) return;
+  if (isLoadingSong) {
+    pendingRemoteScrollData = data;
+    return;
+  }
 
   const anchor = data?.anchor;
   const progress = clamp01(Number(data?.progress) || 0);
@@ -3178,6 +3265,10 @@ socket.on('apply-scroll', data => {
     viewerElement.scrollTop = pendingRemoteScrollTop;
     setTimeout(() => { isRemoteScrolling = false; }, 50);
   });
+}
+
+socket.on('apply-scroll', data => {
+  applyRemoteScroll(data);
 });
 
   function isEditorOpen() {
@@ -3198,6 +3289,19 @@ function shouldBlockFollowerManualScroll(target) {
 function canDrivePlayback() {
   if (!isLeader) return false;
   return !playbackActive || !playbackControllerDeviceId || playbackControllerDeviceId === deviceId;
+}
+
+function emitOfficialPlaybackPosition() {
+  if (!canDrivePlayback() || !isScrolling) return;
+
+  const now = Date.now();
+  if (now - lastOfficialScrollSyncAt < 1000) return;
+  lastOfficialScrollSyncAt = now;
+
+  const state = getTopLyricAnchorState();
+  if (!state) return;
+  state.official = true;
+  socket.emit('scroll-sync', state);
 }
 
   viewerElement.addEventListener('wheel', (e) => {
@@ -3355,6 +3459,7 @@ viewerElement.addEventListener('touchcancel', () => {
       }
     }
 
+    emitOfficialPlaybackPosition();
     rafId = requestAnimationFrame(autoScrollLoop);
   }
   
@@ -3377,6 +3482,7 @@ function startAutoScroll() {
   }
 
   updateLeaderPlayButton();
+  updateResyncButton();
 
   lastRafTime = 0;
   scrollCarry = 0;
@@ -3394,6 +3500,7 @@ function stopAutoScroll() {
   }
 
   updateLeaderPlayButton();
+  updateResyncButton();
 
   if (rafId) cancelAnimationFrame(rafId);
   rafId = null;
@@ -3476,6 +3583,7 @@ socket.on('apply-autoscroll', d => {
   if (wantActive && !isScrolling) startAutoScroll();
   if (!wantActive && isScrolling) stopAutoScroll();
   updateLeaderPlayButton();
+  updateResyncButton();
 });
 
   socket.on('apply-fontsize', value => {

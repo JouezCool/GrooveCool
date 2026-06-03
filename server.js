@@ -79,15 +79,17 @@ function getDriveClient() {
 let playedTonight = new Set();
 let playedTonightSaveTimer = null;
 const connectedUsers = new Map();
-const MAX_LEADERS = 2;
+const MAX_LEADERS = 1;
 const LEADER_RECONNECT_GRACE_MS = 5 * 60 * 1000;
 const leadersByDeviceId = new Map();
+const turnersByDeviceId = new Map();
 let currentSongFileName = '';
 let currentAutoScrollState = {
   active: false,
   speed: 50
 };
 let activePlaybackDeviceId = '';
+let currentPlaybackPosition = null;
 let leaderCleanupTimer = null;
 
 app.use(express.json({ limit: '1mb' }));
@@ -732,6 +734,10 @@ function broadcastLeaderState() {
   const leaderSocketIds = leaders.map(leader => leader.socketId).filter(Boolean);
   const leaderUserNames = leaders.map(leader => leader.userName).filter(Boolean);
   const leaderDeviceIds = leaders.map(leader => leader.deviceId).filter(Boolean);
+  const turners = [...turnersByDeviceId.values()];
+  const turnSocketIds = turners.map(turner => turner.socketId).filter(Boolean);
+  const turnUserNames = turners.map(turner => turner.userName).filter(Boolean);
+  const turnDeviceIds = turners.map(turner => turner.deviceId).filter(Boolean);
 
   io.emit('leader-state', {
     leaderSocketId: leaderSocketIds[0] || null,
@@ -739,6 +745,9 @@ function broadcastLeaderState() {
     leaderDeviceIds,
     leaderUserName: leaderUserNames[0] || '',
     leaderUserNames,
+    turnSocketIds,
+    turnDeviceIds,
+    turnUserNames,
     leaderCount: leaderDeviceIds.length,
     maxLeaders: MAX_LEADERS,
     hasLeader: leaderDeviceIds.length > 0
@@ -751,6 +760,18 @@ function isLeaderSocket(socket) {
 
   const leader = leadersByDeviceId.get(deviceId);
   return !!leader && leader.socketId === socket.id;
+}
+
+function isTurnSocket(socket) {
+  const deviceId = String(socket.data.deviceId || '').trim();
+  if (!deviceId) return false;
+
+  const turner = turnersByDeviceId.get(deviceId);
+  return !!turner && turner.socketId === socket.id;
+}
+
+function canChangeSong(socket) {
+  return isLeaderSocket(socket) || isTurnSocket(socket);
 }
 
 function getSocketDeviceId(socket) {
@@ -786,6 +807,7 @@ function pruneDisconnectedLeaders() {
     broadcastLeaderState();
     if (leadersByDeviceId.size === 0) {
       activePlaybackDeviceId = '';
+      currentPlaybackPosition = null;
       currentAutoScrollState = { active: false, speed: 50 };
       io.emit('apply-autoscroll', {
         ...currentAutoScrollState,
@@ -1378,6 +1400,14 @@ io.on('connection', (socket) => {
       });
     }
 
+    if (turnersByDeviceId.has(cleanDeviceId)) {
+      turnersByDeviceId.set(cleanDeviceId, {
+        socketId: socket.id,
+        userName: cleanUser,
+        deviceId: cleanDeviceId
+      });
+    }
+
     broadcastConnectedUsers();
     broadcastLeaderState();
 
@@ -1393,6 +1423,14 @@ io.on('connection', (socket) => {
       controllerDeviceId: currentAutoScrollState.active ? activePlaybackDeviceId : '',
       replay: true
     });
+
+    if (currentPlaybackPosition) {
+      socket.emit('apply-scroll', {
+        ...currentPlaybackPosition,
+        official: true,
+        replay: true
+      });
+    }
   });
 
 socket.on('mark-played', ({ fileName, played }) => {
@@ -1421,6 +1459,7 @@ socket.on('reset-played-tonight', () => {
     if (!deviceId) return;
 
     if (leadersByDeviceId.has(deviceId) || leadersByDeviceId.size < MAX_LEADERS) {
+      turnersByDeviceId.delete(deviceId);
       leadersByDeviceId.set(deviceId, {
         socketId: socket.id,
         userName,
@@ -1436,6 +1475,41 @@ socket.on('reset-played-tonight', () => {
     }
   });
 
+  socket.on('request-turn', () => {
+    const deviceId = String(socket.data.deviceId || '').trim();
+    const userName = String(socket.data.userName || 'Turn').trim();
+    if (!deviceId) return;
+
+    leadersByDeviceId.delete(deviceId);
+    if (activePlaybackDeviceId === deviceId) {
+      activePlaybackDeviceId = '';
+      currentAutoScrollState = {
+        active: false,
+        speed: currentAutoScrollState.speed || 50
+      };
+      io.emit('apply-autoscroll', {
+        ...currentAutoScrollState,
+        controllerDeviceId: ''
+      });
+    }
+
+    turnersByDeviceId.set(deviceId, {
+      socketId: socket.id,
+      userName,
+      deviceId
+    });
+
+    broadcastLeaderState();
+  });
+
+  socket.on('release-turn', () => {
+    const deviceId = String(socket.data.deviceId || '').trim();
+    if (deviceId && turnersByDeviceId.has(deviceId)) {
+      turnersByDeviceId.delete(deviceId);
+      broadcastLeaderState();
+    }
+  });
+
   socket.on('release-leader', () => {
     const deviceId = String(socket.data.deviceId || '').trim();
 
@@ -1444,6 +1518,7 @@ socket.on('reset-played-tonight', () => {
       broadcastLeaderState();
       if (leadersByDeviceId.size === 0) {
         activePlaybackDeviceId = '';
+        currentPlaybackPosition = null;
         currentAutoScrollState = { active: false, speed: 50 };
         io.emit('apply-autoscroll', {
           ...currentAutoScrollState,
@@ -1454,13 +1529,14 @@ socket.on('reset-played-tonight', () => {
   });
 
   socket.on('change-song', (fileName) => {
-    if (!isLeaderSocket(socket)) return;
+    if (!canChangeSong(socket)) return;
 
     const cleanFileName = String(fileName || '').trim();
     if (!isValidSongName(cleanFileName)) return;
 
     currentSongFileName = cleanFileName;
     activePlaybackDeviceId = '';
+    currentPlaybackPosition = null;
     currentAutoScrollState = {
       active: false,
       speed: currentAutoScrollState.speed || 50
@@ -1493,8 +1569,35 @@ socket.on('reset-played-tonight', () => {
       ? Math.max(0, Math.min(1, Number(payload.scrollRatio)))
       : null;
     const manual = !!payload?.manual;
+    const official = !!payload?.official;
 
-    socket.broadcast.emit('apply-scroll', { anchor, progress, top, scrollRatio, manual });
+    currentPlaybackPosition = {
+      anchor,
+      progress,
+      top,
+      scrollRatio,
+      manual,
+      official,
+      updatedAt: Date.now()
+    };
+
+    socket.broadcast.emit('apply-scroll', { anchor, progress, top, scrollRatio, manual, official });
+  });
+
+  socket.on('request-sync-position', () => {
+    if (currentPlaybackPosition) {
+      socket.emit('apply-scroll', {
+        ...currentPlaybackPosition,
+        official: true,
+        replay: true
+      });
+    }
+
+    socket.emit('apply-autoscroll', {
+      ...currentAutoScrollState,
+      controllerDeviceId: currentAutoScrollState.active ? activePlaybackDeviceId : '',
+      replay: true
+    });
   });
 
   socket.on('sync-autoscroll', (d) => {
@@ -1554,6 +1657,14 @@ socket.on('reset-played-tonight', () => {
     if (wasLeader) {
       if (activePlaybackDeviceId === deviceId) {
         activePlaybackDeviceId = '';
+        currentAutoScrollState = {
+          active: false,
+          speed: currentAutoScrollState.speed || 50
+        };
+        io.emit('apply-autoscroll', {
+          ...currentAutoScrollState,
+          controllerDeviceId: ''
+        });
       }
 
       const leader = leadersByDeviceId.get(deviceId);
@@ -1565,6 +1676,11 @@ socket.on('reset-played-tonight', () => {
       });
       broadcastLeaderState();
       scheduleLeaderCleanup();
+    }
+
+    if (deviceId && turnersByDeviceId.has(deviceId)) {
+      turnersByDeviceId.delete(deviceId);
+      broadcastLeaderState();
     }
   });
 });
