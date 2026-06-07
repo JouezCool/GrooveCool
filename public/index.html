@@ -486,10 +486,30 @@ body.concert-mode #settingsFixedWrap{
   white-space:nowrap;
 }
 
-.song-badge.played{
-  border-color: rgba(76,175,80,0.55);
-  background: rgba(76,175,80,0.18);
-}
+    .song-badge.played{
+      border-color: rgba(76,175,80,0.55);
+      background: rgba(76,175,80,0.18);
+    }
+
+    .song-item.setlist-selected{
+      background:rgba(255,152,0,0.14);
+      outline:2px solid rgba(255,152,0,0.55);
+      outline-offset:-2px;
+    }
+
+    .setlist-order-badge{
+      min-width:26px;
+      height:26px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      background:var(--accent);
+      color:#111;
+      font-size:13px;
+      font-weight:900;
+      flex-shrink:0;
+    }
 
 nav{
   display:flex;
@@ -1038,6 +1058,10 @@ nav{
 
     <button class="btn" onclick="resetSongFilters()">Rétablir filtres</button>
     <button class="btn" onclick="resetTonight()">Tous à jouer</button>
+    <button class="btn" id="setlistModeBtn" onclick="toggleSetlistBuilder()">SETLIST</button>
+    <button class="btn btn-blue" id="setlistSaveBtn" onclick="saveTempSetlist()" style="display:none;">ENREGISTRER</button>
+    <button class="btn" id="setlistCancelBtn" onclick="cancelSetlistBuilder()" style="display:none;">ANNULER</button>
+    <button class="btn" id="setlistExitBtn" onclick="clearActiveSetlist()" style="display:none;">QUITTER SETLIST</button>
   </div>
 
   <div id="songList"></div>
@@ -1324,6 +1348,10 @@ let desiredRole = localStorage.getItem('bandapp_role') || (wantsLeader ? 'leader
 let playbackActive = false;
 let playbackControllerDeviceId = "";
 let lastOfficialScrollSyncAt = 0;
+let setlistBuildMode = false;
+let setlistDraftIndexes = [];
+let activeSetlistIndexes = [];
+let setlistBeforeBuildIndexes = [];
 let deviceId = localStorage.getItem('bandapp_deviceId') || "";
 if (!deviceId) {
   deviceId = (crypto?.randomUUID?.() || ('dev-' + Date.now() + '-' + Math.random().toString(36).slice(2)));
@@ -1433,6 +1461,14 @@ function hexToRgba(hex, alpha) {
 
 function updateCategoryTitle() {
   if (!categoryTitleEl) return;
+  if (setlistBuildMode) {
+    categoryTitleEl.textContent = `Setlist (${setlistDraftIndexes.length})`;
+    return;
+  }
+  if (activeSetlistIndexes.length) {
+    categoryTitleEl.textContent = 'Setlist';
+    return;
+  }
   const label = String(categoryFilterEl?.value || 'Répertoire').trim() || 'Répertoire';
   categoryTitleEl.textContent = label;
 }
@@ -1954,6 +1990,26 @@ function canChooseSongs() {
   return isLeader || isTurn;
 }
 
+function isSetlistActive() {
+  return activeSetlistIndexes.length > 0;
+}
+
+function syncSetlistButtons() {
+  const modeBtn = document.getElementById('setlistModeBtn');
+  const saveBtn = document.getElementById('setlistSaveBtn');
+  const cancelBtn = document.getElementById('setlistCancelBtn');
+  const exitBtn = document.getElementById('setlistExitBtn');
+
+  if (modeBtn) {
+    modeBtn.style.display = canChooseSongs() ? '' : 'none';
+    modeBtn.classList.toggle('active-btn', setlistBuildMode);
+    modeBtn.textContent = setlistBuildMode ? 'SÉLECTION' : 'SETLIST';
+  }
+  if (saveBtn) saveBtn.style.display = setlistBuildMode ? '' : 'none';
+  if (cancelBtn) cancelBtn.style.display = setlistBuildMode ? '' : 'none';
+  if (exitBtn) exitBtn.style.display = (!setlistBuildMode && isSetlistActive()) ? '' : 'none';
+}
+
 function updateResyncButton() {
   const btn = document.getElementById('resyncLeaderBtn');
   if (!btn) return;
@@ -1982,6 +2038,7 @@ function updateConcertFloatingVisibility() {
   const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
   if (concertWrap) concertWrap.style.display = viewerOpen ? 'block' : 'none';
   updateResyncButton();
+  syncSetlistButtons();
 }
 
   function loadUsersList() {
@@ -2466,16 +2523,23 @@ function sortSongsForLibrary() {
 
 function renderSongList() {
   const listEl = document.getElementById('songList');
+  const indexes = isSetlistActive() && !setlistBuildMode
+    ? activeSetlistIndexes
+    : allSongs.map((_, idx) => idx);
 
-  listEl.innerHTML = allSongs.map((s, idx) => {
+  listEl.innerHTML = indexes.map((idx) => {
+    const s = allSongs[idx];
     const played = isPlayedTonight(s);
     const { title, artist } = getSongDisplayInfo(s);
+    const draftOrder = setlistDraftIndexes.indexOf(idx);
+    const isDraftSelected = draftOrder !== -1;
 
     return `
-      <div class="song-item ${played ? 'played' : ''}"
+      <div class="song-item ${played ? 'played' : ''} ${isDraftSelected ? 'setlist-selected' : ''}"
            data-index="${idx}"
-           onclick="openSong(${idx})">
+           onclick="${setlistBuildMode ? `toggleSetlistSong(${idx})` : `openSong(${idx})`}">
         <div class="song-left">
+          ${isDraftSelected ? `<span class="setlist-order-badge">${draftOrder + 1}</span>` : ''}
           <span class="song-badge ${played ? 'played' : ''}">
             ${played ? 'Joué' : 'À jouer'}
           </span>
@@ -2490,6 +2554,10 @@ function renderSongList() {
 }
 
 function getFilteredSongIndexes() {
+  if (isSetlistActive() && !setlistBuildMode) {
+    return [...activeSetlistIndexes];
+  }
+
   const query = songSearchInput?.value || "";
 
   return allSongs.reduce((acc, song, idx) => {
@@ -2562,13 +2630,17 @@ function filterSongList(q) {
   items.forEach(item => {
     const idx = Number(item.dataset.index);
     const song = allSongs[idx];
-    const ok = songMatchesFilters(song, q);
+    const ok = isSetlistActive() && !setlistBuildMode
+      ? true
+      : songMatchesFilters(song, q);
 
     item.style.display = ok ? "flex" : "none";
     if (ok) shown++;
   });
 
   updateSongCount(shown);
+  updateCategoryTitle();
+  syncSetlistButtons();
 }
 
 function resetSongFilters() {
@@ -2583,11 +2655,83 @@ function resetSongFilters() {
   filterSongList("");
 }
 
+function toggleSetlistBuilder() {
+  if (!canChooseSongs()) {
+    showToast("Setlist disponible en TURN ou LEADER");
+    return;
+  }
+
+  setlistBuildMode = !setlistBuildMode;
+  if (setlistBuildMode) {
+    setlistBeforeBuildIndexes = [...activeSetlistIndexes];
+    setlistDraftIndexes = isSetlistActive() ? [...activeSetlistIndexes] : [];
+    activeSetlistIndexes = [];
+  }
+
+  renderSongList();
+  filterSongList(songSearchInput?.value || "");
+  syncSetlistButtons();
+}
+
+function toggleSetlistSong(idx) {
+  if (!setlistBuildMode) return;
+
+  const pos = setlistDraftIndexes.indexOf(idx);
+  if (pos === -1) {
+    setlistDraftIndexes.push(idx);
+  } else {
+    setlistDraftIndexes.splice(pos, 1);
+  }
+
+  renderSongList();
+  filterSongList(songSearchInput?.value || "");
+}
+
+function saveTempSetlist() {
+  if (!setlistBuildMode) return;
+  if (!setlistDraftIndexes.length) {
+    showToast("Sélectionne au moins un morceau");
+    return;
+  }
+
+  activeSetlistIndexes = [...setlistDraftIndexes];
+  setlistBuildMode = false;
+  setlistDraftIndexes = [];
+  setlistBeforeBuildIndexes = [];
+  currentIndex = activeSetlistIndexes.includes(currentIndex) ? currentIndex : activeSetlistIndexes[0];
+
+  renderSongList();
+  filterSongList("");
+  showToast("Setlist active");
+}
+
+function cancelSetlistBuilder() {
+  setlistBuildMode = false;
+  activeSetlistIndexes = [...setlistBeforeBuildIndexes];
+  setlistDraftIndexes = [];
+  setlistBeforeBuildIndexes = [];
+  renderSongList();
+  filterSongList(songSearchInput?.value || "");
+}
+
+function clearActiveSetlist() {
+  activeSetlistIndexes = [];
+  setlistBuildMode = false;
+  setlistDraftIndexes = [];
+  setlistBeforeBuildIndexes = [];
+  renderSongList();
+  filterSongList(songSearchInput?.value || "");
+  showToast("Setlist quittée");
+}
+
   function updateSongCount(visibleCount) {
     if (!songCountEl) return;
     const total = allSongs.length || 0;
-    const visible = (typeof visibleCount === "number") ? visibleCount : total;
-    songCountEl.textContent = `${visible}/${total}`;
+    const setlistTotal = isSetlistActive() ? activeSetlistIndexes.length : total;
+    const visible = (typeof visibleCount === "number") ? visibleCount : setlistTotal;
+    songCountEl.textContent = isSetlistActive()
+      ? `${visible}/${setlistTotal}`
+      : `${visible}/${total}`;
   }
 
   function toggleLeader() {
