@@ -2852,6 +2852,12 @@ function openRemoteSong(fileName) {
   const cleanFileName = String(fileName || '').trim();
   if (!cleanFileName) return;
 
+  // Le morceau est déjà celui affiché : on ignore. Sans ce garde-fou, le
+  // resync automatique en arrière-plan (qui renvoie régulièrement le morceau
+  // en cours pour rattraper un appareil qui aurait raté le changement)
+  // réinitialiserait le défilement de tout le monde à chaque tick.
+  if (cleanFileName === currentFileName) return;
+
   stopAutoScroll();
 
   const idx = allSongs.indexOf(cleanFileName);
