@@ -25,6 +25,103 @@ const LEADER_PIN = String(process.env.LEADER_PIN || '1991');
 const OAUTH_TOKENS_FILE_NAME = 'oauth-tokens.json';
 const SONG_SETTINGS_META_KEY = '__songSettings';
 
+// --- Mot de passe partagé pour accéder à l'app ---
+// Par défaut, réutilise LEADER_PIN pour ne demander qu'un seul mot de passe aux membres,
+// mais peut être défini séparément via la variable d'environnement SITE_PASSWORD sur Render.
+const SITE_PASSWORD = String(process.env.SITE_PASSWORD || LEADER_PIN);
+// Signe les cookies de session. Idéalement définie séparément via la variable d'environnement
+// SESSION_SECRET sur Render ; à défaut, dérivée du mot de passe pour que les sessions restent
+// valides après un redéploiement ou une mise en veille (plan gratuit Render).
+const SESSION_SECRET = process.env.SESSION_SECRET
+  || crypto.createHash('sha256').update('groovecool-session-' + SITE_PASSWORD).digest('hex');
+const SESSION_COOKIE_NAME = 'gc_session';
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+function parseCookieHeader(headerStr) {
+	  const out = {};
+	  if (!headerStr) return out;
+	  headerStr.split(';').forEach(part => {
+		      const idx = part.indexOf('=');
+		      if (idx === -1) return;
+		      const key = part.slice(0, idx).trim();
+		      const val = part.slice(idx + 1).trim();
+		      if (key) out[key] = decodeURIComponent(val);
+	  });
+	  return out;
+}
+
+function signSession(expiresAt) {
+	  const payload = String(expiresAt);
+	  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
+	  return `${payload}.${sig}`;
+}
+
+function verifySession(token) {
+	  if (!token) return false;
+	  const parts = String(token).split('.');
+	  if (parts.length !== 2) return false;
+	  const [payload, sig] = parts;
+	  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
+	  const sigBuf = Buffer.from(sig);
+	  const expBuf = Buffer.from(expected);
+	  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) return false;
+	  const expiresAt = Number(payload);
+	  return Number.isFinite(expiresAt) && Date.now() < expiresAt;
+}
+
+function isAuthenticated(req) {
+	  const cookies = parseCookieHeader(req.headers.cookie);
+	  return verifySession(cookies[SESSION_COOKIE_NAME]);
+}
+
+function loginPageHtml(errorMessage) {
+	  const errorHtml = errorMessage
+	    ? `<p style="color:#ff6b6b;margin:0 0 16px;font-size:14px;">${errorMessage}</p>`
+		      : '';
+	  return `<!DOCTYPE html>
+	  <html lang="fr">
+	  <head>
+	  <meta charset="UTF-8">
+	  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	  <title>GrooveCool - Connexion</title>
+	  <style>
+	    body{background:#000;color:#eee;font-family:-apple-system,Segoe UI,Roboto,sans-serif;
+		    display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+			  form{background:#111;border:1px solid #2a2a2a;border-radius:12px;padding:32px;width:280px;}
+			    h1{font-size:18px;margin:0 0 20px;text-align:center;color:#ff9800;}
+				  input{width:100%;box-sizing:border-box;padding:12px;border-radius:8px;border:1px solid #333;
+				      background:#000;color:#eee;font-size:16px;margin-bottom:16px;}
+					    button{width:100%;padding:12px;border-radius:8px;border:none;background:#ff9800;
+						    color:#000;font-weight:600;font-size:15px;cursor:pointer;}
+							</style>
+							</head>
+							<body>
+							<form method="POST" action="/login">
+							  <h1>🎵 GrooveCool</h1>
+							    ${errorHtml}
+								  <input type="password" name="password" placeholder="Mot de passe" autofocus required>
+								    <button type="submit">Entrer</button>
+									</form>
+									</body>
+									</html>`;
+}
+
+const AUTH_OPEN_PATHS = new Set(['/login', '/health']);
+
+function requireAuth(req, res, next) {
+	  if (AUTH_OPEN_PATHS.has(req.path) || req.path.startsWith('/socket.io/')) {
+		      return next();
+	  }
+
+	  if (isAuthenticated(req)) return next();
+
+	  const wantsJson = req.method !== 'GET' || req.headers.accept?.includes('application/json');
+	  if (wantsJson) {
+		      return res.status(401).json({ error: 'unauthorized' });
+	  }
+	  res.redirect('/login');
+}
+
 const memoryCache = {
   songsList: null,
   songsListAt: 0,
@@ -93,6 +190,34 @@ let currentPlaybackPosition = null;
 let leaderCleanupTimer = null;
 
 app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false }));
+
+app.get('/login', (req, res) => {
+	  if (isAuthenticated(req)) return res.redirect('/');
+	  res.type('html').send(loginPageHtml());
+});
+
+app.post('/login', (req, res) => {
+	  const password = String(req.body?.password || '');
+	  if (password !== SITE_PASSWORD) {
+		      return res.status(401).type('html').send(loginPageHtml('Mot de passe incorrect'));
+	  }
+
+	  const expiresAt = Date.now() + SESSION_MAX_AGE_MS;
+	  const token = signSession(expiresAt);
+	  res.setHeader(
+		      'Set-Cookie',
+		      `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}; HttpOnly; Path=/; Max-Age=${Math.floor(SESSION_MAX_AGE_MS / 1000)}; SameSite=Lax`
+		    );
+	  res.redirect('/');
+});
+
+app.get('/logout', (req, res) => {
+	  res.setHeader('Set-Cookie', `${SESSION_COOKIE_NAME}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`);
+	  res.redirect('/login');
+});
+
+app.use(requireAuth);
 
 app.use(express.static('public', {
   etag: true,
@@ -1370,6 +1495,12 @@ if (settingsFile) {
   }
 });
 
+io.use((socket, next) => {
+	  const cookies = parseCookieHeader(socket.handshake.headers?.cookie || '');
+	  if (verifySession(cookies[SESSION_COOKIE_NAME])) return next();
+	  next(new Error('unauthorized'));
+});
+
 io.on('connection', (socket) => {
   console.log('📱 connecté', socket.id);
 
@@ -1740,6 +1871,6 @@ const PORT = process.env.PORT || 3000;
 
   http.listen(PORT, '0.0.0.0', () => {
     console.log('✅ Serveur en ligne sur le port ' + PORT);
-    console.log('🔐 PIN global:', LEADER_PIN);
+    console.log('🔐 Mot de passe app configuré :', SITE_PASSWORD ? 'OK' : 'MANQUANT');
   });
 })();
