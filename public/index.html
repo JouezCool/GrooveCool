@@ -267,6 +267,36 @@ body.concert-mode #settingsFixedWrap{
       user-select:none;
     }
 
+    #roleMenuWrap{
+      position:relative;
+    }
+
+    .role-menu{
+      position:absolute;
+      top:calc(100% + 6px);
+      right:0;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      padding:8px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.18);
+      background:rgba(20,20,20,0.92);
+      backdrop-filter: blur(8px);
+      z-index:6001;
+      min-width:140px;
+    }
+
+    .role-menu-item{
+      cursor:pointer;
+      user-select:none;
+      text-align:center;
+    }
+
+    .role-menu-item.active{
+      outline:2px solid rgba(255,255,255,0.6);
+    }
+
     .version-badge.perso{
       border-color: rgba(59,130,246,0.55);
       background: rgba(59,130,246,0.18);
@@ -960,7 +990,14 @@ nav{
 
 <body>
 <div id="settingsFixedWrap">
-  <span id="leaderBadge" class="version-badge off" onclick="toggleLeader()" title="Changer le mode leader">FOLLOW</span>
+  <div id="roleMenuWrap">
+    <span id="leaderBadge" class="version-badge off" onclick="toggleRoleMenu()" title="Changer de rôle">FOLLOW</span>
+    <div id="roleMenu" class="role-menu" style="display:none;">
+      <div class="version-badge role-menu-item off" data-role="follow" onclick="selectRole('follow')">FOLLOW</div>
+      <div class="version-badge role-menu-item turn" data-role="turn" onclick="selectRole('turn')">TURN</div>
+      <div class="version-badge role-menu-item perso" data-role="leader" onclick="selectRole('leader')">LEADER</div>
+    </div>
+  </div>
   <button id="settingsBtnFixed" onclick="openSettings()">⚙️ Utilisateur</button>
 </div>
 
@@ -1361,6 +1398,8 @@ let wakeLockNoticeShown = false;
 let wantsLeader = localStorage.getItem('bandapp_wantsLeader') === '1';
 let leaderReleaseRequested = false;
 let desiredRole = localStorage.getItem('bandapp_role') || (wantsLeader ? 'leader' : 'follow');
+let currentLeaderUserName = '';
+let currentTurnUserName = '';
 let playbackActive = false;
 let playbackControllerDeviceId = "";
 let lastOfficialScrollSyncAt = 0;
@@ -1984,21 +2023,22 @@ function applyLeaderUI() {
 
   if (isLeader) {
     badge.textContent = "LEADER";
-    badge.title = "Quitter le mode leader";
+    badge.title = "Changer de rôle";
     badge.classList.remove('off', 'turn');
     badge.classList.add('perso');
   } else if (isTurn) {
     badge.textContent = "TURN";
-    badge.title = "Passer en leader";
+    badge.title = "Changer de rôle";
     badge.classList.remove('off', 'perso');
     badge.classList.add('turn');
   } else {
     badge.textContent = "FOLLOW";
-    badge.title = "Passer en turn";
+    badge.title = "Changer de rôle";
     badge.classList.remove('perso', 'turn');
     badge.classList.add('off');
   }
 
+  updateRoleMenuHighlight();
   updateResyncButton();
 }
 
@@ -2285,6 +2325,9 @@ socket.on('connected-users', (data) => {
     isLeader = leaderDeviceIds.includes(deviceId) || leaderSocketIds.includes(socket.id);
     isTurn = !isLeader && (turnDeviceIds.includes(deviceId) || turnSocketIds.includes(socket.id));
 
+    currentLeaderUserName = String(data?.leaderUserName || '').trim();
+    currentTurnUserName = String(data?.turnUserNames?.[0] || '').trim();
+
     if (isLeader) {
       desiredRole = 'leader';
       wantsLeader = true;
@@ -2318,11 +2361,31 @@ socket.on('connected-users', (data) => {
     leaderReleaseRequested = false;
     localStorage.removeItem('bandapp_wantsLeader');
 
+    // On ne bascule plus automatiquement en TURN : avec le menu de rôle,
+    // l'utilisateur a choisi LEADER explicitement, donc on le laisse là où
+    // il est réellement (isLeader/isTurn reflètent le dernier leader-state
+    // reçu) plutôt que de le rediriger vers un rôle qu'il n'a pas demandé.
     const names = String(data?.leaderUserName || '').trim();
-    desiredRole = 'turn';
-    localStorage.setItem('bandapp_role', 'turn');
-    socket.emit('request-turn');
+    desiredRole = isLeader ? 'leader' : (isTurn ? 'turn' : 'follow');
+    localStorage.setItem('bandapp_role', desiredRole);
     showToast(`Leader déjà actif${names ? ' : ' + names : ''}`);
+  });
+
+  socket.on('turn-denied', (data) => {
+    wantsLeader = false;
+    leaderReleaseRequested = false;
+    localStorage.removeItem('bandapp_wantsLeader');
+
+    const names = String(data?.turnUserName || '').trim();
+    desiredRole = isLeader ? 'leader' : (isTurn ? 'turn' : 'follow');
+    localStorage.setItem('bandapp_role', desiredRole);
+    showToast(`Turn déjà actif${names ? ' : ' + names : ''}`);
+  });
+
+  socket.on('role-taken-over', (data) => {
+    const role = String(data?.role || '').toUpperCase();
+    const byName = String(data?.byUserName || '').trim();
+    showToast(`Ta place de ${role} a été reprise${byName ? ' par ' + byName : ''}`);
   });
   
 function populateSongFilters() {
@@ -2773,22 +2836,80 @@ function clearActiveSetlist() {
       : `${visible}/${total}`;
   }
 
-  function toggleLeader() {
-    if (isLeader) {
-      desiredRole = 'follow';
-    } else if (isTurn) {
-      desiredRole = 'leader';
+  function toggleRoleMenu() {
+    const menu = document.getElementById('roleMenu');
+    if (!menu) return;
+
+    if (menu.style.display === 'none') {
+      updateRoleMenuHighlight();
+      menu.style.display = 'flex';
     } else {
-      desiredRole = 'turn';
+      closeRoleMenu();
+    }
+  }
+
+  function closeRoleMenu() {
+    const menu = document.getElementById('roleMenu');
+    if (menu) menu.style.display = 'none';
+  }
+
+  function updateRoleMenuHighlight() {
+    const menu = document.getElementById('roleMenu');
+    if (!menu) return;
+
+    const current = isLeader ? 'leader' : (isTurn ? 'turn' : 'follow');
+    menu.querySelectorAll('.role-menu-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.role === current);
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    const wrap = document.getElementById('roleMenuWrap');
+    if (wrap && !wrap.contains(e.target)) closeRoleMenu();
+  });
+
+  // Choix explicite d'un rôle dans le menu déroulant. LEADER et TURN sont
+  // exclusifs (une personne à la fois) : si la place est déjà prise par
+  // quelqu'un d'autre, on demande le code PIN pour la lui "voler" — pensé
+  // pour un dépannage occasionnel, pas un usage courant.
+  function selectRole(role) {
+    closeRoleMenu();
+
+    const current = isLeader ? 'leader' : (isTurn ? 'turn' : 'follow');
+    if (role === current) return;
+
+    if (role === 'follow') {
+      desiredRole = 'follow';
+      wantsLeader = false;
+      leaderReleaseRequested = true;
+      localStorage.setItem('bandapp_role', 'follow');
+      localStorage.removeItem('bandapp_wantsLeader');
+      socket.emit('release-leader');
+      socket.emit('release-turn');
+      return;
     }
 
-    wantsLeader = desiredRole === 'leader';
-    leaderReleaseRequested = desiredRole !== 'leader';
-    localStorage.setItem('bandapp_role', desiredRole);
+    const holderName = role === 'leader' ? currentLeaderUserName : currentTurnUserName;
+    let pin = '';
+
+    if (holderName) {
+      const entered = prompt(`${holderName} est déjà ${role.toUpperCase()}. Code pour prendre sa place :`);
+      if (entered === null) return; // annulé
+      pin = String(entered).trim();
+    }
+
+    desiredRole = role;
+    wantsLeader = role === 'leader';
+    leaderReleaseRequested = false;
+    localStorage.setItem('bandapp_role', role);
     if (wantsLeader) localStorage.setItem('bandapp_wantsLeader', '1');
     else localStorage.removeItem('bandapp_wantsLeader');
 
-    requestDesiredRole();
+    if (role === 'leader') {
+      socket.emit('request-leader', { pin });
+    } else {
+      socket.emit('request-turn', { pin });
+    }
   }
   
   function autoMarkCurrentSongAsPlayed() {
