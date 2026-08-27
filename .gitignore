@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+.env
+npm-debug.log*
+# Les partitions vivent sur Google Drive (lues dynamiquement par le serveur) ;
+# la copie locale ne doit pas repartir dans le dépôt public.
+public/partitions/
