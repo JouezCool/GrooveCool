@@ -298,18 +298,27 @@ body.concert-mode #settingsFixedWrap{
     }
 
     .version-badge.perso{
-      border-color: rgba(59,130,246,0.55);
-      background: rgba(59,130,246,0.18);
+      border-color: rgba(59,130,246,0.75);
+      background: rgba(59,130,246,0.32);
+      color:#eaf2ff;
     }
 
     .version-badge.off{
-      border-color: rgba(255,152,0,0.55);
-      background: rgba(255,152,0,0.18);
+      border-color: rgba(255,152,0,0.75);
+      background: rgba(255,152,0,0.32);
+      color:#fff6e8;
     }
 
     .version-badge.turn{
-      border-color: rgba(156,39,176,0.55);
-      background: rgba(156,39,176,0.18);
+      border-color: rgba(156,39,176,0.75);
+      background: rgba(156,39,176,0.32);
+      color:#f7e8fb;
+    }
+
+    .version-badge.karaoke{
+      border-color: rgba(233,30,99,0.75);
+      background: rgba(233,30,99,0.32);
+      color:#ffe8f0;
     }
 
     #netBadge.off{
@@ -709,6 +718,65 @@ nav{
       line-height:1.6;
     }
 
+    /* Mode karaoké : n'affiche que les paroles, en gardant exactement la
+       même mise en page (même chord-row, même hauteur de ligne) que la vue
+       normale avec accords — pour que le défilement synchronisé (basé sur
+       un ratio de la hauteur totale de la page) reste aligné avec ce que
+       voit le groupe. On utilise visibility:hidden (pas display:none) pour
+       que chaque élément garde exactement sa place. */
+    body.karaoke-mode #songContent .chord-cell .chord,
+    body.karaoke-mode #songContent .commentline,
+    body.karaoke-mode #songContent .inline-music-line.notes-only,
+    body.karaoke-mode #songContent .pu-block{
+      visibility:hidden;
+    }
+
+    body.karaoke-mode #songContent .inline-music-line.chords-only{
+      visibility:hidden;
+      position:relative;
+    }
+
+    body.karaoke-mode #songContent .inline-music-line.chords-only::after{
+      content:"🎵 instrumental";
+      visibility:visible;
+      position:absolute;
+      left:0;
+      top:0;
+      color:var(--text);
+      font-family:sans-serif;
+      font-weight:700;
+      opacity:0.65;
+    }
+
+    /* Zoom plutôt que font-size : ça grossit TOUT le contenu (paroles,
+       mais aussi les éléments cachés) dans les mêmes proportions, donc la
+       hauteur totale de la page reste un agrandissement uniforme de la vue
+       normale — le ratio de défilement synchronisé reste donc exact. */
+    body.karaoke-mode #songContent{
+      zoom:1.4;
+    }
+
+    .karaoke-current-line{
+      background: rgba(255,255,255,0.14);
+      border-radius:8px;
+      box-shadow: inset 4px 0 0 0 rgba(233,30,99,0.85);
+    }
+
+    /* En mode concert + karaoké, l'appareil est tendu à l'invité : on
+       masque tout ce qui pourrait changer le morceau ou perturber la
+       lecture, il ne reste que le bouton pour sortir du mode concert. */
+    body.concert-mode.karaoke-mode #prevSongBtn,
+    body.concert-mode.karaoke-mode #nextSongBtn,
+    body.concert-mode.karaoke-mode #resyncLeaderBtn{
+      display:none !important;
+    }
+
+    body.concert-mode.karaoke-mode #concertModeBtn{
+      padding:4px 8px;
+      font-size:11px;
+      opacity:0.5;
+    }
+
     .inline-music-line{
       white-space:pre-wrap;
       word-break:keep-all;
@@ -996,6 +1064,7 @@ nav{
       <div class="version-badge role-menu-item off" data-role="follow" onclick="selectRole('follow')">FOLLOW</div>
       <div class="version-badge role-menu-item turn" data-role="turn" onclick="selectRole('turn')">TURN</div>
       <div class="version-badge role-menu-item perso" data-role="leader" onclick="selectRole('leader')">LEADER</div>
+      <div class="version-badge role-menu-item karaoke" data-role="karaoke" onclick="selectRole('karaoke')">KARAOKE</div>
     </div>
   </div>
   <button id="settingsBtnFixed" onclick="openSettings()">⚙️ Utilisateur</button>
@@ -1999,6 +2068,15 @@ function renderConnectedUsers(usersList) {
   el.innerHTML = usersList.map(name => `<div>${escapeHtml(name)}</div>`).join('');
 }
 
+// Rôle "affiché" à l'écran : Leader/Turn viennent du serveur (ressources
+// exclusives), Follow/Karaoke sont purement locaux (un simple choix
+// d'affichage, rien à réserver côté serveur).
+function currentDisplayRole() {
+  if (isLeader) return 'leader';
+  if (isTurn) return 'turn';
+  return desiredRole === 'karaoke' ? 'karaoke' : 'follow';
+}
+
 function applyLeaderUI() {
   document.querySelectorAll('.leader-only').forEach(el => {
     if (isLeader) {
@@ -2021,25 +2099,34 @@ function applyLeaderUI() {
   const badge = document.getElementById('leaderBadge');
   if (!badge) return;
 
-  if (isLeader) {
+  const role = currentDisplayRole();
+  document.body.classList.toggle('karaoke-mode', role === 'karaoke');
+
+  if (role === 'leader') {
     badge.textContent = "LEADER";
     badge.title = "Changer de rôle";
-    badge.classList.remove('off', 'turn');
+    badge.classList.remove('off', 'turn', 'karaoke');
     badge.classList.add('perso');
-  } else if (isTurn) {
+  } else if (role === 'turn') {
     badge.textContent = "TURN";
     badge.title = "Changer de rôle";
-    badge.classList.remove('off', 'perso');
+    badge.classList.remove('off', 'perso', 'karaoke');
     badge.classList.add('turn');
+  } else if (role === 'karaoke') {
+    badge.textContent = "KARAOKE";
+    badge.title = "Changer de rôle";
+    badge.classList.remove('off', 'perso', 'turn');
+    badge.classList.add('karaoke');
   } else {
     badge.textContent = "FOLLOW";
     badge.title = "Changer de rôle";
-    badge.classList.remove('perso', 'turn');
+    badge.classList.remove('perso', 'turn', 'karaoke');
     badge.classList.add('off');
   }
 
   updateRoleMenuHighlight();
   updateResyncButton();
+  updateKaraokeHighlight();
 }
 
 function canChooseSongs() {
@@ -2857,7 +2944,7 @@ function clearActiveSetlist() {
     const menu = document.getElementById('roleMenu');
     if (!menu) return;
 
-    const current = isLeader ? 'leader' : (isTurn ? 'turn' : 'follow');
+    const current = currentDisplayRole();
     menu.querySelectorAll('.role-menu-item').forEach(el => {
       el.classList.toggle('active', el.dataset.role === current);
     });
@@ -2875,7 +2962,7 @@ function clearActiveSetlist() {
   function selectRole(role) {
     closeRoleMenu();
 
-    const current = isLeader ? 'leader' : (isTurn ? 'turn' : 'follow');
+    const current = currentDisplayRole();
     if (role === current) return;
 
     if (role === 'follow') {
@@ -2886,6 +2973,23 @@ function clearActiveSetlist() {
       localStorage.removeItem('bandapp_wantsLeader');
       socket.emit('release-leader');
       socket.emit('release-turn');
+      applyLeaderUI();
+      return;
+    }
+
+    if (role === 'karaoke') {
+      // Rôle purement local (pas de ressource à réserver côté serveur) :
+      // on met à jour l'UI tout de suite plutôt que d'attendre un
+      // éventuel round-trip serveur qui pourrait ne jamais arriver si rien
+      // ne change côté leader/turn.
+      desiredRole = 'karaoke';
+      wantsLeader = false;
+      leaderReleaseRequested = false;
+      localStorage.setItem('bandapp_role', 'karaoke');
+      localStorage.removeItem('bandapp_wantsLeader');
+      socket.emit('release-leader');
+      socket.emit('release-turn');
+      applyLeaderUI();
       return;
     }
 
@@ -3520,6 +3624,51 @@ viewerElement.addEventListener('scroll', () => {
   if (isScrolling && !isLeaderManualDragging) return;
 
   emitLeaderScrollSync();
+});
+
+// Surlignage de la ligne en cours en mode karaoké. Basé sur la position de
+// défilement réelle (quelle ligne se trouve actuellement au niveau d'un
+// repère fixe à l'écran), pas sur un temps ou un tempo — ça s'adapte donc
+// automatiquement à n'importe quelle vitesse de jeu, sans métronome.
+let karaokeHighlightEl = null;
+let karaokeHighlightRaf = null;
+
+function updateKaraokeHighlight() {
+  if (!document.body.classList.contains('karaoke-mode')) {
+    if (karaokeHighlightEl) {
+      karaokeHighlightEl.classList.remove('karaoke-current-line');
+      karaokeHighlightEl = null;
+    }
+    return;
+  }
+
+  if (!isViewerOpen()) return;
+
+  const blocks = viewerElement.querySelectorAll('[data-kind="lyric"]');
+  if (!blocks.length) return;
+
+  const markerY = viewerElement.scrollTop + viewerElement.clientHeight * 0.35;
+  let target = blocks[blocks.length - 1];
+  for (const el of blocks) {
+    if (el.offsetTop + el.offsetHeight > markerY) {
+      target = el;
+      break;
+    }
+  }
+
+  if (target !== karaokeHighlightEl) {
+    if (karaokeHighlightEl) karaokeHighlightEl.classList.remove('karaoke-current-line');
+    target.classList.add('karaoke-current-line');
+    karaokeHighlightEl = target;
+  }
+}
+
+viewerElement.addEventListener('scroll', () => {
+  if (karaokeHighlightRaf) return;
+  karaokeHighlightRaf = requestAnimationFrame(() => {
+    karaokeHighlightRaf = null;
+    updateKaraokeHighlight();
+  });
 });
 
 function applyRemoteScroll(data) {
