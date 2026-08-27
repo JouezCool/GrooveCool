@@ -1,7 +1,14 @@
 const express = require('express');
 const app = express();
 const http = require('http').Server(app);
-const io = require('socket.io')(http);
+const io = require('socket.io')(http, {
+  // Tolère les micro-coupures réseau (WiFi de salle, 4G, verrouillage d'écran)
+  // sans déclarer la connexion morte trop vite. Valeurs par défaut de Socket.IO :
+  // pingTimeout 20000ms / pingInterval 25000ms — on augmente le timeout pour
+  // absorber les brefs trous réseau observés en concert.
+  pingTimeout: 60000,
+  pingInterval: 25000
+});
 const crypto = require('crypto');
 const { google } = require('googleapis');
 const { Readable } = require('stream');
@@ -178,6 +185,11 @@ let playedTonightSaveTimer = null;
 const connectedUsers = new Map();
 const MAX_LEADERS = 1;
 const LEADER_RECONNECT_GRACE_MS = 5 * 60 * 1000;
+// Si le leader actif se déconnecte brièvement (coupure réseau), on attend
+// quelques secondes avant de couper le défilement de tout le monde — le temps
+// qu'il se reconnecte tout seul. Ça évite qu'une micro-coupure du leader
+// interrompe tout le monde pendant un concert.
+const PLAYBACK_STOP_GRACE_MS = 8000;
 const leadersByDeviceId = new Map();
 const turnersByDeviceId = new Map();
 let currentSongFileName = '';
@@ -188,6 +200,7 @@ let currentAutoScrollState = {
 let activePlaybackDeviceId = '';
 let currentPlaybackPosition = null;
 let leaderCleanupTimer = null;
+let pendingPlaybackStop = null;
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
@@ -1529,6 +1542,13 @@ io.on('connection', (socket) => {
         deviceId: cleanDeviceId,
         disconnectedAt: 0
       });
+
+      // Le leader revient avant la fin de la fenêtre de grâce : on annule
+      // l'arrêt du défilement, le concert continue sans interruption.
+      if (pendingPlaybackStop && pendingPlaybackStop.deviceId === cleanDeviceId) {
+        clearTimeout(pendingPlaybackStop.timer);
+        pendingPlaybackStop = null;
+      }
     }
 
     if (turnersByDeviceId.has(cleanDeviceId)) {
@@ -1787,15 +1807,29 @@ socket.on('reset-played-tonight', () => {
 
     if (wasLeader) {
       if (activePlaybackDeviceId === deviceId) {
-        activePlaybackDeviceId = '';
-        currentAutoScrollState = {
-          active: false,
-          speed: currentAutoScrollState.speed || 50
+        // On ne coupe pas le défilement de tout le monde immédiatement :
+        // ça laisse une courte fenêtre de grâce pour absorber une micro-coupure
+        // réseau du leader (WiFi de salle, 4G, écran verrouillé) sans arrêter
+        // le concert pour tout le monde. Les autres continuent de défiler
+        // localement en attendant.
+        if (pendingPlaybackStop) clearTimeout(pendingPlaybackStop.timer);
+        pendingPlaybackStop = {
+          deviceId,
+          timer: setTimeout(() => {
+            pendingPlaybackStop = null;
+            if (activePlaybackDeviceId !== deviceId) return;
+
+            activePlaybackDeviceId = '';
+            currentAutoScrollState = {
+              active: false,
+              speed: currentAutoScrollState.speed || 50
+            };
+            io.emit('apply-autoscroll', {
+              ...currentAutoScrollState,
+              controllerDeviceId: ''
+            });
+          }, PLAYBACK_STOP_GRACE_MS)
         };
-        io.emit('apply-autoscroll', {
-          ...currentAutoScrollState,
-          controllerDeviceId: ''
-        });
       }
 
       const leader = leadersByDeviceId.get(deviceId);
