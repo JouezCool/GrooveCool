@@ -292,6 +292,11 @@ body.concert-mode #settingsFixedWrap{
       background: rgba(76,175,80,0.18);
     }
 
+    #netBadge.syncing{
+      border-color: rgba(255,152,0,0.55);
+      background: rgba(255,152,0,0.18);
+    }
+
 #settingsFixedWrap{
   position:fixed;
   top:10px;
@@ -1301,15 +1306,20 @@ nav{
 </div>
 
 <script>
-  const socket = io();
+  const socket = io({
+    // Reconnexion plus rapide après une micro-coupure réseau (WiFi de salle,
+    // 4G, écran verrouillé) : on retente vite plutôt que d'attendre.
+    reconnectionDelay: 500,
+    reconnectionDelayMax: 2000,
+    timeout: 10000
+  });
 
-	  socket.on('connect_error', (err) => {
-	  if (err && err.message === 'unauthorized') {
-	  window.location.href = '/login';
-	  }
-	  });
-  console.log("VERSION TEST 1");
-  
+  socket.on('connect_error', (err) => {
+    if (err && err.message === 'unauthorized') {
+      window.location.href = '/login';
+    }
+  });
+
   let isLeader = false, isTurn = false, allSongs = [], currentIndex = -1;
   let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
   
@@ -2026,6 +2036,17 @@ function requestLeaderPosition() {
   socket.emit('request-sync-position');
 }
 
+// Resynchronisation automatique en arrière-plan : au lieu de compter sur
+// quelqu'un qui pense à appuyer sur le bouton "↕ LEADER", chaque appareil
+// suiveur se recale tout seul régulièrement pendant la lecture. Réutilise
+// exactement le même mécanisme que le bouton manuel (request-sync-position).
+const AUTO_RESYNC_INTERVAL_MS = 6000;
+setInterval(() => {
+  if (!socket.connected) return;
+  if (!playbackActive || isLeader || !isViewerOpen()) return;
+  requestLeaderPosition();
+}, AUTO_RESYNC_INTERVAL_MS);
+
 function requestDesiredRole() {
   if (!socket.connected || !currentUser) return;
 
@@ -2176,7 +2197,7 @@ socket.on('song-deleted', async ({ fileName }) => {
 
     if (netBadge) {
       netBadge.textContent = "ONLINE";
-      netBadge.classList.remove('off');
+      netBadge.classList.remove('off', 'syncing');
       netBadge.classList.add('on');
     }
 
@@ -2189,7 +2210,19 @@ if (currentUser) {
   if (desiredRole !== 'follow') {
     setTimeout(() => requestDesiredRole(), 300);
   }
+
+  // On vient de se (re)connecter : on se recale tout de suite plutôt que
+  // d'attendre le prochain tick de resynchronisation automatique.
+  setTimeout(() => requestLeaderPosition(), 500);
 }
+  });
+
+  socket.on('reconnect_attempt', () => {
+    if (netBadge) {
+      netBadge.textContent = "RECONNEXION…";
+      netBadge.classList.remove('on');
+      netBadge.classList.add('syncing');
+    }
   });
 
   socket.on('disconnect', () => {
@@ -2197,7 +2230,7 @@ if (currentUser) {
 
     if (netBadge) {
       netBadge.textContent = "OFFLINE";
-      netBadge.classList.remove('on');
+      netBadge.classList.remove('on', 'syncing');
       netBadge.classList.add('off');
     }
   });
