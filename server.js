@@ -184,6 +184,10 @@ let playedTonight = new Set();
 let playedTonightSaveTimer = null;
 const connectedUsers = new Map();
 const MAX_LEADERS = 1;
+// Turn était jusqu'ici illimité (n'importe qui pouvait devenir Turn en plus
+// des autres). On le rend exclusif comme Leader : une seule personne à la
+// fois, avec possibilité de "voler" la place via le code PIN (voir pinOk).
+const MAX_TURNERS = 1;
 const LEADER_RECONNECT_GRACE_MS = 5 * 60 * 1000;
 // Si le leader actif se déconnecte brièvement (coupure réseau), on attend
 // quelques secondes avant de couper le défilement de tout le monde — le temps
@@ -1601,35 +1605,75 @@ socket.on('reset-played-tonight', () => {
   broadcastPlayedTonight();
 });
 
-  socket.on('request-leader', () => {
+  socket.on('request-leader', (payload) => {
     pruneDisconnectedLeaders();
 
     const deviceId = String(socket.data.deviceId || '').trim();
     const userName = String(socket.data.userName || 'Leader').trim();
+    const pin = String(payload?.pin || '');
 
     if (!deviceId) return;
 
-    if (leadersByDeviceId.has(deviceId) || leadersByDeviceId.size < MAX_LEADERS) {
-      turnersByDeviceId.delete(deviceId);
-      leadersByDeviceId.set(deviceId, {
-        socketId: socket.id,
-        userName,
-        deviceId,
-        disconnectedAt: 0
-      });
-      broadcastLeaderState();
-    } else {
+    const alreadyMine = leadersByDeviceId.has(deviceId);
+    const isFree = leadersByDeviceId.size < MAX_LEADERS;
+
+    // Place déjà prise par quelqu'un d'autre : il faut le bon code PIN pour
+    // la lui voler (menu de rôle côté client). Sans code, on refuse comme
+    // avant.
+    if (!alreadyMine && !isFree && !pinOk(pin)) {
       socket.emit('leader-denied', {
         leaderUserName: [...leadersByDeviceId.values()].map(leader => leader.userName).filter(Boolean).join(', '),
         maxLeaders: MAX_LEADERS
       });
+      return;
     }
+
+    if (!alreadyMine && !isFree) {
+      // Code correct : on prévient la personne évincée pour qu'elle ne
+      // reste pas sur une UI "leader" qui ne l'est plus.
+      for (const leader of leadersByDeviceId.values()) {
+        if (leader.socketId) {
+          io.to(leader.socketId).emit('role-taken-over', { role: 'leader', byUserName: userName });
+        }
+      }
+      leadersByDeviceId.clear();
+    }
+
+    turnersByDeviceId.delete(deviceId);
+    leadersByDeviceId.set(deviceId, {
+      socketId: socket.id,
+      userName,
+      deviceId,
+      disconnectedAt: 0
+    });
+    broadcastLeaderState();
   });
 
-  socket.on('request-turn', () => {
+  socket.on('request-turn', (payload) => {
     const deviceId = String(socket.data.deviceId || '').trim();
     const userName = String(socket.data.userName || 'Turn').trim();
+    const pin = String(payload?.pin || '');
     if (!deviceId) return;
+
+    const alreadyMine = turnersByDeviceId.has(deviceId);
+    const isFree = turnersByDeviceId.size < MAX_TURNERS;
+
+    if (!alreadyMine && !isFree && !pinOk(pin)) {
+      socket.emit('turn-denied', {
+        turnUserName: [...turnersByDeviceId.values()].map(turner => turner.userName).filter(Boolean).join(', '),
+        maxTurners: MAX_TURNERS
+      });
+      return;
+    }
+
+    if (!alreadyMine && !isFree) {
+      for (const turner of turnersByDeviceId.values()) {
+        if (turner.socketId) {
+          io.to(turner.socketId).emit('role-taken-over', { role: 'turn', byUserName: userName });
+        }
+      }
+      turnersByDeviceId.clear();
+    }
 
     leadersByDeviceId.delete(deviceId);
     if (activePlaybackDeviceId === deviceId) {
