@@ -1736,6 +1736,19 @@ socket.on('reset-played-tonight', () => {
   });
 
   socket.on('request-sync-position', () => {
+    // Resync complet (morceau + défilement), pas juste la position : si un
+    // appareil a raté le changement de morceau du Turn/Leader (socket
+    // momentanément coupé), il se rattrape ici tout seul au prochain tick,
+    // au lieu d'attendre une reconnexion complète. openRemoteSong() ignore
+    // ce message côté client si le morceau est déjà le bon, donc ça ne
+    // provoque aucun à-coup visible quand tout est déjà synchronisé.
+    if (currentSongFileName) {
+      socket.emit('load-song', {
+        fileName: currentSongFileName,
+        replay: true
+      });
+    }
+
     if (currentPlaybackPosition) {
       socket.emit('apply-scroll', {
         ...currentPlaybackPosition,
