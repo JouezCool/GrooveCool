@@ -756,10 +756,12 @@ nav{
       zoom:1.4;
     }
 
+    /* Surlignage du paragraphe (couplet/refrain/pont, ou groupe de lignes
+       séparé par une ligne vide) en cours en mode karaoké : toute la ligne
+       en fond coloré, pas juste un repère sur le côté. */
     .karaoke-current-line{
-      background: rgba(255,255,255,0.14);
+      background: rgba(233,30,99,0.22);
       border-radius:8px;
-      box-shadow: inset 4px 0 0 0 rgba(233,30,99,0.85);
     }
 
     /* En mode concert + karaoké, l'appareil est tendu à l'invité : on
@@ -2101,6 +2103,11 @@ function applyLeaderUI() {
 
   const role = currentDisplayRole();
   document.body.classList.toggle('karaoke-mode', role === 'karaoke');
+  if (role === 'karaoke' && isViewerOpen()) {
+    // Affichage immédiat en entrant en mode karaoké, sans attendre le
+    // prochain scroll du Leader.
+    applyKaraokeAutoCenter(viewerElement.scrollTop);
+  }
 
   if (role === 'leader') {
     badge.textContent = "LEADER";
@@ -2126,7 +2133,7 @@ function applyLeaderUI() {
 
   updateRoleMenuHighlight();
   updateResyncButton();
-  updateKaraokeHighlight();
+  updateLeaderParagraphHighlight();
 }
 
 function canChooseSongs() {
@@ -3626,50 +3633,134 @@ viewerElement.addEventListener('scroll', () => {
   emitLeaderScrollSync();
 });
 
-// Surlignage de la ligne en cours en mode karaoké. Basé sur la position de
-// défilement réelle (quelle ligne se trouve actuellement au niveau d'un
-// repère fixe à l'écran), pas sur un temps ou un tempo — ça s'adapte donc
-// automatiquement à n'importe quelle vitesse de jeu, sans métronome.
-let karaokeHighlightEl = null;
+// Repérage du "paragraphe" en cours en mode karaoké (couplet/refrain/pont
+// balisé en ChordPro {soc}/{sov}/{sob}, ou à défaut un groupe de lignes
+// séparé par une ligne vide) : pas ligne par ligne (trop pénible à taper
+// pour le Leader, trop imprécis à déduire du seul scroll), et pas basé sur
+// un tempo (on ne joue pas au métronome). Le Leader garde le contrôle en
+// scrollant normalement comme avant ; on affiche chez lui aussi le
+// paragraphe repéré, pour qu'il puisse vérifier/corriger ce que voient les
+// invités en mode karaoké.
+let karaokeParagraphGroups = null;
+let karaokeHighlightGroup = null;
 let karaokeHighlightRaf = null;
 
-function updateKaraokeHighlight() {
-  if (!document.body.classList.contains('karaoke-mode')) {
-    if (karaokeHighlightEl) {
-      karaokeHighlightEl.classList.remove('karaoke-current-line');
-      karaokeHighlightEl = null;
+function invalidateKaraokeParagraphGroups() {
+  karaokeParagraphGroups = null;
+  karaokeHighlightGroup = null;
+}
+
+function computeKaraokeParagraphGroups() {
+  function isBlankLyric(el) {
+    return !!(el.dataset && el.dataset.kind === 'lyric' && !el.textContent.trim());
+  }
+
+  const groups = [];
+  let current = [];
+  function flush() {
+    if (current.length) { groups.push(current); current = []; }
+  }
+
+  Array.from(songContentEl.children).forEach(child => {
+    if (child.id === 'overlayLayer' || child.classList.contains('song-end-spacer')) return;
+
+    if (
+      child.classList.contains('chorus-block') ||
+      child.classList.contains('verse-block') ||
+      child.classList.contains('bridge-block')
+    ) {
+      flush();
+      const lyrics = Array.from(child.querySelectorAll('[data-kind="lyric"]')).filter(el => !isBlankLyric(el));
+      if (lyrics.length) groups.push(lyrics);
+      return;
     }
+
+    if (child.dataset && child.dataset.kind === 'lyric') {
+      if (isBlankLyric(child)) { flush(); return; }
+      current.push(child);
+      return;
+    }
+
+    // Titre, ligne de commentaire, ligne d'accords seuls, tablature, etc. :
+    // coupure naturelle entre deux paragraphes.
+    flush();
+  });
+  flush();
+
+  return groups
+    .filter(blocks => blocks.length)
+    .map(blocks => ({
+      blocks,
+      top: Math.min(...blocks.map(el => el.offsetTop)),
+      bottom: Math.max(...blocks.map(el => el.offsetTop + el.offsetHeight)),
+    }));
+}
+
+function getKaraokeParagraphGroups() {
+  if (!karaokeParagraphGroups) karaokeParagraphGroups = computeKaraokeParagraphGroups();
+  return karaokeParagraphGroups;
+}
+
+function findKaraokeParagraphAt(y) {
+  const groups = getKaraokeParagraphGroups();
+  if (!groups.length) return null;
+  for (const g of groups) {
+    if (g.bottom > y) return g;
+  }
+  return groups[groups.length - 1];
+}
+
+function setKaraokeHighlightGroup(group) {
+  if (group === karaokeHighlightGroup) return false;
+  if (karaokeHighlightGroup) {
+    karaokeHighlightGroup.blocks.forEach(el => el.classList.remove('karaoke-current-line'));
+  }
+  karaokeHighlightGroup = group;
+  if (group) {
+    group.blocks.forEach(el => el.classList.add('karaoke-current-line'));
+  }
+  return true;
+}
+
+// Affichage local (Leader) : suit son propre scroll, ne le déplace jamais.
+function updateLeaderParagraphHighlight() {
+  if (!isLeader || !isViewerOpen()) {
+    setKaraokeHighlightGroup(null);
     return;
   }
+  const markerY = viewerElement.scrollTop + viewerElement.clientHeight * 0.5;
+  setKaraokeHighlightGroup(findKaraokeParagraphAt(markerY));
+}
 
+// Affichage en mode karaoké (invités) : on ignore la position pixel-perfect
+// reçue du Leader (inutile pour lire des paroles) et on recentre en douceur
+// l'écran sur le paragraphe repéré, uniquement quand il change.
+function applyKaraokeAutoCenter(leaderReferenceTop) {
   if (!isViewerOpen()) return;
 
-  const blocks = viewerElement.querySelectorAll('[data-kind="lyric"]');
-  if (!blocks.length) return;
+  const referenceY = leaderReferenceTop + viewerElement.clientHeight * 0.5;
+  const group = findKaraokeParagraphAt(referenceY);
+  if (!group) return;
+  if (!setKaraokeHighlightGroup(group)) return;
 
-  const markerY = viewerElement.scrollTop + viewerElement.clientHeight * 0.35;
-  let target = blocks[blocks.length - 1];
-  for (const el of blocks) {
-    if (el.offsetTop + el.offsetHeight > markerY) {
-      target = el;
-      break;
-    }
-  }
+  const groupCenter = (group.top + group.bottom) / 2;
+  const max = Math.max(0, viewerElement.scrollHeight - viewerElement.clientHeight);
+  const targetTop = Math.max(0, Math.min(max, groupCenter - viewerElement.clientHeight / 2));
 
-  if (target !== karaokeHighlightEl) {
-    if (karaokeHighlightEl) karaokeHighlightEl.classList.remove('karaoke-current-line');
-    target.classList.add('karaoke-current-line');
-    karaokeHighlightEl = target;
-  }
+  isRemoteScrolling = true;
+  viewerElement.scrollTo({ top: targetTop, behavior: 'smooth' });
+  setTimeout(() => { isRemoteScrolling = false; }, 600);
 }
 
 viewerElement.addEventListener('scroll', () => {
   if (karaokeHighlightRaf) return;
   karaokeHighlightRaf = requestAnimationFrame(() => {
     karaokeHighlightRaf = null;
-    updateKaraokeHighlight();
+    updateLeaderParagraphHighlight();
   });
 });
+
+window.addEventListener('resize', invalidateKaraokeParagraphGroups);
 
 function applyRemoteScroll(data) {
   const isOfficialReplay = !!data?.official || !!data?.replay;
@@ -3711,6 +3802,11 @@ function applyRemoteScroll(data) {
     targetTop < 12 &&
     (isManual || viewerElement.scrollTop > 120)
   ) {
+    return;
+  }
+
+  if (document.body.classList.contains('karaoke-mode')) {
+    applyKaraokeAutoCenter(targetTop);
     return;
   }
 
@@ -4498,6 +4594,7 @@ function renderTabBlock(targetEl, text) {
 
   function renderChordPro() {
     clearSongContent();
+    invalidateKaraokeParagraphGroups();
     renderChordPro._occ = {};
 
     const lines = currentRaw.split('\n');
