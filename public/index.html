@@ -1471,6 +1471,12 @@ let leaderReleaseRequested = false;
 let desiredRole = localStorage.getItem('bandapp_role') || (wantsLeader ? 'leader' : 'follow');
 let currentLeaderUserName = '';
 let currentTurnUserName = '';
+// Nombre de personnes actuellement en mode karaoké (vu du serveur) : le
+// surlignage de paragraphe côté Leader ne doit s'afficher que si ce nombre
+// est > 0 — inutile de surligner chez le Leader si personne ne regarde en
+// mode karaoké.
+let karaokeGuestsCount = 0;
+let lastSentKaraokeActive = null;
 let playbackActive = false;
 let playbackControllerDeviceId = "";
 let lastOfficialScrollSyncAt = 0;
@@ -2079,6 +2085,17 @@ function currentDisplayRole() {
   return desiredRole === 'karaoke' ? 'karaoke' : 'follow';
 }
 
+// Prévient le serveur qu'on entre/sort du mode karaoké, pour qu'il puisse
+// dire au Leader si au moins un invité regarde en mode karaoké (voir
+// karaokeGuestsCount). On ne renvoie que si l'état a changé, pour ne pas
+// spammer le serveur à chaque appel de applyLeaderUI().
+function syncKaraokeModeToServer(active) {
+  active = !!active;
+  if (lastSentKaraokeActive === active) return;
+  lastSentKaraokeActive = active;
+  socket.emit('karaoke-mode', { deviceId, active });
+}
+
 function applyLeaderUI() {
   document.querySelectorAll('.leader-only').forEach(el => {
     if (isLeader) {
@@ -2102,6 +2119,7 @@ function applyLeaderUI() {
   if (!badge) return;
 
   const role = currentDisplayRole();
+  syncKaraokeModeToServer(role === 'karaoke');
   document.body.classList.toggle('karaoke-mode', role === 'karaoke');
   if (role === 'karaoke' && isViewerOpen()) {
     // Affichage immédiat en entrant en mode karaoké, sans attendre le
@@ -2348,6 +2366,13 @@ if (currentUser) {
   // On vient de se (re)connecter : on se recale tout de suite plutôt que
   // d'attendre le prochain tick de resynchronisation automatique.
   setTimeout(() => requestLeaderPosition(), 500);
+
+  // Le serveur repart de zéro sur le suivi "mode karaoké" à chaque
+  // (re)connexion (voir cleanup au disconnect côté serveur) : on force donc
+  // un renvoi de notre état actuel plutôt que de compter sur la dédup de
+  // syncKaraokeModeToServer, qui sinon croirait à tort l'avoir déjà fait.
+  lastSentKaraokeActive = null;
+  syncKaraokeModeToServer(document.body.classList.contains('karaoke-mode'));
 }
   });
 
@@ -2448,6 +2473,14 @@ socket.on('connected-users', (data) => {
 
     applyLeaderUI();
     syncSettingsUI();
+  });
+
+  // Nombre de personnes en mode karaoké, tenu par le serveur (voir
+  // syncKaraokeModeToServer) : sert uniquement à décider si le Leader doit
+  // voir le surlignage de paragraphe (inutile si personne ne le regarde).
+  socket.on('karaoke-guests', (data) => {
+    karaokeGuestsCount = Math.max(0, Number(data?.count) || 0);
+    updateLeaderParagraphHighlight();
   });
 
   socket.on('leader-denied', (data) => {
@@ -3723,8 +3756,9 @@ function setKaraokeHighlightGroup(group) {
 }
 
 // Affichage local (Leader) : suit son propre scroll, ne le déplace jamais.
+// Ne s'affiche que si au moins un invité est en mode karaoké (sinon inutile).
 function updateLeaderParagraphHighlight() {
-  if (!isLeader || !isViewerOpen()) {
+  if (!isLeader || !isViewerOpen() || karaokeGuestsCount <= 0) {
     setKaraokeHighlightGroup(null);
     return;
   }
@@ -3753,6 +3787,12 @@ function applyKaraokeAutoCenter(leaderReferenceTop) {
 }
 
 viewerElement.addEventListener('scroll', () => {
+  // Sur un appareil en mode karaoké, les évènements "scroll" viennent du
+  // recentrage automatique déclenché par applyKaraokeAutoCenter (pas d'un
+  // Leader qui scrolle) : les ignorer ici évite d'écraser en boucle le
+  // surlignage qu'applyKaraokeAutoCenter vient de poser (ce qui causait un
+  // clignotement constant et un décalage progressif du surlignage).
+  if (document.body.classList.contains('karaoke-mode')) return;
   if (karaokeHighlightRaf) return;
   karaokeHighlightRaf = requestAnimationFrame(() => {
     karaokeHighlightRaf = null;

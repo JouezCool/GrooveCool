@@ -196,6 +196,11 @@ const LEADER_RECONNECT_GRACE_MS = 5 * 60 * 1000;
 const PLAYBACK_STOP_GRACE_MS = 8000;
 const leadersByDeviceId = new Map();
 const turnersByDeviceId = new Map();
+// Appareils actuellement en mode karaoké (rôle purement client, pas de
+// ressource exclusive comme leader/turn) : sert uniquement à informer le
+// Leader si au moins un invité regarde en mode karaoké, pour qu'il sache
+// s'il doit voir le surlignage de paragraphe.
+const karaokeDeviceIds = new Set();
 let currentSongFileName = '';
 let currentAutoScrollState = {
   active: false,
@@ -871,6 +876,13 @@ function broadcastConnectedUsers() {
   io.emit('connected-users', { users: uniqueUsers });
 }
 
+// Informe tout le monde du nombre d'appareils actuellement en mode karaoké
+// (voir karaokeDeviceIds) : le Leader s'en sert pour savoir s'il doit
+// afficher le surlignage de paragraphe.
+function broadcastKaraokeGuests() {
+  io.emit('karaoke-guests', { count: karaokeDeviceIds.size });
+}
+
 function broadcastLeaderState() {
   const leaders = [...leadersByDeviceId.values()];
   const leaderSocketIds = leaders.map(leader => leader.socketId).filter(Boolean);
@@ -1524,6 +1536,25 @@ io.on('connection', (socket) => {
   broadcastLeaderState();
   broadcastConnectedUsers();
   broadcastPlayedTonight();
+  socket.emit('karaoke-guests', { count: karaokeDeviceIds.size });
+
+  // Rôle purement client (voir syncKaraokeModeToServer côté front) : on ne
+  // fait que compter combien d'appareils sont en mode karaoké, pour que le
+  // Leader sache s'il doit afficher le surlignage de paragraphe.
+  socket.on('karaoke-mode', ({ deviceId, active } = {}) => {
+    const cleanDeviceId = String(deviceId || '').trim();
+    if (!cleanDeviceId) return;
+
+    const before = karaokeDeviceIds.size;
+    if (active) {
+      karaokeDeviceIds.add(cleanDeviceId);
+    } else {
+      karaokeDeviceIds.delete(cleanDeviceId);
+    }
+    socket.data.karaokeDeviceId = active ? cleanDeviceId : '';
+
+    if (karaokeDeviceIds.size !== before) broadcastKaraokeGuests();
+  });
 
   socket.on('register-user', ({ userName, deviceId }) => {
     const cleanUser = String(userName || '').trim();
@@ -1903,6 +1934,13 @@ socket.on('reset-played-tonight', () => {
     if (deviceId && turnersByDeviceId.has(deviceId)) {
       turnersByDeviceId.delete(deviceId);
       broadcastLeaderState();
+    }
+
+    // Contrairement au leader (fenêtre de grâce), le mode karaoké n'a pas
+    // besoin d'attendre une reconnexion : le client renvoie son état dès
+    // qu'il se reconnecte (voir socket.on('connect', ...) côté front).
+    if (deviceId && karaokeDeviceIds.delete(deviceId)) {
+      broadcastKaraokeGuests();
     }
   });
 });
