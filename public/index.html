@@ -14,13 +14,22 @@
 
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 
+<!-- Il n'y avait aucune balise theme-color avant : sur Chrome Android (hors
+     PWA installée), le navigateur affichait donc la barre d'adresse dans sa
+     couleur par défaut (claire) même quand le contenu de la page était déjà
+     tout noir — c'est probablement ce qui donnait l'impression que le "mode
+     sombre" de la scène karaoké n'avait aucun effet. On la fait maintenant
+     suivre la couleur de la scène karaoké via JS (voir updateThemeColorMeta()
+     dans applyLeaderUI()). -->
+<meta name="theme-color" id="themeColorMeta" content="#ff9800">
+
 <meta name="apple-mobile-web-app-title" content="BandApp">
 
 <link rel="manifest" href="/manifest.json">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet">
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
@@ -29,7 +38,7 @@
       --bg:#000;
       --text:#eee;
       --accent:#ff9800;
-      --karaoke-accent-rgb: 233,30,99;
+      --karaoke-accent-rgb: 130,179,225;
       --chord-color:#ff9800;
       --chord-size:.86em;
       --edit:#2196F3;
@@ -781,7 +790,7 @@ nav{
       overflow:hidden;
       background:var(--bg);
       text-align:center;
-      font-family:'Montserrat', sans-serif;
+      font-family:'Poppins', sans-serif;
       /* Le reste de l'app n'a pas de bascule clair/sombre (fond toujours
          noir), mais sans ceci certains navigateurs affichent quand même
          les contrôles natifs (barre de défilement de #karaokeCard, etc.)
@@ -798,7 +807,7 @@ nav{
       display:flex;
     }
 
-    /* Ambiance discrète : léger halo rose qui "respire" doucement derrière
+    /* Ambiance discrète : léger halo bleu qui "respire" doucement derrière
        la carte, pour ne pas laisser un fond tout noir sans être distrayant. */
     #karaokeStage::before{
       content:"";
@@ -815,12 +824,18 @@ nav{
       50%{ opacity:1; }
     }
 
+    /* Icônes d'ambiance (micro / notes) : assez opaques pour rester bien
+       visibles et colorées (les emoji ont leurs couleurs propres — un
+       opacity trop bas les délavait au point de les rendre presque
+       grises), avec un léger halo dans la couleur d'accent pour qu'elles
+       se détachent du fond noir sans être criardes. */
     .karaoke-ambiance-icon{
       position:absolute;
       z-index:1;
-      font-size:56px;
-      opacity:0.18;
+      font-size:60px;
+      opacity:0.85;
       pointer-events:none;
+      filter:drop-shadow(0 0 14px rgba(var(--karaoke-accent-rgb),0.55));
       animation:karaokeFloat 5s ease-in-out infinite;
     }
     .karaoke-ambiance-icon--tl{ top:3vh; left:4vw; }
@@ -831,16 +846,30 @@ nav{
       50%{ transform:translateY(-10px); }
     }
 
+    /* En mode concert (scène plein écran), le logo devient le seul moyen de
+       revenir en arrière (voir #concertModeBtn et exitConcertModeFromLogo()
+       plus bas) : pointer-events est donc toujours actif ici (le clic est
+       ignoré tant qu'on n'est pas en mode concert, voir le JS), avec un
+       curseur "pointer" comme indice visuel. */
     #karaokeLogo{
       position:absolute;
-      z-index:1;
+      z-index:2;
       top:2.5vh;
       right:4vw;
-      width:96px;
-      height:96px;
+      width:130px;
+      height:130px;
       opacity:0.9;
       filter:drop-shadow(0 0 10px rgba(var(--karaoke-accent-rgb),0.4));
-      pointer-events:none;
+    }
+
+    body.concert-mode.karaoke-mode #karaokeLogo{
+      cursor:pointer;
+      animation:karaokeLogoPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes karaokeLogoPulse{
+      0%, 100%{ filter:drop-shadow(0 0 10px rgba(var(--karaoke-accent-rgb),0.4)); }
+      50%{ filter:drop-shadow(0 0 20px rgba(var(--karaoke-accent-rgb),0.75)); }
     }
 
     /* La "carte" lyrics : c'est elle qui reçoit le zoom dynamique (voir
@@ -868,8 +897,8 @@ nav{
       transform:translateY(8px);
     }
 
-    /* Police "fun" pour la scène karaoké : Montserrat ExtraBold plutôt que
-       le Courier New (hérité de #viewer, utile pour l'alignement paroles/
+    /* Police "fun" pour la scène karaoké : Poppins Bold plutôt que le
+       Courier New (hérité de #viewer, utile pour l'alignement paroles/
        accords ailleurs dans l'app, mais pas ici puisque les accords sont
        masqués en mode karaoké). !important pour passer devant les règles
        .lyricline/.chord-cell .lyric (poids/police normaux, nécessaires
@@ -878,8 +907,8 @@ nav{
        normal : avec un poids déjà très gras, ça épaississait le rendu. */
     #karaokeCard,
     #karaokeCard *{
-      font-family:'Montserrat', sans-serif !important;
-      font-weight:800 !important;
+      font-family:'Poppins', sans-serif !important;
+      font-weight:700 !important;
       -webkit-text-stroke:0 !important;
       text-shadow:none !important;
     }
@@ -899,7 +928,7 @@ nav{
       height:100%;
       width:0%;
       border-radius:3px;
-      background:linear-gradient(90deg, rgba(var(--karaoke-accent-rgb),0.9), rgba(255,121,178,0.9));
+      background:linear-gradient(90deg, rgba(var(--karaoke-accent-rgb),0.9), rgba(190,225,255,0.9));
       transition:width 300ms linear;
     }
 
@@ -922,24 +951,22 @@ nav{
       left:0;
       top:0;
       color:var(--text);
-      font-family:'Montserrat', sans-serif;
-      font-weight:800;
+      font-family:'Poppins', sans-serif;
+      font-weight:700;
       opacity:0.65;
     }
 
     /* En mode concert + karaoké, l'appareil est tendu à l'invité : on
        masque tout ce qui pourrait changer le morceau ou perturber la
-       lecture, il ne reste que le bouton pour sortir du mode concert. */
+       lecture (plus de contrôles flottants du tout — y compris le bouton
+       "MODE CONCERT" lui-même, qui ferait doublon avec le logo). Pour
+       revenir en arrière, l'invité clique désormais sur le logo du groupe
+       (voir #karaokeLogo et exitConcertModeFromLogo() plus bas). */
     body.concert-mode.karaoke-mode #prevSongBtn,
     body.concert-mode.karaoke-mode #nextSongBtn,
-    body.concert-mode.karaoke-mode #resyncLeaderBtn{
-      display:none !important;
-    }
-
+    body.concert-mode.karaoke-mode #resyncLeaderBtn,
     body.concert-mode.karaoke-mode #concertModeBtn{
-      padding:4px 8px;
-      font-size:11px;
-      opacity:0.5;
+      display:none !important;
     }
 
     .inline-music-line{
@@ -1411,7 +1438,7 @@ nav{
       <div id="karaokeStage">
         <div class="karaoke-ambiance-icon karaoke-ambiance-icon--tl" aria-hidden="true">🎤</div>
         <div class="karaoke-ambiance-icon karaoke-ambiance-icon--br" aria-hidden="true">🎶</div>
-        <img id="karaokeLogo" alt="Jouez Cool" src="karaoke-logo.png">
+        <img id="karaokeLogo" alt="Jouez Cool" src="karaoke-logo.png" onclick="exitConcertModeFromLogo()">
         <div id="karaokeCard"></div>
         <div id="karaokeProgress"><div id="karaokeProgressFill"></div></div>
       </div>
@@ -2275,6 +2302,18 @@ function syncKaraokeModeToServer(active) {
   socket.emit('karaoke-mode', { deviceId, active });
 }
 
+// Couleur de la barre d'adresse / barre de statut (balise theme-color) :
+// orange (couleur de marque, cf. manifest.json) normalement, noire pendant
+// le mode karaoké pour que la scène soit vraiment tout en noir, y compris
+// hors du contenu de la page.
+const THEME_COLOR_DEFAULT = '#ff9800';
+const THEME_COLOR_KARAOKE = '#000000';
+function updateThemeColorMeta(karaokeActive) {
+  const meta = document.getElementById('themeColorMeta');
+  if (!meta) return;
+  meta.setAttribute('content', karaokeActive ? THEME_COLOR_KARAOKE : THEME_COLOR_DEFAULT);
+}
+
 function applyLeaderUI() {
   document.querySelectorAll('.leader-only').forEach(el => {
     if (isLeader) {
@@ -2300,6 +2339,7 @@ function applyLeaderUI() {
   const role = currentDisplayRole();
   syncKaraokeModeToServer(role === 'karaoke');
   document.body.classList.toggle('karaoke-mode', role === 'karaoke');
+  updateThemeColorMeta(role === 'karaoke');
   if (role === 'karaoke' && isViewerOpen()) {
     // Affichage immédiat en entrant en mode karaoké, sans attendre le
     // prochain scroll du Leader.
@@ -2876,6 +2916,16 @@ function updateConcertModeUI() {
 function toggleConcertMode() {
   concertMode = !concertMode;
   updateConcertModeUI();
+}
+
+// Sur la scène karaoké en mode concert (plein écran), le bouton "MODE
+// CONCERT" est masqué (voir CSS) : c'est le logo qui sert de bouton retour.
+// En dehors de ce cas (mode concert pas encore activé, ou pas en karaoké),
+// un clic sur le logo ne fait rien — il n'est pas prévu comme point
+// d'entrée du mode concert, seulement comme sortie.
+function exitConcertModeFromLogo() {
+  if (!concertMode || !document.body.classList.contains('karaoke-mode')) return;
+  toggleConcertMode();
 }
 
 async function fetchSongs() {
