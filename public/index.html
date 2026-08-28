@@ -18,6 +18,10 @@
 
 <link rel="manifest" href="/manifest.json">
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800&display=swap" rel="stylesheet">
+
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
   <style>
@@ -777,6 +781,13 @@ nav{
       overflow:hidden;
       background:var(--bg);
       text-align:center;
+      font-family:'Montserrat', sans-serif;
+      /* Le reste de l'app n'a pas de bascule clair/sombre (fond toujours
+         noir), mais sans ceci certains navigateurs affichent quand même
+         les contrôles natifs (barre de défilement de #karaokeCard, etc.)
+         dans un style clair par défaut si l'appareil est en mode clair —
+         ça détonnait sur la scène karaoké. */
+      color-scheme:dark;
     }
 
     body.concert-mode #karaokeStage{
@@ -807,8 +818,8 @@ nav{
     .karaoke-ambiance-icon{
       position:absolute;
       z-index:1;
-      font-size:34px;
-      opacity:0.16;
+      font-size:56px;
+      opacity:0.18;
       pointer-events:none;
       animation:karaokeFloat 5s ease-in-out infinite;
     }
@@ -825,8 +836,8 @@ nav{
       z-index:1;
       top:2.5vh;
       right:4vw;
-      width:56px;
-      height:56px;
+      width:96px;
+      height:96px;
       opacity:0.9;
       filter:drop-shadow(0 0 10px rgba(var(--karaoke-accent-rgb),0.4));
       pointer-events:none;
@@ -855,6 +866,22 @@ nav{
     #karaokeCard.karaoke-card-out{
       opacity:0;
       transform:translateY(8px);
+    }
+
+    /* Police "fun" pour la scène karaoké : Montserrat ExtraBold plutôt que
+       le Courier New (hérité de #viewer, utile pour l'alignement paroles/
+       accords ailleurs dans l'app, mais pas ici puisque les accords sont
+       masqués en mode karaoké). !important pour passer devant les règles
+       .lyricline/.chord-cell .lyric (poids/police normaux, nécessaires
+       dans la partition classique) qui sont plus spécifiques que
+       #karaokeCard seul. On retire aussi le liseré/l'ombre du texte
+       normal : avec un poids déjà très gras, ça épaississait le rendu. */
+    #karaokeCard,
+    #karaokeCard *{
+      font-family:'Montserrat', sans-serif !important;
+      font-weight:800 !important;
+      -webkit-text-stroke:0 !important;
+      text-shadow:none !important;
     }
 
     #karaokeProgress{
@@ -895,8 +922,8 @@ nav{
       left:0;
       top:0;
       color:var(--text);
-      font-family:sans-serif;
-      font-weight:700;
+      font-family:'Montserrat', sans-serif;
+      font-weight:800;
       opacity:0.65;
     }
 
@@ -5018,6 +5045,17 @@ function renderTabBlock(targetEl, text) {
     const endSpacer = document.createElement('div');
     endSpacer.className = 'song-end-spacer';
     songContentEl.appendChild(endSpacer);
+
+    // Sans ça, le surlignage du Leader restait vide tant qu'il n'avait pas
+    // scrollé au moins une fois après l'ouverture du morceau (le scroll
+    // programmatique à 0 lors du chargement ne déclenche pas d'évènement
+    // 'scroll' quand on est déjà en haut) : un invité déjà en mode karaoké
+    // au moment où le Leader ouvre un morceau ne voyait donc rien pendant
+    // ce laps de temps. On réinitialise systématiquement ici, après que le
+    // contenu soit reconstruit — utile à chaque appel de renderChordPro(),
+    // pas seulement à l'ouverture d'un morceau (changement de taille de
+    // texte, transposition, etc. reconstruisent aussi le contenu).
+    updateLeaderParagraphHighlight();
   }
 
   function openEditor() {
