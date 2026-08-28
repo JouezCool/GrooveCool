@@ -25,6 +25,7 @@
       --bg:#000;
       --text:#eee;
       --accent:#ff9800;
+      --karaoke-accent-rgb: 233,30,99;
       --chord-color:#ff9800;
       --chord-size:.86em;
       --edit:#2196F3;
@@ -748,24 +749,16 @@ nav{
       opacity:0.65;
     }
 
-    /* Zoom plutôt que font-size : ça grossit TOUT le contenu (paroles,
-       mais aussi les éléments cachés) dans les mêmes proportions, donc la
-       hauteur totale de la page reste un agrandissement uniforme de la vue
-       normale — le ratio de défilement synchronisé reste donc exact. */
-    body.karaoke-mode #songContent{
-      zoom:1.4;
-    }
-
     /* Surlignage du paragraphe (couplet/refrain/pont, ou groupe de lignes
        séparé par une ligne vide) en cours en mode karaoké : toute la ligne
        en fond coloré, pas juste un repère sur le côté. */
     .karaoke-current-line{
-      background: rgba(233,30,99,0.22);
+      background: rgba(var(--karaoke-accent-rgb),0.22);
       border-radius:8px;
     }
 
     /* "Scène" karaoké : plus de défilement pour les invités en mode
-       karaoké — on affiche uniquement, dans un cadre centré, une copie du
+       karaoké — on affiche uniquement, dans une carte centrée, une copie du
        seul paragraphe repéré (voir renderKaraokeStage()). #songContent
        reste caché derrière (toujours mesuré, pour savoir quel paragraphe
        correspond à la position du Leader), mais n'est plus jamais visible
@@ -781,7 +774,7 @@ nav{
       align-items:center;
       justify-content:center;
       padding:6vh 6vw;
-      overflow:auto;
+      overflow:hidden;
       background:var(--bg);
       text-align:center;
     }
@@ -794,8 +787,93 @@ nav{
       display:flex;
     }
 
-    body.karaoke-mode #karaokeStage{
-      zoom:1.4;
+    /* Ambiance discrète : léger halo rose qui "respire" doucement derrière
+       la carte, pour ne pas laisser un fond tout noir sans être distrayant. */
+    #karaokeStage::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      z-index:0;
+      pointer-events:none;
+      background:radial-gradient(circle at 50% 42%, rgba(var(--karaoke-accent-rgb),0.16), transparent 62%);
+      animation:karaokeBreathe 6s ease-in-out infinite;
+    }
+
+    @keyframes karaokeBreathe{
+      0%, 100%{ opacity:0.55; }
+      50%{ opacity:1; }
+    }
+
+    .karaoke-ambiance-icon{
+      position:absolute;
+      z-index:1;
+      font-size:34px;
+      opacity:0.16;
+      pointer-events:none;
+      animation:karaokeFloat 5s ease-in-out infinite;
+    }
+    .karaoke-ambiance-icon--tl{ top:3vh; left:4vw; }
+    .karaoke-ambiance-icon--br{ bottom:6vh; right:4vw; animation-delay:2.5s; }
+
+    @keyframes karaokeFloat{
+      0%, 100%{ transform:translateY(0); }
+      50%{ transform:translateY(-10px); }
+    }
+
+    #karaokeLogo{
+      position:absolute;
+      z-index:1;
+      top:2.5vh;
+      right:4vw;
+      width:56px;
+      height:56px;
+      opacity:0.9;
+      filter:drop-shadow(0 0 10px rgba(var(--karaoke-accent-rgb),0.4));
+      pointer-events:none;
+    }
+
+    /* La "carte" lyrics : c'est elle qui reçoit le zoom dynamique (voir
+       applyKaraokeZoom()) et le fondu entre paragraphes (voir
+       renderKaraokeStage()) — le logo, les icônes et la barre de
+       progression restent en dehors, à taille fixe. */
+    #karaokeCard{
+      position:relative;
+      z-index:1;
+      max-width:90vw;
+      max-height:74vh;
+      overflow:auto;
+      padding:5vh 6vw;
+      border-radius:28px;
+      background:rgba(255,255,255,0.045);
+      border:1px solid rgba(var(--karaoke-accent-rgb),0.5);
+      box-shadow:0 0 40px rgba(var(--karaoke-accent-rgb),0.25), inset 0 0 60px rgba(var(--karaoke-accent-rgb),0.05);
+      transition:opacity 220ms ease, transform 220ms ease;
+      opacity:1;
+      transform:translateY(0);
+    }
+
+    #karaokeCard.karaoke-card-out{
+      opacity:0;
+      transform:translateY(8px);
+    }
+
+    #karaokeProgress{
+      position:absolute;
+      z-index:1;
+      left:6vw; right:6vw;
+      bottom:3vh;
+      height:5px;
+      border-radius:3px;
+      background:rgba(255,255,255,0.1);
+      overflow:hidden;
+    }
+
+    #karaokeProgressFill{
+      height:100%;
+      width:0%;
+      border-radius:3px;
+      background:linear-gradient(90deg, rgba(var(--karaoke-accent-rgb),0.9), rgba(255,121,178,0.9));
+      transition:width 300ms linear;
     }
 
     body.karaoke-mode #karaokeStage .chord-cell .chord,
@@ -1300,8 +1378,16 @@ nav{
 
       <!-- Mode karaoké : au lieu de faire défiler #songContent (source de
            dérive), on affiche ici, par-dessus, une copie du seul
-           paragraphe repéré, centrée. Rempli par renderKaraokeStage(). -->
-      <div id="karaokeStage"></div>
+           paragraphe repéré, centrée dans une "carte" habillée.
+           #karaokeCard est rempli par renderKaraokeStage() ; le reste
+           (logo, icônes d'ambiance, barre de progression) est fixe. -->
+      <div id="karaokeStage">
+        <div class="karaoke-ambiance-icon karaoke-ambiance-icon--tl" aria-hidden="true">🎤</div>
+        <div class="karaoke-ambiance-icon karaoke-ambiance-icon--br" aria-hidden="true">🎶</div>
+        <img id="karaokeLogo" alt="Jouez Cool" src="karaoke-logo.png">
+        <div id="karaokeCard"></div>
+        <div id="karaokeProgress"><div id="karaokeProgressFill"></div></div>
+      </div>
     </div>
   </div>
 
@@ -1561,6 +1647,8 @@ let currentSongSettings = {
   const viewerElement = document.getElementById('viewer');
   const songContentEl = document.getElementById('songContent');
   const karaokeStageEl = document.getElementById('karaokeStage');
+  const karaokeCardEl = document.getElementById('karaokeCard');
+  const karaokeProgressFillEl = document.getElementById('karaokeProgressFill');
   const speedInput = document.getElementById('scrollSpeed');
   const notesPanel = document.getElementById('notesPanel');
   const notesTextarea = document.getElementById('notesTextarea');
@@ -3830,23 +3918,67 @@ function updateLeaderParagraphHighlight() {
   setKaraokeHighlightGroup(findKaraokeParagraphAt(markerY));
 }
 
+// Taille du texte adaptée à la longueur du paragraphe affiché : un
+// couplet d'une ligne peut se permettre un zoom bien plus fort qu'un long
+// paragraphe, qui doit rester lisible dans le cadre sans déborder. 1.4
+// reste le plancher (c'était la valeur fixe précédente, déjà validée).
+function applyKaraokeZoom(group) {
+  if (!karaokeCardEl) return;
+  const lineCount = group ? Math.max(1, group.blocks.length) : 1;
+  const zoom = Math.max(1.4, Math.min(2.0, 2.0 - (lineCount - 1) * 0.12));
+  karaokeCardEl.style.zoom = zoom;
+}
+
+// Barre de progression du morceau : réutilise le ratio de défilement déjà
+// calculé pour positionner la scène (aucune donnée supplémentaire à faire
+// remonter du serveur).
+function updateKaraokeProgress(ratio) {
+  if (!karaokeProgressFillEl) return;
+  karaokeProgressFillEl.style.width = `${Math.round(clamp01(ratio) * 100)}%`;
+}
+
+let karaokeCardTransitionTimer = null;
+
 // Affichage en mode karaoké (invités) : on ne fait plus défiler l'écran du
 // tout — plus aucune position de scroll à synchroniser entre appareils,
-// donc plus aucune dérive possible. On affiche seulement, dans un cadre
-// fixe et centré (#karaokeStage), une copie du paragraphe repéré ; le vrai
-// #songContent reste caché mais toujours mesuré, pour continuer à savoir
-// quel paragraphe correspond à la position du Leader.
+// donc plus aucune dérive possible. On affiche seulement, dans une carte
+// fixe et centrée (#karaokeCard, à l'intérieur de #karaokeStage), une
+// copie du paragraphe repéré ; le vrai #songContent reste caché mais
+// toujours mesuré, pour continuer à savoir quel paragraphe correspond à
+// la position du Leader.
 function renderKaraokeStage(group) {
-  if (!karaokeStageEl) return;
-  karaokeStageEl.innerHTML = '';
-  if (!group) return;
-  group.blocks.forEach(el => {
-    karaokeStageEl.appendChild(el.cloneNode(true));
-  });
+  if (!karaokeCardEl) return;
+
+  const swap = () => {
+    karaokeCardEl.innerHTML = '';
+    if (group) {
+      group.blocks.forEach(el => {
+        karaokeCardEl.appendChild(el.cloneNode(true));
+      });
+    }
+    applyKaraokeZoom(group);
+    karaokeCardEl.classList.remove('karaoke-card-out');
+  };
+
+  clearTimeout(karaokeCardTransitionTimer);
+  if (!karaokeCardEl.childNodes.length) {
+    // Première apparition (on vient d'entrer en mode karaoké) : on affiche
+    // directement, pas de fondu de sortie sur une carte vide.
+    swap();
+    return;
+  }
+
+  // Petit fondu enchaîné entre deux paragraphes plutôt qu'un remplacement
+  // brutal du contenu (voir la transition CSS sur #karaokeCard).
+  karaokeCardEl.classList.add('karaoke-card-out');
+  karaokeCardTransitionTimer = setTimeout(swap, 220);
 }
 
 function applyKaraokeStage(leaderReferenceTop) {
   if (!isViewerOpen()) return;
+
+  const maxScroll = getViewerMaxSongScrollTop();
+  updateKaraokeProgress(maxScroll > 0 ? leaderReferenceTop / maxScroll : 0);
 
   const referenceY = leaderReferenceTop + viewerElement.clientHeight * 0.5;
   const group = findKaraokeParagraphAt(referenceY);
