@@ -764,6 +764,63 @@ nav{
       border-radius:8px;
     }
 
+    /* "Scène" karaoké : plus de défilement pour les invités en mode
+       karaoké — on affiche uniquement, dans un cadre centré, une copie du
+       seul paragraphe repéré (voir renderKaraokeStage()). #songContent
+       reste caché derrière (toujours mesuré, pour savoir quel paragraphe
+       correspond à la position du Leader), mais n'est plus jamais visible
+       ni scrollé. position:fixed (et non absolute dans #viewer) pour ne
+       dépendre d'aucun scroll : #viewer peut rester scrollé n'importe où
+       sans affecter l'affichage — plus de risque de dérive. */
+    #karaokeStage{
+      display:none;
+      position:fixed;
+      top:65px; left:0; right:0; bottom:0;
+      z-index:15;
+      align-items:center;
+      justify-content:center;
+      padding:6vh 6vw;
+      overflow:auto;
+      background:var(--bg);
+      text-align:center;
+    }
+
+    body.concert-mode #karaokeStage{
+      top:0;
+    }
+
+    body.karaoke-mode #karaokeStage{
+      display:flex;
+    }
+
+    body.karaoke-mode #karaokeStage{
+      zoom:1.4;
+    }
+
+    body.karaoke-mode #karaokeStage .chord-cell .chord,
+    body.karaoke-mode #karaokeStage .commentline,
+    body.karaoke-mode #karaokeStage .inline-music-line.notes-only,
+    body.karaoke-mode #karaokeStage .pu-block{
+      display:none;
+    }
+
+    body.karaoke-mode #karaokeStage .inline-music-line.chords-only{
+      visibility:hidden;
+      position:relative;
+    }
+
+    body.karaoke-mode #karaokeStage .inline-music-line.chords-only::after{
+      content:"🎵 instrumental";
+      visibility:visible;
+      position:absolute;
+      left:0;
+      top:0;
+      color:var(--text);
+      font-family:sans-serif;
+      font-weight:700;
+      opacity:0.65;
+    }
+
     /* En mode concert + karaoké, l'appareil est tendu à l'invité : on
        masque tout ce qui pourrait changer le morceau ou perturber la
        lecture, il ne reste que le bouton pour sortir du mode concert. */
@@ -1239,6 +1296,11 @@ nav{
 
     <div id="viewer">
       <div id="songContent"></div>
+
+      <!-- Mode karaoké : au lieu de faire défiler #songContent (source de
+           dérive), on affiche ici, par-dessus, une copie du seul
+           paragraphe repéré, centrée. Rempli par renderKaraokeStage(). -->
+      <div id="karaokeStage"></div>
     </div>
   </div>
 
@@ -1497,6 +1559,7 @@ let currentSongSettings = {
 
   const viewerElement = document.getElementById('viewer');
   const songContentEl = document.getElementById('songContent');
+  const karaokeStageEl = document.getElementById('karaokeStage');
   const speedInput = document.getElementById('scrollSpeed');
   const notesPanel = document.getElementById('notesPanel');
   const notesTextarea = document.getElementById('notesTextarea');
@@ -2124,7 +2187,7 @@ function applyLeaderUI() {
   if (role === 'karaoke' && isViewerOpen()) {
     // Affichage immédiat en entrant en mode karaoké, sans attendre le
     // prochain scroll du Leader.
-    applyKaraokeAutoCenter(viewerElement.scrollTop);
+    applyKaraokeStage(viewerElement.scrollTop);
   }
 
   if (role === 'leader') {
@@ -3766,47 +3829,37 @@ function updateLeaderParagraphHighlight() {
   setKaraokeHighlightGroup(findKaraokeParagraphAt(markerY));
 }
 
-// Affichage en mode karaoké (invités) : on suit en continu la position
-// réelle du Leader (jamais figé, donc pas de dérive sur un couplet/refrain
-// plus haut qu'un écran), mais sans jamais sortir du paragraphe
-// actuellement surligné — on ne saute donc jamais en avance sur le
-// paragraphe suivant avant que le Leader n'y soit vraiment.
-function applyKaraokeAutoCenter(leaderReferenceTop) {
+// Affichage en mode karaoké (invités) : on ne fait plus défiler l'écran du
+// tout — plus aucune position de scroll à synchroniser entre appareils,
+// donc plus aucune dérive possible. On affiche seulement, dans un cadre
+// fixe et centré (#karaokeStage), une copie du paragraphe repéré ; le vrai
+// #songContent reste caché mais toujours mesuré, pour continuer à savoir
+// quel paragraphe correspond à la position du Leader.
+function renderKaraokeStage(group) {
+  if (!karaokeStageEl) return;
+  karaokeStageEl.innerHTML = '';
+  if (!group) return;
+  group.blocks.forEach(el => {
+    karaokeStageEl.appendChild(el.cloneNode(true));
+  });
+}
+
+function applyKaraokeStage(leaderReferenceTop) {
   if (!isViewerOpen()) return;
 
   const referenceY = leaderReferenceTop + viewerElement.clientHeight * 0.5;
   const group = findKaraokeParagraphAt(referenceY);
   if (!group) return;
-  const groupChanged = setKaraokeHighlightGroup(group);
+  if (!setKaraokeHighlightGroup(group)) return; // même paragraphe : rien à refaire
 
-  // La position qu'on garde à l'écran ne s'éloigne jamais du paragraphe
-  // surligné, même si le Leader est déjà un peu plus loin dedans (les
-  // ticks suivants rattraperont, et le prochain changement de paragraphe
-  // fera le reste).
-  const clampedReferenceY = Math.max(group.top, Math.min(group.bottom, referenceY));
-  const max = Math.max(0, viewerElement.scrollHeight - viewerElement.clientHeight);
-  const targetTop = Math.max(0, Math.min(max, clampedReferenceY - viewerElement.clientHeight / 2));
-
-  if (Math.abs(viewerElement.scrollTop - targetTop) < 4) return;
-
-  isRemoteScrolling = true;
-  if (groupChanged) {
-    // Nouveau paragraphe : un balayage doux, plus lisible qu'un saut sec.
-    viewerElement.scrollTo({ top: targetTop, behavior: 'smooth' });
-  } else {
-    // Toujours le même paragraphe : petits ajustements fréquents pour
-    // rester en phase, pas besoin de relancer une animation à chaque fois.
-    viewerElement.scrollTop = targetTop;
-  }
-  setTimeout(() => { isRemoteScrolling = false; }, groupChanged ? 600 : 80);
+  renderKaraokeStage(group);
 }
 
 viewerElement.addEventListener('scroll', () => {
-  // Sur un appareil en mode karaoké, les évènements "scroll" viennent du
-  // recentrage automatique déclenché par applyKaraokeAutoCenter (pas d'un
-  // Leader qui scrolle) : les ignorer ici évite d'écraser en boucle le
-  // surlignage qu'applyKaraokeAutoCenter vient de poser (ce qui causait un
-  // clignotement constant et un décalage progressif du surlignage).
+  // Un appareil en mode karaoké n'affiche plus #songContent (il est caché
+  // derrière #karaokeStage) et on ne le fait plus jamais défiler par code :
+  // ce listener ne concerne que le Leader, qui suit son propre surlignage
+  // en scrollant normalement.
   if (document.body.classList.contains('karaoke-mode')) return;
   if (karaokeHighlightRaf) return;
   karaokeHighlightRaf = requestAnimationFrame(() => {
@@ -3861,7 +3914,7 @@ function applyRemoteScroll(data) {
   }
 
   if (document.body.classList.contains('karaoke-mode')) {
-    applyKaraokeAutoCenter(targetTop);
+    applyKaraokeStage(targetTop);
     return;
   }
 
