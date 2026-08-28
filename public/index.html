@@ -3766,24 +3766,39 @@ function updateLeaderParagraphHighlight() {
   setKaraokeHighlightGroup(findKaraokeParagraphAt(markerY));
 }
 
-// Affichage en mode karaoké (invités) : on ignore la position pixel-perfect
-// reçue du Leader (inutile pour lire des paroles) et on recentre en douceur
-// l'écran sur le paragraphe repéré, uniquement quand il change.
+// Affichage en mode karaoké (invités) : on suit en continu la position
+// réelle du Leader (jamais figé, donc pas de dérive sur un couplet/refrain
+// plus haut qu'un écran), mais sans jamais sortir du paragraphe
+// actuellement surligné — on ne saute donc jamais en avance sur le
+// paragraphe suivant avant que le Leader n'y soit vraiment.
 function applyKaraokeAutoCenter(leaderReferenceTop) {
   if (!isViewerOpen()) return;
 
   const referenceY = leaderReferenceTop + viewerElement.clientHeight * 0.5;
   const group = findKaraokeParagraphAt(referenceY);
   if (!group) return;
-  if (!setKaraokeHighlightGroup(group)) return;
+  const groupChanged = setKaraokeHighlightGroup(group);
 
-  const groupCenter = (group.top + group.bottom) / 2;
+  // La position qu'on garde à l'écran ne s'éloigne jamais du paragraphe
+  // surligné, même si le Leader est déjà un peu plus loin dedans (les
+  // ticks suivants rattraperont, et le prochain changement de paragraphe
+  // fera le reste).
+  const clampedReferenceY = Math.max(group.top, Math.min(group.bottom, referenceY));
   const max = Math.max(0, viewerElement.scrollHeight - viewerElement.clientHeight);
-  const targetTop = Math.max(0, Math.min(max, groupCenter - viewerElement.clientHeight / 2));
+  const targetTop = Math.max(0, Math.min(max, clampedReferenceY - viewerElement.clientHeight / 2));
+
+  if (Math.abs(viewerElement.scrollTop - targetTop) < 4) return;
 
   isRemoteScrolling = true;
-  viewerElement.scrollTo({ top: targetTop, behavior: 'smooth' });
-  setTimeout(() => { isRemoteScrolling = false; }, 600);
+  if (groupChanged) {
+    // Nouveau paragraphe : un balayage doux, plus lisible qu'un saut sec.
+    viewerElement.scrollTo({ top: targetTop, behavior: 'smooth' });
+  } else {
+    // Toujours le même paragraphe : petits ajustements fréquents pour
+    // rester en phase, pas besoin de relancer une animation à chaque fois.
+    viewerElement.scrollTop = targetTop;
+  }
+  setTimeout(() => { isRemoteScrolling = false; }, groupChanged ? 600 : 80);
 }
 
 viewerElement.addEventListener('scroll', () => {
