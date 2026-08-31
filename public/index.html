@@ -911,6 +911,34 @@ nav{
       50%{ filter:drop-shadow(0 0 20px rgba(var(--karaoke-accent-rgb),0.75)); }
     }
 
+    /* Titre du morceau, en haut au centre de la scène — uniquement en mode
+       concert (scène plein écran) : en dehors du plein écran, la barre du
+       haut (nav, nom du morceau dans la liste, etc.) reste visible, pas
+       besoin de doublon ici. Discret (petite taille, opacité réduite) pour
+       ne pas concurrencer le logo ni les paroles, qui restent le point
+       d'attention principal. */
+    #karaokeTitleBadge{
+      display:none;
+      position:absolute;
+      z-index:2;
+      top:3vh;
+      left:0;
+      right:0;
+      text-align:center;
+      pointer-events:none;
+      font-family:'Poppins', sans-serif;
+      font-weight:700;
+      font-size:clamp(14px, 2.2vw, 22px);
+      letter-spacing:0.03em;
+      color:var(--text);
+      opacity:0.6;
+      text-shadow:0 0 12px rgba(var(--karaoke-accent-rgb),0.35);
+    }
+
+    body.concert-mode.karaoke-mode #karaokeTitleBadge{
+      display:block;
+    }
+
     /* La "carte" lyrics : c'est elle qui reçoit le zoom dynamique (voir
        applyKaraokeZoom()) et le fondu entre paragraphes (voir
        renderKaraokeStage()) — le logo, les icônes et la barre de
@@ -1488,6 +1516,9 @@ nav{
       <div id="karaokeStage">
         <div class="karaoke-ambiance-icon karaoke-ambiance-icon--tl" aria-hidden="true">🎤</div>
         <div class="karaoke-ambiance-icon karaoke-ambiance-icon--br" aria-hidden="true">🎶</div>
+        <!-- Titre du morceau, en haut au centre, uniquement en mode concert
+             (voir #karaokeTitleBadge en CSS et updateKaraokeTitleBadge()). -->
+        <div id="karaokeTitleBadge"></div>
         <img id="karaokeLogo" alt="Jouez Cool" src="karaoke-logo.png" onclick="exitConcertModeFromLogo()">
         <div id="karaokeCard"></div>
         <div id="karaokeProgress"><div id="karaokeProgressFill"></div></div>
@@ -1753,6 +1784,7 @@ let currentSongSettings = {
   const karaokeStageEl = document.getElementById('karaokeStage');
   const karaokeCardEl = document.getElementById('karaokeCard');
   const karaokeProgressFillEl = document.getElementById('karaokeProgressFill');
+  const karaokeTitleBadgeEl = document.getElementById('karaokeTitleBadge');
   const speedInput = document.getElementById('scrollSpeed');
   const notesPanel = document.getElementById('notesPanel');
   const notesTextarea = document.getElementById('notesTextarea');
@@ -2961,6 +2993,7 @@ function updateConcertModeUI() {
   }
 
   updateConcertFloatingVisibility();
+  updateKaraokeTitleBadge();
 }
 
 function toggleConcertMode() {
@@ -3006,6 +3039,16 @@ function getSongDisplayInfo(song) {
     artist: String(meta.artist || fallbackArtist).trim(),
     fileBase
   };
+}
+
+// Titre affiché en haut de la scène karaoké en mode concert (voir
+// #karaokeTitleBadge, masqué en dehors du mode concert par CSS) : même
+// titre "propre" (méta éditée si dispo, sinon déduit du nom de fichier) que
+// celui affiché dans la bibliothèque, plutôt que le {title:...} brut du
+// fichier ChordPro qui contient parfois un code interne (ex: "AF5 - ...").
+function updateKaraokeTitleBadge() {
+  if (!karaokeTitleBadgeEl) return;
+  karaokeTitleBadgeEl.textContent = currentFileName ? getSongDisplayInfo(currentFileName).title : '';
 }
 
 function sortSongsForLibrary() {
@@ -3690,6 +3733,7 @@ async function loadSong(f) {
     currentFileName = f;
 
     updatePlayedButton();
+    updateKaraokeTitleBadge();
 
     const tRenderStart = performance.now();
     renderChordPro();
@@ -3873,11 +3917,12 @@ function songMatchesFilters(song, query) {
     const max = Math.max(0, getViewerMaxSongScrollTop());
     const scrollRatio = max > 0 ? clamp01(st / max) : 0;
     // Paragraphe karaoké correspondant à CETTE position de scroll, calculé
-    // ici (même formule que updateLeaderParagraphHighlight()) pour être
-    // transmis tel quel aux invités en mode karaoké — voir le commentaire
-    // sur getKaraokeGroupAnchor() plus haut.
+    // ici (même logique que updateLeaderParagraphHighlight(), voir
+    // pickKaraokeGroupForScroll()) pour être transmis tel quel aux invités
+    // en mode karaoké — voir le commentaire sur getKaraokeGroupAnchor() plus
+    // haut.
     const karaokeAnchor = getKaraokeGroupAnchor(
-      findKaraokeParagraphAt(st + viewerElement.clientHeight * 0.5)
+      pickKaraokeGroupForScroll(st, viewerElement.clientHeight)
     );
     const baseState = { top: st, scrollRatio, karaokeAnchor };
     const first = blocks[0];
@@ -4049,6 +4094,23 @@ function findKaraokeParagraphAt(y) {
   return groups[groups.length - 1];
 }
 
+// Repère le paragraphe "courant" pour une position de scroll donnée, en
+// visant le milieu de l'écran (voir findKaraokeParagraphAt) — SAUF tout en
+// haut du morceau (scrollTop ~ 0), où l'on force le tout premier
+// paragraphe. Sans ce cas particulier, un morceau dont l'intro (titre,
+// sous-titre, nom du chanteur) plus le premier paragraphe ne remplit pas la
+// moitié de la fenêtre laisse le marqueur "milieu d'écran" tomber déjà
+// au-delà du premier paragraphe même scrollé tout en haut — impossible
+// d'afficher les toutes premières lignes (repéré sur "A Nos Souvenirs").
+// Tout en haut, il n'y a de toute façon rien d'autre à montrer que le début
+// du morceau, donc pas besoin du marqueur au milieu de l'écran.
+function pickKaraokeGroupForScroll(scrollTop, clientHeight) {
+  const groups = getKaraokeParagraphGroups();
+  if (!groups.length) return null;
+  if (scrollTop <= 2) return groups[0];
+  return findKaraokeParagraphAt(scrollTop + clientHeight * 0.5);
+}
+
 // Identifiant stable d'un groupe (le data-anchor de sa première ligne,
 // déjà calculé par renderChordPro() à partir du contenu — même valeur
 // chez tout le monde pour un même morceau, quel que soit l'appareil).
@@ -4090,8 +4152,7 @@ function updateLeaderParagraphHighlight() {
     setKaraokeHighlightGroup(null);
     return;
   }
-  const markerY = viewerElement.scrollTop + viewerElement.clientHeight * 0.5;
-  setKaraokeHighlightGroup(findKaraokeParagraphAt(markerY));
+  setKaraokeHighlightGroup(pickKaraokeGroupForScroll(viewerElement.scrollTop, viewerElement.clientHeight));
 }
 
 // Taille du texte adaptée à la longueur du paragraphe affiché : un
@@ -4164,7 +4225,7 @@ function applyKaraokeStage(leaderReferenceTop, karaokeAnchor) {
   // calcul géométrique que si l'ancre est absente (compat) ou introuvable
   // (changement de morceau pas encore propagé, par ex.).
   const group = findKaraokeParagraphByAnchor(karaokeAnchor)
-    || findKaraokeParagraphAt(leaderReferenceTop + viewerElement.clientHeight * 0.5);
+    || pickKaraokeGroupForScroll(leaderReferenceTop, viewerElement.clientHeight);
   if (!group) return;
   if (!setKaraokeHighlightGroup(group)) return; // même paragraphe : rien à refaire
 
@@ -5183,6 +5244,26 @@ function renderTabBlock(targetEl, text) {
         renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
         const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
         addChordBlock(segments, lyricLine, target, anchorId);
+        continue;
+      }
+
+      // Arrivé ici, la ligne n'a matché aucune directive ChordPro reconnue
+      // ci-dessus (titre, sov/soc/sob, {a:}, {n:}, {d:}, {c:}...). Si elle
+      // est malgré tout entièrement composée d'une ou plusieurs accolades
+      // — typiquement des métadonnées d'import sans effet ici comme
+      // {time:4:01} ou {metronome: 134} — on l'ignore purement et
+      // simplement plutôt que de la laisser tomber dans le rendu "paroles"
+      // juste en dessous. Sans ce filtre, une ligne comme "{time:4:01}"
+      // s'affichait comme une fausse ligne de paroles ET comptait pour un
+      // paragraphe à part entière dans le regroupement karaoké (voir
+      // computeKaraokeParagraphGroups()), ce qui décalait tout le
+      // surlignage d'un cran et empêchait d'atteindre les toutes premières
+      // vraies lignes du morceau (repéré sur "A Nos Souvenirs", qui a
+      // {time:...} et {metronome:...} juste après le titre). On ne matche
+      // qu'une ligne intégralement composée d'accolades — jamais un mélange
+      // accolade+texte, qui doit continuer à être traité comme une ligne de
+      // paroles avec accords ci-dessous.
+      if (/^(?:\{[^}]*\}\s*)+$/.test(line.trim())) {
         continue;
       }
 
