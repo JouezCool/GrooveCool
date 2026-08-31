@@ -991,6 +991,29 @@ nav{
       justify-content:center;
     }
 
+    /* Tout premier "paragraphe" de la scène karaoké pour chaque morceau :
+       titre + artiste (voir isTitleGroup / renderKaraokeStage()), avant les
+       paroles. Mise en forme dédiée en clamp() plutôt que le zoom
+       dynamique utilisé pour les paragraphes de paroles. */
+    #karaokeCard .karaoke-title-card{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:2vh;
+    }
+
+    #karaokeCard .karaoke-title-main{
+      font-size:clamp(30px, 6vw, 68px);
+      line-height:1.15;
+      text-align:center;
+    }
+
+    #karaokeCard .karaoke-title-artist{
+      font-size:clamp(16px, 2.8vw, 30px);
+      opacity:0.7;
+      text-align:center;
+    }
+
     #karaokeProgress{
       position:absolute;
       z-index:1;
@@ -4044,8 +4067,21 @@ function computeKaraokeParagraphGroups() {
     if (current.length) { groups.push(current); current = []; }
   }
 
+  // {title:}/{subtitle:} ChordPro, rendus par addCenteredTitle() en
+  // <h1>/<h2> tout en haut de #songContent : capturés à part tant qu'aucun
+  // paragraphe réel n'a encore commencé, pour en faire le tout premier
+  // "paragraphe" de la scène karaoké (titre + artiste), avant les paroles
+  // — demande explicite du Leader pour ouvrir chaque morceau sur le titre
+  // plutôt que directement sur la première ligne.
+  const titleBlocks = [];
+
   Array.from(songContentEl.children).forEach(child => {
     if (child.id === 'overlayLayer' || child.classList.contains('song-end-spacer')) return;
+
+    if (!groups.length && !current.length && (child.tagName === 'H1' || child.tagName === 'H2')) {
+      titleBlocks.push(child);
+      return;
+    }
 
     if (
       child.classList.contains('chorus-block') ||
@@ -4070,7 +4106,7 @@ function computeKaraokeParagraphGroups() {
   });
   flush();
 
-  return groups
+  const realGroups = groups
     .filter(blocks => blocks.length)
     .flatMap(chunkKaraokeBlocks)
     .map(blocks => ({
@@ -4078,6 +4114,17 @@ function computeKaraokeParagraphGroups() {
       top: Math.min(...blocks.map(el => el.offsetTop)),
       bottom: Math.max(...blocks.map(el => el.offsetTop + el.offsetHeight)),
     }));
+
+  if (titleBlocks.length) {
+    realGroups.unshift({
+      blocks: titleBlocks,
+      top: 0,
+      bottom: Math.max(...titleBlocks.map(el => el.offsetTop + el.offsetHeight)),
+      isTitleGroup: true,
+    });
+  }
+
+  return realGroups;
 }
 
 function getKaraokeParagraphGroups() {
@@ -4159,8 +4206,15 @@ function updateLeaderParagraphHighlight() {
 // couplet d'une ligne peut se permettre un zoom bien plus fort qu'un long
 // paragraphe, qui doit rester lisible dans le cadre sans déborder. 1.4
 // reste le plancher (c'était la valeur fixe précédente, déjà validée).
+// Le paragraphe "titre" (voir isTitleGroup) a sa propre mise en forme en
+// clamp() côté CSS (.karaoke-title-main/.karaoke-title-artist), pas besoin
+// du zoom dynamique ici — on le laisse à 1 pour éviter un double effet.
 function applyKaraokeZoom(group) {
   if (!karaokeCardEl) return;
+  if (group && group.isTitleGroup) {
+    karaokeCardEl.style.zoom = 1;
+    return;
+  }
   const lineCount = group ? Math.max(1, group.blocks.length) : 1;
   const zoom = Math.max(1.4, Math.min(2.0, 2.0 - (lineCount - 1) * 0.12));
   karaokeCardEl.style.zoom = zoom;
@@ -4188,7 +4242,26 @@ function renderKaraokeStage(group) {
 
   const swap = () => {
     karaokeCardEl.innerHTML = '';
-    if (group) {
+    if (group && group.isTitleGroup) {
+      // Titre + artiste "propres" (même source que #karaokeTitleBadge et
+      // la bibliothèque, via getSongDisplayInfo()) plutôt qu'un clone brut
+      // du {title:...}/{subtitle:...} du fichier ChordPro, qui contient
+      // parfois un code interne de setlist (ex: "AF5 - A Nos Souvenirs").
+      const info = getSongDisplayInfo(currentFileName);
+      const card = document.createElement('div');
+      card.className = 'karaoke-title-card';
+      const mainEl = document.createElement('div');
+      mainEl.className = 'karaoke-title-main';
+      mainEl.textContent = info.title;
+      card.appendChild(mainEl);
+      if (info.artist) {
+        const artistEl = document.createElement('div');
+        artistEl.className = 'karaoke-title-artist';
+        artistEl.textContent = info.artist;
+        card.appendChild(artistEl);
+      }
+      karaokeCardEl.appendChild(card);
+    } else if (group) {
       group.blocks.forEach(el => {
         karaokeCardEl.appendChild(el.cloneNode(true));
       });
@@ -4823,6 +4896,12 @@ socket.on('apply-speed', value => {
     el.style.fontSize = ((level === 1 ? 34 : 20) * currentSongZoom) + 'px';
     if (level === 2) el.style.color = (themeMode === 'light' ? '#555' : '#888');
     el.textContent = text;
+    // Ancre stable pour le paragraphe "titre" de la scène karaoké (voir
+    // isTitleGroup dans computeKaraokeParagraphGroups()) : seul le tout
+    // premier <h1> compte comme référence (getKaraokeGroupAnchor() ne lit
+    // que le premier bloc du groupe), mais on la pose aussi sur le <h2>
+    // pour rester correct si un morceau n'a qu'un sous-titre sans titre.
+    el.dataset.anchor = 'karaoke-title';
     songContentEl.appendChild(el);
   }
 
