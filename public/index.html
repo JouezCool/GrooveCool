@@ -39,6 +39,7 @@
       --text:#eee;
       --accent:#ff9800;
       --karaoke-accent-rgb: 130,179,225;
+      --karaoke-leader-highlight-rgb: 144,224,144;
       --chord-color:#ff9800;
       --chord-size:.86em;
       --edit:#2196F3;
@@ -770,6 +771,18 @@ nav{
       border-radius:8px;
     }
 
+    /* Chez le Leader (vue normale des paroles dans #songContent, jamais
+       cachée derrière #karaokeStage puisque body.karaoke-mode ne s'active
+       que pour le rôle "karaoke") : couleur différente — vert clair — pour
+       distinguer d'un coup d'œil "mon repère perso" de ce qui s'affiche
+       réellement sur la scène chez les invités (accent bleu ci-dessus,
+       utilisé par #karaokeCard). #karaokeCard n'est pas imbriqué dans
+       #songContent (nœuds clonés, voir renderKaraokeStage()), donc les deux
+       règles ne se marchent jamais dessus. */
+    #songContent .karaoke-current-line{
+      background: rgba(var(--karaoke-leader-highlight-rgb),0.3);
+    }
+
     /* "Scène" karaoké : plus de défilement pour les invités en mode
        karaoké — on affiche uniquement, dans une carte centrée, une copie du
        seul paragraphe repéré (voir renderKaraokeStage()). #songContent
@@ -822,6 +835,32 @@ nav{
     @keyframes karaokeBreathe{
       0%, 100%{ opacity:0.55; }
       50%{ opacity:1; }
+    }
+
+    /* Effet d'ambiance additionnel : un doux reflet en diagonale qui
+       traverse tout l'écran, une fois toutes les 10s (voir le minutage des
+       keyframes ci-dessous — le reflet ne prend qu'environ le premier tiers
+       du cycle de 10s, le reste du temps il est hors-écran/invisible).
+       Reste derrière #karaokeCard (z-index:0, la carte est en z-index:1) et
+       n'intercepte jamais les clics (pointer-events:none). */
+    #karaokeStage::after{
+      content:"";
+      position:absolute;
+      inset:-10% -10%;
+      z-index:0;
+      pointer-events:none;
+      background:linear-gradient(115deg,
+        transparent 42%,
+        rgba(var(--karaoke-accent-rgb),0.16) 50%,
+        transparent 58%);
+      transform:translateX(-70%);
+      animation:karaokeSweep 10s ease-in-out infinite;
+    }
+
+    @keyframes karaokeSweep{
+      0%{ transform:translateX(-70%); }
+      32%{ transform:translateX(70%); }
+      100%{ transform:translateX(70%); }
     }
 
     /* Icônes d'ambiance (micro / notes) : assez opaques pour rester bien
@@ -3930,6 +3969,25 @@ function invalidateKaraokeParagraphGroups() {
   karaokeHighlightGroup = null;
 }
 
+// Un couplet/refrain/pont (ou un groupe séparé par une ligne vide) peut
+// compter beaucoup plus de lignes que ça — trop de texte d'un coup à
+// l'écran en mode karaoké, pénible à suivre pour les invités. On découpe
+// donc tout groupe trop long en tranches de MAX_KARAOKE_GROUP_LINES lignes
+// consécutives. Chaque ligne a de toute façon son propre data-anchor unique
+// (voir hashDJB2() plus bas, assigné indépendamment du groupement), donc ce
+// découpage reste identique et stable sur tous les appareils pour un même
+// morceau, sans rien changer à la synchro par ancre.
+const MAX_KARAOKE_GROUP_LINES = 4;
+
+function chunkKaraokeBlocks(blocks) {
+  if (blocks.length <= MAX_KARAOKE_GROUP_LINES) return [blocks];
+  const chunks = [];
+  for (let i = 0; i < blocks.length; i += MAX_KARAOKE_GROUP_LINES) {
+    chunks.push(blocks.slice(i, i + MAX_KARAOKE_GROUP_LINES));
+  }
+  return chunks;
+}
+
 function computeKaraokeParagraphGroups() {
   function isBlankLyric(el) {
     return !!(el.dataset && el.dataset.kind === 'lyric' && !el.textContent.trim());
@@ -3969,6 +4027,7 @@ function computeKaraokeParagraphGroups() {
 
   return groups
     .filter(blocks => blocks.length)
+    .flatMap(chunkKaraokeBlocks)
     .map(blocks => ({
       blocks,
       top: Math.min(...blocks.map(el => el.offsetTop)),
