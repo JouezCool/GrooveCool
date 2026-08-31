@@ -913,6 +913,17 @@ nav{
       text-shadow:none !important;
     }
 
+    /* .chord-row est en display:flex (voir plus haut, pour l'alignement
+       paroles/accords caractère par caractère dans la partition classique),
+       et le text-align:center hérité de #karaokeStage ne s'applique pas au
+       contenu d'un conteneur flex — il faut recentrer explicitement via
+       justify-content, sinon chaque ligne reste collée à gauche de la
+       carte malgré le text-align. Uniquement dans #karaokeCard : ailleurs
+       dans l'app, .chord-row doit rester alignée à gauche. */
+    #karaokeCard .chord-row{
+      justify-content:center;
+    }
+
     #karaokeProgress{
       position:absolute;
       z-index:1;
@@ -3822,7 +3833,14 @@ function songMatchesFilters(song, query) {
     const st = viewerElement.scrollTop;
     const max = Math.max(0, getViewerMaxSongScrollTop());
     const scrollRatio = max > 0 ? clamp01(st / max) : 0;
-    const baseState = { top: st, scrollRatio };
+    // Paragraphe karaoké correspondant à CETTE position de scroll, calculé
+    // ici (même formule que updateLeaderParagraphHighlight()) pour être
+    // transmis tel quel aux invités en mode karaoké — voir le commentaire
+    // sur getKaraokeGroupAnchor() plus haut.
+    const karaokeAnchor = getKaraokeGroupAnchor(
+      findKaraokeParagraphAt(st + viewerElement.clientHeight * 0.5)
+    );
+    const baseState = { top: st, scrollRatio, karaokeAnchor };
     const first = blocks[0];
     if (st < first.offsetTop - 8) {
       return { ...baseState, anchor: '', progress: 0 };
@@ -3972,6 +3990,28 @@ function findKaraokeParagraphAt(y) {
   return groups[groups.length - 1];
 }
 
+// Identifiant stable d'un groupe (le data-anchor de sa première ligne,
+// déjà calculé par renderChordPro() à partir du contenu — même valeur
+// chez tout le monde pour un même morceau, quel que soit l'appareil).
+// Sert à faire correspondre EXACTEMENT le même paragraphe chez un invité
+// karaoké que celui affiché chez le Leader (voir findKaraokeParagraphByAnchor
+// et getTopLyricAnchorState) plutôt que de le redéduire d'une position de
+// scroll traduite proportionnellement : deux appareils avec une hauteur de
+// fenêtre différente (ordinateur du Leader vs téléphone de l'invité)
+// n'ajoutent pas la même moitié de hauteur d'écran au calcul, ce qui
+// causait un léger décalage ("il faut scroller encore un peu" côté
+// Leader avant que ça se mette à jour côté scène karaoké).
+function getKaraokeGroupAnchor(group) {
+  const first = group && group.blocks && group.blocks[0];
+  return (first && first.dataset && first.dataset.anchor) || '';
+}
+
+function findKaraokeParagraphByAnchor(anchor) {
+  if (!anchor) return null;
+  const groups = getKaraokeParagraphGroups();
+  return groups.find(g => getKaraokeGroupAnchor(g) === anchor) || null;
+}
+
 function setKaraokeHighlightGroup(group) {
   if (group === karaokeHighlightGroup) return false;
   if (karaokeHighlightGroup) {
@@ -4051,14 +4091,21 @@ function renderKaraokeStage(group) {
   karaokeCardTransitionTimer = setTimeout(swap, 220);
 }
 
-function applyKaraokeStage(leaderReferenceTop) {
+function applyKaraokeStage(leaderReferenceTop, karaokeAnchor) {
   if (!isViewerOpen()) return;
 
   const maxScroll = getViewerMaxSongScrollTop();
   updateKaraokeProgress(maxScroll > 0 ? leaderReferenceTop / maxScroll : 0);
 
-  const referenceY = leaderReferenceTop + viewerElement.clientHeight * 0.5;
-  const group = findKaraokeParagraphAt(referenceY);
+  // Priorité à karaokeAnchor (identifiant exact du paragraphe déjà repéré
+  // chez le Leader, voir getKaraokeGroupAnchor()) plutôt qu'à un recalcul
+  // géométrique local : deux appareils de hauteur d'écran différente ne
+  // traduisent pas leaderReferenceTop au même endroit, d'où le léger
+  // décalage/retard observé côté scène karaoké. On ne retombe sur le
+  // calcul géométrique que si l'ancre est absente (compat) ou introuvable
+  // (changement de morceau pas encore propagé, par ex.).
+  const group = findKaraokeParagraphByAnchor(karaokeAnchor)
+    || findKaraokeParagraphAt(leaderReferenceTop + viewerElement.clientHeight * 0.5);
   if (!group) return;
   if (!setKaraokeHighlightGroup(group)) return; // même paragraphe : rien à refaire
 
@@ -4124,7 +4171,7 @@ function applyRemoteScroll(data) {
   }
 
   if (document.body.classList.contains('karaoke-mode')) {
-    applyKaraokeStage(targetTop);
+    applyKaraokeStage(targetTop, data?.karaokeAnchor);
     return;
   }
 

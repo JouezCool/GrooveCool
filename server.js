@@ -1796,6 +1796,10 @@ socket.on('reset-played-tonight', () => {
       : null;
     const manual = !!payload?.manual;
     const official = !!payload?.official;
+    // Identifiant du paragraphe repéré côté Leader pour la scène karaoké
+    // (voir getKaraokeGroupAnchor() côté client) : simplement relayé tel
+    // quel, jamais interprété côté serveur.
+    const karaokeAnchor = String(payload?.karaokeAnchor || '');
 
     currentPlaybackPosition = {
       anchor,
@@ -1804,10 +1808,11 @@ socket.on('reset-played-tonight', () => {
       scrollRatio,
       manual,
       official,
+      karaokeAnchor,
       updatedAt: Date.now()
     };
 
-    socket.broadcast.emit('apply-scroll', { anchor, progress, top, scrollRatio, manual, official });
+    socket.broadcast.emit('apply-scroll', { anchor, progress, top, scrollRatio, manual, official, karaokeAnchor });
   });
 
   socket.on('request-sync-position', () => {
