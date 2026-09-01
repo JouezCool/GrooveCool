@@ -1,5 +1,13 @@
 const express = require('express');
+const compression = require('compression');
 const app = express();
+// Compresse toutes les réponses (gzip/brotli selon ce que le navigateur
+// accepte) : index.html (~180 Ko non compressé, ~40 Ko compressé) et les
+// réponses JSON (morceaux, méta) sont retransmis en entier à chaque
+// chargement (index.html est volontairement en no-cache, voir plus bas) —
+// gain direct sur les connexions lentes de salle (wifi/4G), sans rien
+// changer au comportement de l'app.
+app.use(compression());
 const http = require('http').Server(app);
 const io = require('socket.io')(http, {
   // Tolère les micro-coupures réseau (WiFi de salle, 4G, verrouillage d'écran)
