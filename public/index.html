@@ -1346,6 +1346,58 @@ nav{
   color: var(--text);
 }
 
+#guestQueueBox{
+  border:1px solid var(--panel-border);
+  background:var(--panel-bg);
+  border-radius:8px;
+  padding:10px;
+  margin-top:10px;
+}
+
+#guestQueueTitle{
+  color: var(--text);
+  font-weight:600;
+}
+
+#guestQueueList{
+  font-size:14px;
+  color: var(--text);
+}
+
+.guest-queue-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 0;
+  border-top:1px solid var(--panel-border);
+}
+
+.guest-queue-row:first-child{
+  border-top:none;
+}
+
+.guest-queue-row .guest-queue-info{
+  min-width:0;
+  line-height:1.35;
+}
+
+.guest-queue-row .guest-queue-song{
+  color:#9a9a9a;
+  font-size:12.5px;
+}
+
+.guest-queue-row button{
+  flex-shrink:0;
+  padding:6px 10px;
+  border-radius:6px;
+  border:1px solid var(--panel-border);
+  background:transparent;
+  color:var(--text);
+  font-size:12.5px;
+  cursor:pointer;
+}
+
   </style>
 </head>
 
@@ -1609,6 +1661,13 @@ nav{
   <div id="connectedUsersList">Aucun utilisateur connecté</div>
 </div>
 
+<!-- File d'attente karaoké (invités via /guest.html) : visible seulement
+     par Leader/Turn (voir renderGuestQueuePanel / canChooseSongs). -->
+<div id="guestQueueBox" style="display:none;">
+  <div id="guestQueueTitle">File d'attente karaoké 🎤</div>
+  <div id="guestQueueList">Aucune demande en attente</div>
+</div>
+
       <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end;">
         <button class="btn btn-blue" onclick="closeSettings()">OK</button>
       </div>
@@ -1736,6 +1795,7 @@ nav{
   });
 
   let isLeader = false, isTurn = false, allSongs = [], currentIndex = -1;
+  let guestQueue = []; // file d'attente karaoké des invités (voir /guest.html)
   let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
   
   const songTextCache = new Map();
@@ -2393,6 +2453,67 @@ function renderConnectedUsers(usersList) {
   el.innerHTML = usersList.map(name => `<div>${escapeHtml(name)}</div>`).join('');
 }
 
+// File d'attente karaoké des invités (voir /guest.html + guest-queue.js
+// côté serveur). Panneau réservé à Leader/Turn : ce sont eux qui appellent
+// les gens sur scène et retirent les demandes traitées.
+function renderGuestQueuePanel() {
+  const box = document.getElementById('guestQueueBox');
+  const list = document.getElementById('guestQueueList');
+  if (!box || !list) return;
+
+  if (!canChooseSongs()) {
+    box.style.display = 'none';
+    return;
+  }
+
+  box.style.display = 'block';
+
+  if (!Array.isArray(guestQueue) || guestQueue.length === 0) {
+    list.textContent = "Aucune demande en attente";
+    return;
+  }
+
+  list.innerHTML = guestQueue.map(entry => `
+    <div class="guest-queue-row">
+      <div class="guest-queue-info">
+        <div>${escapeHtml(entry.name)}</div>
+        <div class="guest-queue-song">${escapeHtml(entry.songTitle || '')}${entry.songArtist ? ' — ' + escapeHtml(entry.songArtist) : ''}</div>
+      </div>
+      <button type="button" onclick="removeGuestQueueEntry('${escapeHtml(entry.id)}')">Retirer</button>
+    </div>
+  `).join('');
+}
+
+async function fetchGuestQueue() {
+  try {
+    const res = await fetch('/guest-queue', { cache: 'no-store' });
+    guestQueue = await res.json();
+  } catch (err) {
+    console.error(err);
+    guestQueue = [];
+  }
+  renderGuestQueuePanel();
+}
+
+async function removeGuestQueueEntry(id) {
+  // Retrait optimiste pour une UI réactive ; l'événement socket
+  // 'guest-queue-updated' recale de toute façon tout le monde ensuite.
+  guestQueue = guestQueue.filter(e => e.id !== id);
+  renderGuestQueuePanel();
+
+  try {
+    await fetch('/guest-queue/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+  } catch (err) {
+    console.error(err);
+    showToast("Erreur réseau, nouvelle tentative...");
+    await fetchGuestQueue();
+  }
+}
+
 // Rôle "affiché" à l'écran : Leader/Turn viennent du serveur (ressources
 // exclusives), Follow/Karaoke sont purement locaux (un simple choix
 // d'affichage, rien à réserver côté serveur).
@@ -2482,6 +2603,7 @@ function applyLeaderUI() {
   updateRoleMenuHighlight();
   updateResyncButton();
   updateLeaderParagraphHighlight();
+  renderGuestQueuePanel();
 }
 
 function canChooseSongs() {
@@ -2672,6 +2794,11 @@ socket.on('song-deleted', async ({ fileName }) => {
   await fetchSongMeta();
   await fetchSongs();
   filterSongList(songSearchInput?.value || "");
+});
+
+socket.on('guest-queue-updated', (list) => {
+  guestQueue = Array.isArray(list) ? list : [];
+  renderGuestQueuePanel();
 });
 
   socket.on('connect', () => {
@@ -5713,6 +5840,7 @@ async function restoreHistoryVersion(historyId) {
   updateSettingsButtonLabel();
   await fetchSongMeta();
   await fetchUserColors();
+  await fetchGuestQueue();
   await fetchSongs();
   debugMetaMatching();
   syncSettingsUI();
