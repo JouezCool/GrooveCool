@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Karaoké — Jouez-Cool</title>
+<link rel="icon" href="/icon-512.png" />
+<link rel="apple-touch-icon" href="/icon-512.png" />
+<style>
+  :root{
+    --bg:#0a0a0a; --panel:#141414; --panel-border:#2a2a2a; --text:#eee;
+    --muted:#9a9a9a; --accent:#ff9800;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+    font-family:-apple-system,Segoe UI,Roboto,sans-serif;
+    display:flex; justify-content:center; padding:24px 16px 48px;
+  }
+  #wrap{ width:100%; max-width:420px; }
+  h1{
+    font-size:22px; margin:0 0 4px; text-align:center; color:var(--accent);
+  }
+  #subtitle{
+    text-align:center; color:var(--muted); font-size:14px; margin:0 0 24px;
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--panel-border);
+    border-radius:14px; padding:20px; display:grid; gap:16px;
+  }
+  label{ display:grid; gap:8px; font-size:14px; color:var(--muted); }
+  select, input[type="text"]{
+    width:100%; padding:14px; border-radius:10px; border:1px solid #333;
+    background:#000; color:var(--text); font-size:16px;
+  }
+  button{
+    width:100%; padding:15px; border-radius:10px; border:none;
+    background:var(--accent); color:#000; font-weight:700; font-size:16px;
+    cursor:pointer;
+  }
+  button:disabled{ opacity:0.5; cursor:default; }
+  button.secondary{
+    background:transparent; color:var(--accent); border:1px solid var(--accent);
+    font-weight:600; margin-top:8px;
+  }
+  #status{
+    min-height:20px; font-size:14px; text-align:center; color:#ff6b6b;
+  }
+  #confirmCard{ display:none; text-align:center; }
+  #confirmCard .big{ font-size:40px; margin-bottom:4px; }
+  #confirmCard h2{ margin:0 0 8px; font-size:19px; color:var(--accent); }
+  #confirmCard p{ margin:0; color:var(--text); font-size:15px; line-height:1.5; }
+  #emptyState{ text-align:center; color:var(--muted); font-size:14px; padding:8px 0; }
+</style>
+</head>
+
+<body>
+<div id="wrap">
+  <h1>🎤 Karaoké</h1>
+  <p id="subtitle">Choisis ton morceau, on t'appelle sur scène !</p>
+
+  <div class="card" id="formCard">
+    <div id="emptyState" style="display:none;">
+      Aucun morceau karaoké disponible pour le moment.
+    </div>
+
+    <form id="joinForm">
+      <label>
+        Ton morceau
+        <select id="songSelect" required></select>
+      </label>
+
+      <label>
+        Ton prénom
+        <input id="nameInput" type="text" maxlength="40" placeholder="Ex: Alex" required autocomplete="given-name" />
+      </label>
+
+      <div id="status"></div>
+
+      <button id="submitBtn" type="submit">Je m'inscris 🎶</button>
+    </form>
+  </div>
+
+  <div class="card" id="confirmCard">
+    <div class="big">✅</div>
+    <h2>C'est noté !</h2>
+    <p id="confirmText"></p>
+    <button class="secondary" id="newRequestBtn" type="button">Faire une nouvelle demande</button>
+  </div>
+</div>
+
+<script>
+  // Page publique, sans mot de passe (voir GUEST_QUEUE_OPEN_PATHS côté
+  // serveur) : pensée pour être ouverte via un QR code par des invités qui
+  // ne connaissent pas l'appli. Volontairement autonome (pas de dépendance
+  // au reste de l'app), en JS simple sans build.
+
+  const formCard = document.getElementById('formCard');
+  const confirmCard = document.getElementById('confirmCard');
+  const confirmText = document.getElementById('confirmText');
+  const joinForm = document.getElementById('joinForm');
+  const songSelect = document.getElementById('songSelect');
+  const nameInput = document.getElementById('nameInput');
+  const statusEl = document.getElementById('status');
+  const submitBtn = document.getElementById('submitBtn');
+  const emptyState = document.getElementById('emptyState');
+  const newRequestBtn = document.getElementById('newRequestBtn');
+
+  // Identifiant propre à cet appareil/navigateur, utilisé côté serveur pour
+  // n'autoriser qu'une demande active à la fois. Clé volontairement distincte
+  // de celles utilisées par l'appli principale (bandapp_*) même si elles
+  // partagent le même domaine.
+  function getGuestDeviceId() {
+    let id = localStorage.getItem('gc_guest_device_id');
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+      localStorage.setItem('gc_guest_device_id', id);
+    }
+    return id;
+  }
+
+  let songs = [];
+
+  async function loadSongs() {
+    statusEl.textContent = '';
+    try {
+      const res = await fetch('/guest/songs', { cache: 'no-store' });
+      songs = await res.json();
+    } catch (err) {
+      songs = [];
+    }
+
+    if (!Array.isArray(songs) || songs.length === 0) {
+      emptyState.style.display = 'block';
+      joinForm.style.display = 'none';
+      return;
+    }
+
+    emptyState.style.display = 'none';
+    joinForm.style.display = 'grid';
+    songSelect.innerHTML = songs.map(s =>
+      `<option value="${escapeHtml(s.fileName)}">${escapeHtml(s.title)}${s.artist ? ' — ' + escapeHtml(s.artist) : ''}</option>`
+    ).join('');
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function showConfirmation(name, song) {
+    formCard.style.display = 'none';
+    confirmCard.style.display = 'block';
+    const songLabel = song ? (song.title + (song.artist ? ' — ' + song.artist : '')) : 'ton morceau';
+    confirmText.textContent = `${name}, ta demande pour "${songLabel}" est enregistrée. On vient te chercher quand c'est ton tour 🎤`;
+  }
+
+  joinForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    statusEl.textContent = '';
+
+    const name = nameInput.value.trim();
+    const songFileName = songSelect.value;
+    if (!name || !songFileName) return;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Envoi...';
+
+    try {
+      const res = await fetch('/guest/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId: getGuestDeviceId(), name, songFileName })
+      });
+
+      if (res.ok) {
+        const song = songs.find(s => s.fileName === songFileName);
+        showConfirmation(name, song);
+      } else if (res.status === 409) {
+        statusEl.textContent = "Tu as déjà une demande en attente, patience 🙂";
+      } else {
+        statusEl.textContent = "Oups, ça n'a pas fonctionné. Réessaie ?";
+      }
+    } catch (err) {
+      statusEl.textContent = "Problème de connexion, réessaie.";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Je m'inscris 🎶";
+    }
+  });
+
+  newRequestBtn.addEventListener('click', () => {
+    confirmCard.style.display = 'none';
+    formCard.style.display = 'block';
+    nameInput.value = '';
+    loadSongs();
+  });
+
+  loadSongs();
+</script>
+</body>
+</html>

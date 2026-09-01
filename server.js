@@ -20,6 +20,10 @@ const io = require('socket.io')(http, {
 const crypto = require('crypto');
 const { google } = require('googleapis');
 const { Readable } = require('stream');
+// File d'attente karaoke pour le public (voir guest-queue.js) : logique et
+// routes isolees dans son propre fichier, server.js se contente de la
+// brancher (voir AUTH_OPEN_PATHS et registerGuestQueue plus bas).
+const { registerGuestQueue, GUEST_QUEUE_OPEN_PATHS } = require('./guest-queue');
 
 const GOOGLE_DRIVE_PARTITIONS_FOLDER_ID = process.env.GOOGLE_DRIVE_PARTITIONS_FOLDER_ID || '';
 const GOOGLE_DRIVE_META_FOLDER_ID = process.env.GOOGLE_DRIVE_META_FOLDER_ID || '';
@@ -121,7 +125,7 @@ function loginPageHtml(errorMessage) {
 									</html>`;
 }
 
-const AUTH_OPEN_PATHS = new Set(['/login', '/health']);
+const AUTH_OPEN_PATHS = new Set(['/login', '/health', ...GUEST_QUEUE_OPEN_PATHS]);
 
 function requireAuth(req, res, next) {
 	  if (AUTH_OPEN_PATHS.has(req.path) || req.path.startsWith('/socket.io/')) {
@@ -1085,6 +1089,12 @@ app.get('/list-songs', async (req, res) => {
     res.status(500).json([]);
   }
 });
+
+// Branche les routes /guest/*, /guest-queue et /guest-queue/remove (voir
+// guest-queue.js). /guest/songs et /guest/join sont publiques (voir
+// GUEST_QUEUE_OPEN_PATHS ci-dessus) ; /guest-queue et /guest-queue/remove
+// restent derriere requireAuth comme le reste de l'appli.
+registerGuestQueue(app, io, { isValidSongName, listDriveSongs, readSongMeta });
 
 app.get('/partitions/:fileName', async (req, res) => {
   try {
