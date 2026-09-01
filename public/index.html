@@ -1831,6 +1831,11 @@ const categoryFilterEl = document.getElementById('categoryFilter');
 const ambianceFilterEl = document.getElementById('ambianceFilter');
 const audienceFilterEl = document.getElementById('audienceFilter');
 const singerFilterEl = document.getElementById('singerFilter');
+// Toujours proposée dans le filtre "Audience" et dans l'éditeur d'infos
+// morceau, même si aucun morceau n'est encore tagué avec (même logique que
+// les catégories par défaut) : permet de repérer les morceaux prévus en
+// version karaoké sans devoir d'abord taguer un morceau à la main côté Drive.
+const DEFAULT_AUDIENCE_TAGS = ['Karaoké'];
 const songMetaArtistInput = document.getElementById('songMetaArtistInput');
 const songMetaArtistWrap = document.getElementById('songMetaArtistWrap');
 const songMetaFileNameWrap = document.getElementById('songMetaFileNameWrap');
@@ -2234,7 +2239,8 @@ function prepareSongMetaFormSelections(data = {}) {
   const categories = [...new Set([...defaultCategories, ...getMetaValues('category')])];
   const styles = getMetaValues('style');
   const ambiances = getMetaValues('ambiance');
-  const audiences = getMetaValues('audience');
+  const audiences = [...new Set([...DEFAULT_AUDIENCE_TAGS, ...getMetaValues('audience')])]
+    .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   const chanteurs = getMetaValues('chanteur');
 
   fillSelectOptions(songMetaCategory, categories, false);
@@ -2880,7 +2886,8 @@ function populateSongFilters() {
   ])];
   const sortedStyles = [...stylesMap.values()].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   const sortedAmbiances = [...ambiancesMap.values()].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
-  const sortedAudiences = [...audiencesMap.values()].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  const sortedAudiences = [...new Set([...DEFAULT_AUDIENCE_TAGS, ...audiencesMap.values()])]
+    .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   const sortedChanteurs = [...chanteursMap.values()].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
 
   categoryFilterEl.innerHTML =
