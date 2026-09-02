@@ -4343,21 +4343,66 @@ function findKaraokeParagraphAt(y) {
   return groups[groups.length - 1];
 }
 
-// Repère le paragraphe "courant" pour une position de scroll donnée, en
-// visant le milieu de l'écran (voir findKaraokeParagraphAt) — SAUF tout en
-// haut du morceau (scrollTop ~ 0), où l'on force le tout premier
-// paragraphe. Sans ce cas particulier, un morceau dont l'intro (titre,
-// sous-titre, nom du chanteur) plus le premier paragraphe ne remplit pas la
-// moitié de la fenêtre laisse le marqueur "milieu d'écran" tomber déjà
-// au-delà du premier paragraphe même scrollé tout en haut — impossible
-// d'afficher les toutes premières lignes (repéré sur "A Nos Souvenirs").
-// Tout en haut, il n'y a de toute façon rien d'autre à montrer que le début
-// du morceau, donc pas besoin du marqueur au milieu de l'écran.
+// Repère le paragraphe "courant" pour une position de scroll donnée : parmi
+// les paragraphes au moins partiellement visibles à l'écran, celui dont le
+// centre est le plus proche du centre de la fenêtre — SAUF tout en haut du
+// morceau (scrollTop ~ 0), où l'on force le tout premier paragraphe (rien
+// d'autre à montrer que le tout début du morceau de toute façon).
+//
+// Pourquoi pas simplement "le paragraphe qui contient le milieu de l'écran"
+// (comme avant) : un morceau dont l'intro tient sur peu de lignes — titre,
+// puis par exemple "Intro : ..." et une tablature écrites en texte libre,
+// sans balise dédiée, donc chacune son propre petit paragraphe — peut voir
+// PLUSIEURS de ces petits paragraphes tenir ensemble dans la moitié d'écran
+// visée par ce calcul. Résultat : à scrollTop=0 le point visé (milieu de
+// la fenêtre) est déjà situé après leur bas cumulé, et pour tout scrollTop
+// suivant il ne fait qu'augmenter — ces paragraphes ne contiennent jamais
+// ce point, quel que soit le scroll, et le surlignage saute directement du
+// titre au premier couplet (repéré sur "Adieu Jolie Candy", dont l'intro +
+// la tablature tiennent largement dans moins d'un demi-écran). En prenant
+// plutôt, parmi tout ce qui est déjà visible à l'écran, celui dont le
+// centre est le plus proche du centre de la fenêtre, chaque petit
+// paragraphe a son tour dès qu'il est le plus "central" de ce qui est
+// affiché — et pour un couplet normal qui occupe à lui seul plus d'un
+// demi-écran, un seul paragraphe est visible à la fois : comportement
+// inchangé.
+//
+// Même souci, symétrique, en toute fin de morceau : si ce qu'il reste à
+// afficher après l'avant-dernier paragraphe (souvent court — "Fin", une
+// date...) ne remplit pas la moitié de la fenêtre, son centre ne peut
+// jamais coïncider avec le centre de la fenêtre non plus, faute de pouvoir
+// scroller plus bas que le bas du morceau — d'où le même traitement
+// qu'au tout début : on force le tout dernier paragraphe une fois arrivé
+// (ou presque) en bas du scroll.
 function pickKaraokeGroupForScroll(scrollTop, clientHeight) {
   const groups = getKaraokeParagraphGroups();
   if (!groups.length) return null;
   if (scrollTop <= 2) return groups[0];
-  return findKaraokeParagraphAt(scrollTop + clientHeight * 0.5);
+  // Note : on calcule ici le scroll max réellement atteignable par le
+  // navigateur (viewerElement.scrollHeight - clientHeight) plutôt que
+  // d'utiliser getViewerMaxSongScrollTop() (basée sur offsetTop/offsetHeight
+  // de songContentEl), qui peut légèrement surestimer cette limite selon la
+  // mise en page — un scrollTop qu'on n'atteindrait alors jamais, ce qui
+  // empêcherait ce cas particulier de se déclencher.
+  const maxScrollTop = Math.max(0, viewerElement.scrollHeight - clientHeight);
+  if (scrollTop >= maxScrollTop - 2) return groups[groups.length - 1];
+
+  const viewportTop = scrollTop;
+  const viewportBottom = scrollTop + clientHeight;
+  const viewportCenter = scrollTop + clientHeight * 0.5;
+
+  const visible = groups.filter(g => g.bottom > viewportTop && g.top < viewportBottom);
+  const pool = visible.length ? visible : [findKaraokeParagraphAt(viewportCenter)].filter(Boolean);
+  if (!pool.length) return groups[groups.length - 1];
+
+  let best = pool[0];
+  let bestDist = Math.abs((pool[0].top + pool[0].bottom) / 2 - viewportCenter);
+  for (let i = 1; i < pool.length; i++) {
+    const g = pool[i];
+    const dist = Math.abs((g.top + g.bottom) / 2 - viewportCenter);
+    if (dist < bestDist) { best = g; bestDist = dist; }
+  }
+  return best;
 }
 
 // Identifiant stable d'un groupe (le data-anchor de sa première ligne,
