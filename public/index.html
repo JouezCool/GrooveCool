@@ -1014,6 +1014,33 @@ nav{
       text-align:center;
     }
 
+    /* Paragraphe "instrumental" de la scène karaoké (voir isInstrumentalGroup
+       dans computeKaraokeParagraphGroups()) : regroupe un ou plusieurs
+       éléments consécutifs sans paroles (commentaire {c:}/{d:}, ligne
+       d'accords {a:}, ligne de notes {n:}, tablature {tab}...{/tab}) en un
+       seul écran générique, sans jamais révéler aux invités les accords/
+       notes/tabs réels de la partition. Mise en forme dédiée en clamp(),
+       comme le paragraphe "titre" ci-dessus. */
+    #karaokeCard .karaoke-instrumental-card{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:3vh;
+    }
+
+    #karaokeCard .karaoke-instrumental-icons{
+      font-size:clamp(28px, 6vw, 56px);
+      letter-spacing:0.3em;
+      opacity:0.85;
+    }
+
+    #karaokeCard .karaoke-instrumental-label{
+      font-size:clamp(24px, 5vw, 52px);
+      letter-spacing:0.08em;
+      text-transform:uppercase;
+      opacity:0.9;
+    }
+
     #karaokeProgress{
       position:absolute;
       z-index:1;
@@ -4195,11 +4222,32 @@ function computeKaraokeParagraphGroups() {
     return !!(el.dataset && el.dataset.kind === 'lyric' && !el.textContent.trim());
   }
 
+  // Élément "instrumental" : ligne de commentaire ({c:}/{d:}, wrapper
+  // .commentwrap), ligne d'accords ou de notes seule ({a:}/{n:},
+  // .inline-music-line), ou bloc de tablature ({tab}...{/tab}, .tab-block)
+  // — rien à chanter/lire aux invités, mais du contenu "réel" (une intro,
+  // un pont, un solo...) qui doit rester scrollable/repérable chez le
+  // Leader et s'afficher comme un vrai paragraphe "Instrumental" côté
+  // scène karaoké, plutôt que de disparaître silencieusement entre deux
+  // paragraphes de paroles (voir isInstrumentalGroup ci-dessous).
+  function isInstrumentalEl(el) {
+    return !!(el.classList && (
+      el.classList.contains('commentwrap') ||
+      el.classList.contains('tab-block') ||
+      (el.classList.contains('inline-music-line') && (el.classList.contains('chords-only') || el.classList.contains('notes-only')))
+    ));
+  }
+
   const groups = [];
   let current = [];
-  function flush() {
-    if (current.length) { groups.push(current); current = []; }
+  let instrumental = [];
+  function flushLyric() {
+    if (current.length) { groups.push({ blocks: current, isInstrumentalGroup: false }); current = []; }
   }
+  function flushInstrumental() {
+    if (instrumental.length) { groups.push({ blocks: instrumental, isInstrumentalGroup: true }); instrumental = []; }
+  }
+  function flushAll() { flushLyric(); flushInstrumental(); }
 
   // {title:}/{subtitle:} ChordPro, rendus par addCenteredTitle() en
   // <h1>/<h2> tout en haut de #songContent : capturés à part tant qu'aucun
@@ -4212,7 +4260,7 @@ function computeKaraokeParagraphGroups() {
   Array.from(songContentEl.children).forEach(child => {
     if (child.id === 'overlayLayer' || child.classList.contains('song-end-spacer')) return;
 
-    if (!groups.length && !current.length && (child.tagName === 'H1' || child.tagName === 'H2')) {
+    if (!groups.length && !current.length && !instrumental.length && (child.tagName === 'H1' || child.tagName === 'H2')) {
       titleBlocks.push(child);
       return;
     }
@@ -4222,32 +4270,52 @@ function computeKaraokeParagraphGroups() {
       child.classList.contains('verse-block') ||
       child.classList.contains('bridge-block')
     ) {
-      flush();
+      flushAll();
       const lyrics = Array.from(child.querySelectorAll('[data-kind="lyric"]')).filter(el => !isBlankLyric(el));
-      if (lyrics.length) groups.push(lyrics);
+      if (lyrics.length) groups.push({ blocks: lyrics, isInstrumentalGroup: false });
       return;
     }
 
     if (child.dataset && child.dataset.kind === 'lyric') {
-      if (isBlankLyric(child)) { flush(); return; }
+      // Une ligne vide sépare deux paragraphes de paroles, mais ne doit pas
+      // couper une section instrumentale en cours (typiquement une ligne
+      // vide de mise en forme entre "{c: Intro}" et la ligne d'accords qui
+      // suit dans le fichier) : on ne referme donc que le paragraphe de
+      // paroles ici, jamais le buffer instrumental.
+      if (isBlankLyric(child)) { flushLyric(); return; }
+      flushInstrumental();
       current.push(child);
       return;
     }
 
-    // Titre, ligne de commentaire, ligne d'accords seuls, tablature, etc. :
+    if (isInstrumentalEl(child)) {
+      // Une section instrumentale (intro, pont, solo...) peut s'écrire sur
+      // plusieurs lignes consécutives dans la partition — un commentaire
+      // suivi d'une ligne d'accords et/ou d'une tablature, par exemple. On
+      // les regroupe en un seul paragraphe/écran "Instrumental" plutôt que
+      // d'en faire un par ligne (voir renderKaraokeStage()).
+      flushLyric();
+      instrumental.push(child);
+      return;
+    }
+
+    // Titre en cours de morceau, bloc de notes privées (pu-block), etc. :
     // coupure naturelle entre deux paragraphes.
-    flush();
+    flushAll();
   });
-  flush();
+  flushAll();
 
   const realGroups = groups
-    .filter(blocks => blocks.length)
-    .flatMap(chunkKaraokeBlocks)
-    .map(blocks => ({
-      blocks,
-      top: Math.min(...blocks.map(el => el.offsetTop)),
-      bottom: Math.max(...blocks.map(el => el.offsetTop + el.offsetHeight)),
-    }));
+    .filter(g => g.blocks.length)
+    .flatMap(g => {
+      const chunks = g.isInstrumentalGroup ? [g.blocks] : chunkKaraokeBlocks(g.blocks);
+      return chunks.map(blocks => ({
+        blocks,
+        isInstrumentalGroup: g.isInstrumentalGroup,
+        top: Math.min(...blocks.map(el => el.offsetTop)),
+        bottom: Math.max(...blocks.map(el => el.offsetTop + el.offsetHeight)),
+      }));
+    });
 
   if (titleBlocks.length) {
     realGroups.unshift({
@@ -4345,7 +4413,7 @@ function updateLeaderParagraphHighlight() {
 // du zoom dynamique ici — on le laisse à 1 pour éviter un double effet.
 function applyKaraokeZoom(group) {
   if (!karaokeCardEl) return;
-  if (group && group.isTitleGroup) {
+  if (group && (group.isTitleGroup || group.isInstrumentalGroup)) {
     karaokeCardEl.style.zoom = 1;
     return;
   }
@@ -4394,6 +4462,21 @@ function renderKaraokeStage(group) {
         artistEl.textContent = info.artist;
         card.appendChild(artistEl);
       }
+      karaokeCardEl.appendChild(card);
+    } else if (group && group.isInstrumentalGroup) {
+      // Section instrumentale (voir isInstrumentalGroup dans
+      // computeKaraokeParagraphGroups()) : écran générique, jamais les
+      // accords/notes/tablature réels de la partition.
+      const card = document.createElement('div');
+      card.className = 'karaoke-instrumental-card';
+      const icons = document.createElement('div');
+      icons.className = 'karaoke-instrumental-icons';
+      icons.textContent = '🎷 🥁 🎸';
+      const label = document.createElement('div');
+      label.className = 'karaoke-instrumental-label';
+      label.textContent = 'Instrumental';
+      card.appendChild(icons);
+      card.appendChild(label);
       karaokeCardEl.appendChild(card);
     } else if (group) {
       group.blocks.forEach(el => {
@@ -5039,9 +5122,13 @@ socket.on('apply-speed', value => {
     songContentEl.appendChild(el);
   }
 
-  function addCommentLine(text, targetEl, type = 'comment') {
+  function addCommentLine(text, targetEl, type = 'comment', anchorId) {
     const wrap = document.createElement('div');
     wrap.className = 'commentwrap';
+    // Ancre stable pour le regroupement karaoké (voir isInstrumentalGroup
+    // dans computeKaraokeParagraphGroups()) : posée sur wrap, le vrai enfant
+    // direct de #songContent (le <span>.commentline est imbriqué dedans).
+    if (anchorId) wrap.dataset.anchor = anchorId;
 
     const span = document.createElement('span');
     span.className = type === 'detail' ? 'commentline detail' : 'commentline';
@@ -5051,11 +5138,12 @@ socket.on('apply-speed', value => {
     targetEl.appendChild(wrap);
   }
 
-  function addInlineMusicLine(text, targetEl, type = 'chords-only') {
+  function addInlineMusicLine(text, targetEl, type = 'chords-only', anchorId) {
     const el = document.createElement('div');
     el.className = `inline-music-line ${type}`;
     el.style.fontSize = (fontSize * currentSongZoom) + 'px';
     el.textContent = text;
+    if (anchorId) el.dataset.anchor = anchorId;
     targetEl.appendChild(el);
   }
 
@@ -5256,9 +5344,14 @@ function renderPUContent(targetEl, text) {
   flushText();
 }
 
-function renderTabBlock(targetEl, text) {
+function renderTabBlock(targetEl, text, anchorId) {
   const wrap = document.createElement('div');
   wrap.className = 'tab-block';
+  // Ancre stable pour le regroupement karaoké (voir isInstrumentalGroup
+  // dans computeKaraokeParagraphGroups()) — seulement posée par les
+  // appelants du rendu principal (renderChordPro()), pas depuis un bloc de
+  // notes privées (renderPUContent()), sans lien avec la scène karaoké.
+  if (anchorId) wrap.dataset.anchor = anchorId;
   wrap.style.fontSize = (fontSize * currentSongZoom) + 'px';
 
   const pre = document.createElement('pre');
@@ -5349,7 +5442,11 @@ function renderTabBlock(targetEl, text) {
 
       if (inTab) {
         if (/^\{\/tab\s*\}$/i.test(line.trim())) {
-          renderTabBlock(target, tabBuffer.join("\n"));
+          const tabText = tabBuffer.join("\n");
+          const tabKey = normAnchorText('@tab:' + tabText);
+          renderChordPro._occ[tabKey] = (renderChordPro._occ[tabKey] || 0) + 1;
+          const tabAnchor = hashDJB2(tabKey) + "-" + renderChordPro._occ[tabKey];
+          renderTabBlock(target, tabText, tabAnchor);
           inTab = false;
           tabBuffer = [];
           continue;
@@ -5416,19 +5513,29 @@ function renderTabBlock(targetEl, text) {
       const chordLine = line.match(/^\{a\s*:\s*(.*?)\}\s*$/i);
       if (chordLine) {
         const rendered = chordLine[1].replace(/\[([^\]]+)\]/g, (_, chord) => transChord(chord, transposeValue));
-        addInlineMusicLine(rendered, target, 'chords-only');
+        const chordKey = normAnchorText('@a:' + rendered);
+        renderChordPro._occ[chordKey] = (renderChordPro._occ[chordKey] || 0) + 1;
+        const chordAnchor = hashDJB2(chordKey) + "-" + renderChordPro._occ[chordKey];
+        addInlineMusicLine(rendered, target, 'chords-only', chordAnchor);
         continue;
       }
 
       const notesLine = line.match(/^\{n\s*:\s*(.*?)\}\s*$/i);
       if (notesLine) {
-        addInlineMusicLine(transNotesText(notesLine[1], transposeValue), target, 'notes-only');
+        const notesRendered = transNotesText(notesLine[1], transposeValue);
+        const notesKey = normAnchorText('@n:' + notesRendered);
+        renderChordPro._occ[notesKey] = (renderChordPro._occ[notesKey] || 0) + 1;
+        const notesAnchor = hashDJB2(notesKey) + "-" + renderChordPro._occ[notesKey];
+        addInlineMusicLine(notesRendered, target, 'notes-only', notesAnchor);
         continue;
       }
 
       const detail = line.match(/^\{d\s*:\s*(.*)\}(.*)$/i);
       if (detail) {
-        addCommentLine(detail[1], target, 'detail');
+        const detailKey = normAnchorText('@d:' + detail[1]);
+        renderChordPro._occ[detailKey] = (renderChordPro._occ[detailKey] || 0) + 1;
+        const detailAnchor = hashDJB2(detailKey) + "-" + renderChordPro._occ[detailKey];
+        addCommentLine(detail[1], target, 'detail', detailAnchor);
 
         const trailingLine = String(detail[2] || '');
         if (!trailingLine.trim()) {
@@ -5445,7 +5552,10 @@ function renderTabBlock(targetEl, text) {
 
       const comment = line.match(/^\{c\s*:\s*(.*)\}(.*)$/i);
       if (comment) {
-        addCommentLine(comment[1], target);
+        const commentKey = normAnchorText('@c:' + comment[1]);
+        renderChordPro._occ[commentKey] = (renderChordPro._occ[commentKey] || 0) + 1;
+        const commentAnchor = hashDJB2(commentKey) + "-" + renderChordPro._occ[commentKey];
+        addCommentLine(comment[1], target, 'comment', commentAnchor);
 
         const trailingLine = String(comment[2] || '');
         if (!trailingLine.trim()) {
@@ -5489,7 +5599,11 @@ function renderTabBlock(targetEl, text) {
 
     if (inTab) {
       const target = sectionContainer || songContentEl;
-      renderTabBlock(target, tabBuffer.join("\n"));
+      const tabText = tabBuffer.join("\n");
+      const tabKey = normAnchorText('@tab:' + tabText);
+      renderChordPro._occ[tabKey] = (renderChordPro._occ[tabKey] || 0) + 1;
+      const tabAnchor = hashDJB2(tabKey) + "-" + renderChordPro._occ[tabKey];
+      renderTabBlock(target, tabText, tabAnchor);
     }
 
     const endSpacer = document.createElement('div');
