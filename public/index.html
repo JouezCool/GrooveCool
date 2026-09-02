@@ -4242,7 +4242,19 @@ function computeKaraokeParagraphGroups() {
   let current = [];
   let instrumental = [];
   function flushLyric() {
-    if (current.length) { groups.push({ blocks: current, isInstrumentalGroup: false }); current = []; }
+    if (current.length) {
+      // Un paragraphe de "paroles" entièrement composé de lignes qui
+      // ressemblent à une section instrumentale écrite en texte libre
+      // (voir looksLikeFreeTextInstrumentalLine) est en réalité, lui
+      // aussi, un paragraphe instrumental — au même titre que les
+      // sections balisées {c:}/{a:}/{tab}. On ne le marque ainsi que si
+      // TOUTES ses lignes qualifient : la moindre vraie parole dans le
+      // même paragraphe (aucune ligne vide ne les sépare) suffit à garder
+      // l'affichage normal, par prudence contre les faux positifs.
+      const allFreeInstrumental = current.every(el => el.dataset && el.dataset.freeInstrumental === '1');
+      groups.push({ blocks: current, isInstrumentalGroup: allFreeInstrumental });
+      current = [];
+    }
   }
   function flushInstrumental() {
     if (instrumental.length) { groups.push({ blocks: instrumental, isInstrumentalGroup: true }); instrumental = []; }
@@ -4305,7 +4317,28 @@ function computeKaraokeParagraphGroups() {
   });
   flushAll();
 
-  const realGroups = groups
+  // Contrairement aux sections balisées {c:}/{a:}/{tab} (dont le buffer
+  // "instrumental" ignore les lignes vides et reste donc déjà groupé sur
+  // plusieurs lignes séparées par des blancs, voir plus haut), un
+  // paragraphe "texte libre" détecté via looksLikeFreeTextInstrumentalLine
+  // passe par le buffer normal des paroles et se referme donc à chaque
+  // ligne vide comme n'importe quel paragraphe de paroles — deux repères
+  // libres consécutifs séparés seulement par une ligne vide de mise en
+  // forme ("Instrumental : 4X" puis "Voix (instrumental) : 4X", repéré sur
+  // "A Bailar Calypso") formeraient donc deux écrans "Instrumental"
+  // successifs au lieu d'un seul. On les fusionne ici après coup, plutôt
+  // que de compliquer la logique de groupage ci-dessus.
+  const mergedGroups = [];
+  for (const g of groups) {
+    const prev = mergedGroups[mergedGroups.length - 1];
+    if (prev && prev.isInstrumentalGroup && g.isInstrumentalGroup) {
+      prev.blocks = prev.blocks.concat(g.blocks);
+    } else {
+      mergedGroups.push({ blocks: g.blocks.slice(), isInstrumentalGroup: g.isInstrumentalGroup });
+    }
+  }
+
+  const realGroups = mergedGroups
     .filter(g => g.blocks.length)
     .flatMap(g => {
       const chunks = g.isInstrumentalGroup ? [g.blocks] : chunkKaraokeBlocks(g.blocks);
@@ -5237,12 +5270,56 @@ socket.on('apply-speed', value => {
     return expanded;
   }
 
+  // Mots-clés reconnus comme repère de section instrumentale écrite en
+  // texte libre (voir looksLikeFreeTextInstrumentalLine ci-dessous) — liste
+  // volontairement restreinte à des termes techniques qui n'ont normalement
+  // aucune chance d'apparaître dans une vraie parole chantée. Des mots plus
+  // "parlants" comme "pont" (aussi un mot français ordinaire — cf. "Sur le
+  // Pont d'Avignon"), "gamme", "thème" ou "bridge"/"break" (mots anglais
+  // courants) ont été délibérément exclus : le risque de faux positif sur
+  // une vraie parole dépassait le bénéfice, pour des cas non observés dans
+  // les morceaux réels testés.
+  const FREE_TEXT_INSTRUMENTAL_KEYWORDS = [
+    'intro', 'instrumental', 'solo', 'interlude', 'outro',
+    'impro', 'improvisation', 'coda', 'riff',
+  ];
+
+  // Une ligne de paroles "classique" (bloc .block, data-kind="lyric") peut
+  // en réalité être une indication de section instrumentale écrite en
+  // texte libre plutôt qu'avec les directives ChordPro dédiées
+  // ({c:}/{a:}/{tab}...) — typiquement une ligne d'accords seuls
+  // ("[Am]     [G]     [F]     [E]") suivie ou non d'un court repère
+  // textuel ("INTRO :  4X", "Instrumental : 4 X", "Solo guitare: ...
+  // Pentatonique Am"). Repéré sur "A Bailar Calypso" et "74-75" : de
+  // telles lignes restaient désormais atteignables au scroll (voir
+  // pickKaraokeGroupForScroll) mais s'affichaient côté scène karaoké comme
+  // de fausses "paroles" (les noms d'accords bruts, "INTRO : 4X"...) au
+  // lieu de la carte générique "Instrumental" (voir isInstrumentalGroup
+  // dans computeKaraokeParagraphGroups()).
+  //
+  // Heuristique volontairement prudente pour éviter tout faux positif sur
+  // une vraie ligne de parole, même courte : on ne marque QUE les lignes
+  // très courtes (≤45 caractères une fois les accords retirés, ≤8 mots)
+  // contenant un des mots-clés ci-dessus — ou entièrement vides une fois
+  // les accords retirés (une ligne composée uniquement d'accords, sans
+  // aucun texte, ne peut de toute façon jamais être une parole).
+  function looksLikeFreeTextInstrumentalLine(lyricLine) {
+    const t = String(lyricLine || '').replace(/\s+/g, ' ').trim();
+    if (!t) return true;
+    if (t.length > 45) return false;
+    const lower = t.toLowerCase();
+    if (!FREE_TEXT_INSTRUMENTAL_KEYWORDS.some(kw => lower.includes(kw))) return false;
+    const wordCount = t.split(' ').filter(Boolean).length;
+    return wordCount <= 8;
+  }
+
   function addChordBlock(segments, lyricLine, targetEl, anchorId) {
     const block = document.createElement('div');
     block.className = 'block';
     block.style.fontSize = (fontSize * currentSongZoom) + 'px';
     block.dataset.kind = 'lyric';
     if (anchorId) block.dataset.anchor = anchorId;
+    if (looksLikeFreeTextInstrumentalLine(lyricLine)) block.dataset.freeInstrumental = '1';
 
     const hasChords = segments.some(segment => String(segment.chord || '').trim());
     const row = document.createElement('span');
