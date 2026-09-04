@@ -1341,6 +1341,35 @@ nav{
       font-size:12px;
     }
 
+    /* Pilotage manuel du paragraphe karaoké (voir karaokePaceStep()) :
+       masqué par défaut, affiché uniquement chez le Leader quand au moins un
+       invité karaoké est connecté (voir updateKaraokePaceControls()). */
+    #karaokePaceControls{
+      position:fixed;
+      left:12px;
+      bottom:12px;
+      z-index:80;
+      display:none;
+      align-items:center;
+      gap:6px;
+      background:rgba(0,0,0,0.55);
+      border-radius:10px;
+      padding:6px 8px;
+    }
+
+    #karaokePaceControls .btn{
+      padding:8px 10px;
+      font-size:12px;
+    }
+
+    #karaokePaceLabel{
+      color:#fff;
+      font-size:12px;
+      opacity:.85;
+      min-width:38px;
+      text-align:center;
+    }
+
     #songContent {
       position: relative;
       padding-top:22vh;
@@ -1630,6 +1659,15 @@ nav{
 </div>
 
 <button class="btn" id="resyncLeaderBtn" onclick="requestLeaderPosition()">↕ LEADER</button>
+
+<!-- Pilotage manuel du paragraphe karaoké (voir karaokePaceStep()) : Leader
+     uniquement, affiché seulement quand au moins un invité karaoké est
+     connecté (voir updateKaraokePaceControls()). -->
+<div id="karaokePaceControls">
+  <button class="btn" id="karaokePacePrevBtn" onclick="karaokePaceStep(-1)">◀</button>
+  <span id="karaokePaceLabel"></span>
+  <button class="btn" id="karaokePaceNextBtn" onclick="karaokePaceStep(1)">▶ KARAOKÉ</button>
+</div>
 
     <div id="notesPanel">
       <textarea id="notesTextarea" placeholder="Tes annotations personnelles..."></textarea>
@@ -2586,9 +2624,10 @@ function currentDisplayRole() {
 // spammer le serveur à chaque appel de applyLeaderUI().
 function syncKaraokeModeToServer(active) {
   active = !!active;
-  if (lastSentKaraokeActive === active) return;
+  if (lastSentKaraokeActive === active) return false;
   lastSentKaraokeActive = active;
   socket.emit('karaoke-mode', { deviceId, active });
+  return true;
 }
 
 // Couleur de la barre d'adresse / barre de statut (balise theme-color) :
@@ -2626,13 +2665,15 @@ function applyLeaderUI() {
   if (!badge) return;
 
   const role = currentDisplayRole();
-  syncKaraokeModeToServer(role === 'karaoke');
+  const enteredKaraoke = syncKaraokeModeToServer(role === 'karaoke');
   document.body.classList.toggle('karaoke-mode', role === 'karaoke');
   updateThemeColorMeta(role === 'karaoke');
-  if (role === 'karaoke' && isViewerOpen()) {
-    // Affichage immédiat en entrant en mode karaoké, sans attendre le
-    // prochain scroll du Leader.
-    applyKaraokeStage(viewerElement.scrollTop);
+  if (role === 'karaoke' && isViewerOpen() && enteredKaraoke) {
+    // On vient de basculer sur ce rôle : demande immédiatement l'état
+    // courant (morceau + paragraphe karaoké choisi par le Leader) au lieu
+    // d'attendre le prochain appui sur ◀/▶ ou le filet de rattrapage
+    // périodique (jusqu'à 8s, voir state-heartbeat).
+    socket.emit('request-sync-position');
   }
 
   if (role === 'leader') {
@@ -2732,6 +2773,7 @@ function updateConcertFloatingVisibility() {
   const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
   if (concertWrap) concertWrap.style.display = viewerOpen ? 'block' : 'none';
   updateResyncButton();
+  updateKaraokePaceControls();
   syncSetlistButtons();
 }
 
@@ -3986,6 +4028,11 @@ async function loadSong(f) {
             startAutoScroll();
           }
         }
+        if (pendingKaraokePace) {
+          const nextPace = pendingKaraokePace;
+          pendingKaraokePace = null;
+          applyKaraokePaceFromServer(nextPace.anchor);
+        }
         scheduleSongPrefetch(currentIndex);
         console.log('Temps total loadSong:', Math.round(performance.now() - t0), 'ms');
       });
@@ -4136,15 +4183,10 @@ function songMatchesFilters(song, query) {
     const st = viewerElement.scrollTop;
     const max = Math.max(0, getViewerMaxSongScrollTop());
     const scrollRatio = max > 0 ? clamp01(st / max) : 0;
-    // Paragraphe karaoké correspondant à CETTE position de scroll, calculé
-    // ici (même logique que updateLeaderParagraphHighlight(), voir
-    // pickKaraokeGroupForScroll()) pour être transmis tel quel aux invités
-    // en mode karaoké — voir le commentaire sur getKaraokeGroupAnchor() plus
-    // haut.
-    const karaokeAnchor = getKaraokeGroupAnchor(
-      pickKaraokeGroupForScroll(st, viewerElement.clientHeight)
-    );
-    const baseState = { top: st, scrollRatio, karaokeAnchor };
+    // Le paragraphe karaoké n'est plus déduit d'ici (voir le commentaire sur
+    // karaokeParagraphGroups plus bas) : ce scroll ne sert plus qu'à faire
+    // défiler la partition des musiciens, plus la scène karaoké.
+    const baseState = { top: st, scrollRatio };
     const first = blocks[0];
     if (st < first.offsetTop - 8) {
       return { ...baseState, anchor: '', progress: 0 };
@@ -4221,13 +4263,27 @@ viewerElement.addEventListener('scroll', () => {
 // balisé en ChordPro {soc}/{sov}/{sob}, ou à défaut un groupe de lignes
 // séparé par une ligne vide) : pas ligne par ligne (trop pénible à taper
 // pour le Leader, trop imprécis à déduire du seul scroll), et pas basé sur
-// un tempo (on ne joue pas au métronome). Le Leader garde le contrôle en
-// scrollant normalement comme avant ; on affiche chez lui aussi le
-// paragraphe repéré, pour qu'il puisse vérifier/corriger ce que voient les
-// invités en mode karaoké.
+// un tempo (on ne joue pas au métronome). Ancien comportement : dérivé du
+// scroll du Leader, qui avançait à vitesse fixe — mauvais proxy du tempo
+// réel, d'où un surlignage qui dérivait de ce qui était vraiment chanté.
+// Nouveau comportement (voir karaokePaceStep()) : le Leader avance le
+// paragraphe explicitement via les boutons ◀/▶, en écoutant/regardant où on
+// en est réellement. Le scroll normal du Leader n'a donc plus aucun effet
+// sur ce qu'affichent les invités karaoké — il reste libre pour lire sa
+// partition. On affiche chez lui aussi le paragraphe repéré (voir
+// updateLeaderParagraphHighlight()), pour qu'il garde une confirmation
+// visuelle de ce que voient les invités.
 let karaokeParagraphGroups = null;
 let karaokeHighlightGroup = null;
-let karaokeHighlightRaf = null;
+// Ancre (voir getKaraokeGroupAnchor()) du paragraphe actuellement montré aux
+// invités karaoké — pilotée uniquement par le Leader, jamais recalculée
+// localement par les autres appareils (voir applyKaraokePaceFromServer()).
+let karaokePaceAnchor = '';
+// Ancre reçue via 'karaoke-pace' ou 'state-heartbeat' pendant qu'un
+// chargement de morceau est en cours (DOM pas encore prêt pour y retrouver
+// le paragraphe) — rejouée une fois le chargement terminé, même mécanisme
+// que pendingRemoteScrollData/pendingAutoScrollState.
+let pendingKaraokePace = null;
 
 function invalidateKaraokeParagraphGroups() {
   karaokeParagraphGroups = null;
@@ -4593,14 +4649,120 @@ function setKaraokeHighlightGroup(group) {
   return true;
 }
 
-// Affichage local (Leader) : suit son propre scroll, ne le déplace jamais.
-// Ne s'affiche que si au moins un invité est en mode karaoké (sinon inutile).
+// Index (dans getKaraokeParagraphGroups()) du groupe portant cette ancre, ou
+// -1 si absent (morceau différent, ou aucune ancre définie).
+function karaokePaceGroupIndex(groups, anchor) {
+  if (!anchor) return -1;
+  return groups.findIndex(g => getKaraokeGroupAnchor(g) === anchor);
+}
+
+// Appelée après chaque rendu complet (nouveau morceau, transpose, taille de
+// police...), chez tout le monde (renderChordPro() ne sait pas qui est
+// Leader).
+//
+// Chez un invité karaoké : aucun calcul local, on se contente de rejouer la
+// dernière ancre connue (karaokePaceAnchor) pour rafraîchir la scène avec le
+// contenu fraîchement reconstruit — sinon elle resterait figée sur
+// l'ancienne version (transposition, taille...) jusqu'au prochain appui du
+// Leader ou au filet de rattrapage (jusqu'à 8s, voir state-heartbeat). Chez
+// Turn/Follow, applyKaraokePaceFromServer() ne fait rien (pas en mode
+// karaoké). Voir karaokePaceStep() pour qui décide réellement de l'ancre.
+//
+// Chez le Leader : affichage local (aperçu dans #songContent) reflétant
+// karaokePaceAnchor, plus jamais le scroll (voir le commentaire sur
+// karaokeParagraphGroups plus haut) — ne s'affiche que si au moins un
+// invité est en mode karaoké (sinon inutile). Si l'ancre mémorisée n'existe
+// plus dans les groupes fraîchement recalculés (nouveau morceau, ou tout
+// premier appui à venir), on démarre directement sur le premier paragraphe
+// plutôt que de laisser la scène karaoké vide en attendant que le Leader
+// pense à appuyer sur ▶ — et on le diffuse aussitôt, pour que les invités
+// déjà connectés n'attendent pas non plus.
 function updateLeaderParagraphHighlight() {
-  if (!isLeader || !isViewerOpen() || karaokeGuestsCount <= 0) {
-    setKaraokeHighlightGroup(null);
+  if (!isLeader) {
+    applyKaraokePaceFromServer(karaokePaceAnchor);
     return;
   }
-  setKaraokeHighlightGroup(pickKaraokeGroupForScroll(viewerElement.scrollTop, viewerElement.clientHeight));
+
+  if (!isViewerOpen() || karaokeGuestsCount <= 0) {
+    karaokePaceAnchor = '';
+    setKaraokeHighlightGroup(null);
+    updateKaraokePaceControls();
+    return;
+  }
+
+  const groups = getKaraokeParagraphGroups();
+  let idx = karaokePaceGroupIndex(groups, karaokePaceAnchor);
+
+  if (idx < 0 && groups.length) {
+    idx = 0;
+    karaokePaceAnchor = getKaraokeGroupAnchor(groups[0]);
+    socket.emit('karaoke-pace', { anchor: karaokePaceAnchor, index: 0, total: groups.length });
+  }
+
+  setKaraokeHighlightGroup(groups[idx] || null);
+  updateKaraokePaceLabel(idx, groups.length);
+  updateKaraokePaceControls();
+}
+
+// Avance/recule le paragraphe montré aux invités karaoké. Leader uniquement
+// (le bouton est masqué sinon, voir updateKaraokePaceControls()) — un seul
+// pilote à la fois, comme le reste (scroll, changement de morceau...). Ne
+// déplace jamais le scroll du Leader lui-même : il reste libre de lire sa
+// partition à son rythme pendant qu'il fait avancer la scène karaoké.
+function karaokePaceStep(delta) {
+  if (!isLeader) return;
+
+  const groups = getKaraokeParagraphGroups();
+  if (!groups.length) return;
+
+  const currentIndex = karaokePaceGroupIndex(groups, karaokePaceAnchor);
+  const targetIndex = currentIndex < 0
+    ? 0
+    : Math.max(0, Math.min(groups.length - 1, currentIndex + delta));
+
+  const anchor = getKaraokeGroupAnchor(groups[targetIndex]);
+  if (anchor === karaokePaceAnchor) return;
+
+  karaokePaceAnchor = anchor;
+  setKaraokeHighlightGroup(groups[targetIndex]);
+  updateKaraokePaceLabel(targetIndex, groups.length);
+
+  socket.emit('karaoke-pace', { anchor, index: targetIndex, total: groups.length });
+}
+
+// Applique une ancre reçue du serveur (Leader, via 'karaoke-pace' ou le
+// filet de rattrapage 'state-heartbeat') : ne fait rien chez Leader/Turn/
+// Follow (dont l'écran n'a jamais affiché la scène karaoké), met à jour la
+// scène plein écran chez un invité karaoké.
+function applyKaraokePaceFromServer(anchor) {
+  karaokePaceAnchor = anchor || '';
+
+  if (!document.body.classList.contains('karaoke-mode')) return;
+
+  const group = karaokePaceAnchor ? findKaraokeParagraphByAnchor(karaokePaceAnchor) : null;
+  if (!group) return;
+  if (!setKaraokeHighlightGroup(group)) return;
+
+  renderKaraokeStage(group);
+
+  const groups = getKaraokeParagraphGroups();
+  const idx = karaokePaceGroupIndex(groups, karaokePaceAnchor);
+  updateKaraokeProgress(groups.length > 1 ? idx / (groups.length - 1) : 0);
+}
+
+function updateKaraokePaceLabel(idx, total) {
+  const label = document.getElementById('karaokePaceLabel');
+  if (!label) return;
+  label.textContent = total > 0 ? `${idx + 1} / ${total}` : '';
+}
+
+// Visibilité des boutons ◀/▶ : Leader uniquement, morceau ouvert, et au
+// moins un invité en mode karaoké pour que ça serve à quelque chose (même
+// condition que le reste du pas-à-pas karaoké).
+function updateKaraokePaceControls() {
+  const el = document.getElementById('karaokePaceControls');
+  if (!el) return;
+  el.style.display = (isLeader && isViewerOpen() && karaokeGuestsCount > 0) ? 'flex' : 'none';
 }
 
 // Taille du texte adaptée à la longueur du paragraphe affiché : un
@@ -4700,39 +4862,9 @@ function renderKaraokeStage(group) {
   karaokeCardTransitionTimer = setTimeout(swap, 220);
 }
 
-function applyKaraokeStage(leaderReferenceTop, karaokeAnchor) {
-  if (!isViewerOpen()) return;
-
-  const maxScroll = getViewerMaxSongScrollTop();
-  updateKaraokeProgress(maxScroll > 0 ? leaderReferenceTop / maxScroll : 0);
-
-  // Priorité à karaokeAnchor (identifiant exact du paragraphe déjà repéré
-  // chez le Leader, voir getKaraokeGroupAnchor()) plutôt qu'à un recalcul
-  // géométrique local : deux appareils de hauteur d'écran différente ne
-  // traduisent pas leaderReferenceTop au même endroit, d'où le léger
-  // décalage/retard observé côté scène karaoké. On ne retombe sur le
-  // calcul géométrique que si l'ancre est absente (compat) ou introuvable
-  // (changement de morceau pas encore propagé, par ex.).
-  const group = findKaraokeParagraphByAnchor(karaokeAnchor)
-    || pickKaraokeGroupForScroll(leaderReferenceTop, viewerElement.clientHeight);
-  if (!group) return;
-  if (!setKaraokeHighlightGroup(group)) return; // même paragraphe : rien à refaire
-
-  renderKaraokeStage(group);
-}
-
-viewerElement.addEventListener('scroll', () => {
-  // Un appareil en mode karaoké n'affiche plus #songContent (il est caché
-  // derrière #karaokeStage) et on ne le fait plus jamais défiler par code :
-  // ce listener ne concerne que le Leader, qui suit son propre surlignage
-  // en scrollant normalement.
-  if (document.body.classList.contains('karaoke-mode')) return;
-  if (karaokeHighlightRaf) return;
-  karaokeHighlightRaf = requestAnimationFrame(() => {
-    karaokeHighlightRaf = null;
-    updateLeaderParagraphHighlight();
-  });
-});
+// Note : l'ancienne applyKaraokeStage(leaderReferenceTop, karaokeAnchor),
+// dérivée du scroll du Leader, a été retirée — voir applyKaraokePaceFromServer()
+// et karaokePaceStep() plus haut, qui pilotent désormais la scène karaoké.
 
 window.addEventListener('resize', invalidateKaraokeParagraphGroups);
 
@@ -4776,11 +4908,6 @@ function applyRemoteScroll(data) {
     targetTop < 12 &&
     (isManual || viewerElement.scrollTop > 120)
   ) {
-    return;
-  }
-
-  if (document.body.classList.contains('karaoke-mode')) {
-    applyKaraokeStage(targetTop, data?.karaokeAnchor);
     return;
   }
 
@@ -5123,6 +5250,18 @@ function applyAutoScrollPayload(d) {
 
 socket.on('apply-autoscroll', d => applyAutoScrollPayload(d));
 
+// Pas-à-pas karaoké : le Leader décide, tout le monde écoute (voir
+// karaokePaceStep() et applyKaraokePaceFromServer() plus haut). Comme pour
+// le scroll, on attend que le morceau soit chargé avant d'appliquer.
+socket.on('karaoke-pace', d => {
+  const anchor = String(d?.anchor || '').trim();
+  if (isLoadingSong) {
+    pendingKaraokePace = { anchor };
+    return;
+  }
+  applyKaraokePaceFromServer(anchor);
+});
+
 // Filet de rattrapage périodique, indépendant de tout ce que cet appareil
 // croit déjà savoir (voir le commentaire côté serveur sur
 // STATE_HEARTBEAT_INTERVAL_MS) : si le morceau ou l'état de lecture diffère
@@ -5135,6 +5274,11 @@ socket.on('state-heartbeat', d => {
   }
 
   applyAutoScrollPayload(d);
+
+  const karaokePace = d?.karaokePace;
+  if (karaokePace && karaokePace.anchor && !isLoadingSong) {
+    applyKaraokePaceFromServer(String(karaokePace.anchor || ''));
+  }
 });
 
   socket.on('apply-fontsize', value => {
