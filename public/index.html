@@ -180,6 +180,19 @@ body.concert-mode #nextSongBtn{
   pointer-events:none;
 }
 
+/* JOUÉ, réservé à Turn (voir applyLeaderUI()) — même gabarit que
+   #leaderFloatingActions, dont il prend la place chez Turn (qui n'a pas de
+   bouton play). */
+#turnFloatingActions{
+  display:none;
+  position:fixed;
+  top:72px;
+  left:0;
+  right:0;
+  z-index:30;
+  pointer-events:none;
+}
+
 .center-btn{
   left:50%;
   transform:translateX(-50%);
@@ -223,6 +236,10 @@ body.concert-mode #leaderFloatingActions{
   top:12px;
 }
 
+body.concert-mode #turnFloatingActions{
+  top:12px;
+}
+
 body.concert-mode #concertFloatingActions{
   top:12px;
 }
@@ -235,7 +252,8 @@ body.concert-mode #settingsFixedWrap{
   color:#fff;
 }
 
-#leaderFloatingActions .leader-float-btn{
+#leaderFloatingActions .leader-float-btn,
+#turnFloatingActions .leader-float-btn{
   position:absolute;
   pointer-events:auto;
   background:rgba(0,0,0,0.72);
@@ -247,9 +265,11 @@ body.concert-mode #settingsFixedWrap{
   top:0;
 }
 
+/* Seul bouton de #turnFloatingActions : reprend la position du bouton play
+   (absent chez Turn), pas celle qu'il avait sous ce bouton chez le Leader. */
 #playedToggleBtn{
   left:12px;
-  top:52px;
+  top:0;
 }
 
 #randomSongBtn{
@@ -1341,33 +1361,15 @@ nav{
       font-size:12px;
     }
 
-    /* Pilotage manuel du paragraphe karaoké (voir karaokePaceStep()) :
-       masqué par défaut, affiché uniquement chez le Leader quand au moins un
-       invité karaoké est connecté (voir updateKaraokePaceControls()). */
-    #karaokePaceControls{
-      position:fixed;
-      left:12px;
-      bottom:12px;
-      z-index:80;
-      display:none;
-      align-items:center;
-      gap:6px;
-      background:rgba(0,0,0,0.55);
-      border-radius:10px;
-      padding:6px 8px;
-    }
-
-    #karaokePaceControls .btn{
-      padding:8px 10px;
-      font-size:12px;
-    }
-
-    #karaokePaceLabel{
-      color:#fff;
-      font-size:12px;
-      opacity:.85;
-      min-width:38px;
-      text-align:center;
+    /* Pas-à-pas karaoké : PRÉC./SUIV. (voir #prevSongBtn/#nextSongBtn plus
+       bas) prennent cette teinte verte, la même que le surlignage du
+       paragraphe en cours (--karaoke-leader-highlight-rgb), pour signaler
+       sans ambiguïté qu'ils ne changent plus de morceau mais de paragraphe
+       (voir updateSongNavButtons()). */
+    .karaoke-pace-btn{
+      background:rgba(var(--karaoke-leader-highlight-rgb),0.3) !important;
+      border-color:rgba(var(--karaoke-leader-highlight-rgb),0.7) !important;
+      color:#fff !important;
     }
 
     #songContent {
@@ -1635,15 +1637,23 @@ nav{
 	
 <div id="leaderFloatingActions">
   <button class="btn leader-float-btn" id="leaderPlayBtn" onclick="toggleAutoScroll(true)">▶</button>
-  <button class="btn leader-float-btn" id="playedToggleBtn" onclick="togglePlayedCurrentSong()">JOUÉ</button>
   <button class="btn leader-float-btn" id="randomSongBtn" onclick="openRandomFilteredSong()">🎲 ALÉATOIRE</button>
+</div>
+
+<!-- JOUÉ : réservé à Turn (voir applyLeaderUI()), plus au Leader. -->
+<div id="turnFloatingActions">
+  <button class="btn leader-float-btn" id="playedToggleBtn" onclick="togglePlayedCurrentSong()">JOUÉ</button>
 </div>
 
 <div id="concertFloatingActions">
   <button class="btn concert-float-btn center-btn" id="concertModeBtn" onclick="toggleConcertMode()">MODE CONCERT</button>
 
-  <button class="btn concert-float-btn" id="prevSongBtn" onclick="openPreviousFilteredSong()">⬅ PRÉC.</button>
-  <button class="btn concert-float-btn" id="nextSongBtn" onclick="openNextFilteredSong()">SUIV. ➡</button>
+  <!-- Chez le Leader, dès qu'un invité karaoké est connecté, ces deux
+       boutons pilotent le pas-à-pas karaoké (◀/▶) au lieu de changer de
+       morceau — voir handlePrevSongOrPaceBtn()/handleNextSongOrPaceBtn()
+       et updateKaraokeLeaderControls(). -->
+  <button class="btn concert-float-btn" id="prevSongBtn" onclick="handlePrevSongOrPaceBtn()">⬅ PRÉC.</button>
+  <button class="btn concert-float-btn" id="nextSongBtn" onclick="handleNextSongOrPaceBtn()">SUIV. ➡</button>
 </div>
 
 <div id="bottomSpeedBar" class="leader-only">
@@ -1659,15 +1669,6 @@ nav{
 </div>
 
 <button class="btn" id="resyncLeaderBtn" onclick="requestLeaderPosition()">↕ LEADER</button>
-
-<!-- Pilotage manuel du paragraphe karaoké (voir karaokePaceStep()) : Leader
-     uniquement, affiché seulement quand au moins un invité karaoké est
-     connecté (voir updateKaraokePaceControls()). -->
-<div id="karaokePaceControls">
-  <button class="btn" id="karaokePacePrevBtn" onclick="karaokePaceStep(-1)">◀</button>
-  <span id="karaokePaceLabel"></span>
-  <button class="btn" id="karaokePaceNextBtn" onclick="karaokePaceStep(1)">▶ KARAOKÉ</button>
-</div>
 
     <div id="notesPanel">
       <textarea id="notesTextarea" placeholder="Tes annotations personnelles..."></textarea>
@@ -2661,6 +2662,13 @@ function applyLeaderUI() {
     floating.style.display = isLeader ? 'block' : 'none';
   }
 
+  // Bouton JOUÉ : réservé à Turn (le Leader ne l'a plus, voir
+  // #turnFloatingActions dans le HTML).
+  const turnFloating = document.getElementById('turnFloatingActions');
+  if (turnFloating) {
+    turnFloating.style.display = isTurn ? 'block' : 'none';
+  }
+
   const badge = document.getElementById('leaderBadge');
   if (!badge) return;
 
@@ -2773,7 +2781,7 @@ function updateConcertFloatingVisibility() {
   const viewerOpen = document.getElementById('viewer-container').style.display === 'block';
   if (concertWrap) concertWrap.style.display = viewerOpen ? 'block' : 'none';
   updateResyncButton();
-  updateKaraokePaceControls();
+  updateKaraokeLeaderControls();
   syncSetlistButtons();
 }
 
@@ -4686,7 +4694,7 @@ function updateLeaderParagraphHighlight() {
   if (!isViewerOpen() || karaokeGuestsCount <= 0) {
     karaokePaceAnchor = '';
     setKaraokeHighlightGroup(null);
-    updateKaraokePaceControls();
+    updateKaraokeLeaderControls();
     return;
   }
 
@@ -4700,15 +4708,17 @@ function updateLeaderParagraphHighlight() {
   }
 
   setKaraokeHighlightGroup(groups[idx] || null);
-  updateKaraokePaceLabel(idx, groups.length);
-  updateKaraokePaceControls();
+  updateKaraokeLeaderControls();
 }
 
 // Avance/recule le paragraphe montré aux invités karaoké. Leader uniquement
-// (le bouton est masqué sinon, voir updateKaraokePaceControls()) — un seul
-// pilote à la fois, comme le reste (scroll, changement de morceau...). Ne
-// déplace jamais le scroll du Leader lui-même : il reste libre de lire sa
-// partition à son rythme pendant qu'il fait avancer la scène karaoké.
+// (les boutons ne pilotent le pas-à-pas que chez lui, voir
+// handlePrevSongOrPaceBtn()/handleNextSongOrPaceBtn()) — un seul pilote à la
+// fois, comme le reste (scroll, changement de morceau...). Recentre aussi
+// SON PROPRE scroll sur le paragraphe surligné (voir
+// centerKaraokeHighlightForLeader()) : comme ce scroll est celui qui pilote
+// scroll-sync, Turn/Follow suivent automatiquement, sans plomberie
+// supplémentaire.
 function karaokePaceStep(delta) {
   if (!isLeader) return;
 
@@ -4725,9 +4735,26 @@ function karaokePaceStep(delta) {
 
   karaokePaceAnchor = anchor;
   setKaraokeHighlightGroup(groups[targetIndex]);
-  updateKaraokePaceLabel(targetIndex, groups.length);
+  centerKaraokeHighlightForLeader(groups[targetIndex]);
 
   socket.emit('karaoke-pace', { anchor, index: targetIndex, total: groups.length });
+}
+
+// Centre le scroll du Leader sur le paragraphe qu'il vient de surligner
+// (appelé uniquement sur appui ◀/▶, jamais lors d'un rendu ordinaire — voir
+// karaokePaceStep()). Un scroll normal (pas de flag isRemoteScrolling), donc
+// le listener de scroll existant l'envoie à tout le monde comme n'importe
+// quel scroll manuel du Leader.
+function centerKaraokeHighlightForLeader(group) {
+  if (!group || !group.blocks || !group.blocks.length) return;
+
+  const first = group.blocks[0];
+  const last = group.blocks[group.blocks.length - 1];
+  const center = (first.offsetTop + last.offsetTop + last.offsetHeight) / 2;
+  const maxTop = Math.max(0, getViewerMaxSongScrollTop());
+  const target = Math.max(0, Math.min(maxTop, center - viewerElement.clientHeight / 2));
+
+  viewerElement.scrollTo({ top: target, behavior: 'smooth' });
 }
 
 // Applique une ancre reçue du serveur (Leader, via 'karaoke-pace' ou le
@@ -4750,19 +4777,63 @@ function applyKaraokePaceFromServer(anchor) {
   updateKaraokeProgress(groups.length > 1 ? idx / (groups.length - 1) : 0);
 }
 
-function updateKaraokePaceLabel(idx, total) {
-  const label = document.getElementById('karaokePaceLabel');
-  if (!label) return;
-  label.textContent = total > 0 ? `${idx + 1} / ${total}` : '';
+// Vrai quand PRÉC./SUIV. doivent piloter le pas-à-pas karaoké plutôt que
+// changer de morceau — dès qu'au moins un invité karaoké est connecté, et
+// seulement chez le Leader (seul à décider, voir karaokePaceStep()).
+function isKaraokePaceUiActive() {
+  return isLeader && isViewerOpen() && karaokeGuestsCount > 0;
 }
 
-// Visibilité des boutons ◀/▶ : Leader uniquement, morceau ouvert, et au
-// moins un invité en mode karaoké pour que ça serve à quelque chose (même
-// condition que le reste du pas-à-pas karaoké).
-function updateKaraokePaceControls() {
-  const el = document.getElementById('karaokePaceControls');
-  if (!el) return;
-  el.style.display = (isLeader && isViewerOpen() && karaokeGuestsCount > 0) ? 'flex' : 'none';
+function handlePrevSongOrPaceBtn() {
+  if (isKaraokePaceUiActive()) {
+    karaokePaceStep(-1);
+    return;
+  }
+  openPreviousFilteredSong();
+}
+
+function handleNextSongOrPaceBtn() {
+  if (isKaraokePaceUiActive()) {
+    karaokePaceStep(1);
+    return;
+  }
+  openNextFilteredSong();
+}
+
+// Réétiquette PRÉC./SUIV. en boutons de pas-à-pas karaoké (teinte verte,
+// voir .karaoke-pace-btn) quand isKaraokePaceUiActive(), sinon les remet en
+// navigation de morceau normale.
+function updateSongNavButtons(active) {
+  const prevBtn = document.getElementById('prevSongBtn');
+  const nextBtn = document.getElementById('nextSongBtn');
+  if (!prevBtn || !nextBtn) return;
+
+  prevBtn.textContent = active ? '◀ KARAOKÉ' : '⬅ PRÉC.';
+  nextBtn.textContent = active ? 'KARAOKÉ ▶' : 'SUIV. ➡';
+  prevBtn.classList.toggle('karaoke-pace-btn', active);
+  nextBtn.classList.toggle('karaoke-pace-btn', active);
+}
+
+// Bascule l'interface du Leader entre "défilement classique" (bouton play
+// visible, PRÉC./SUIV. changent de morceau) et "pas-à-pas karaoké" (pas de
+// bouton play — plus de défilement continu à broadcaster — PRÉC./SUIV.
+// avancent/reculent le paragraphe surligné). Actif dès qu'au moins un
+// invité karaoké est connecté.
+function updateKaraokeLeaderControls() {
+  const playBtn = document.getElementById('leaderPlayBtn');
+  const active = isKaraokePaceUiActive();
+
+  if (playBtn) playBtn.style.display = active ? 'none' : '';
+
+  if (active && isScrolling) {
+    // On bascule en pas-à-pas karaoké pendant que le défilement classique
+    // tournait déjà : on l'arrête proprement (et on prévient tout le
+    // monde) plutôt que de masquer le seul bouton qui permettait de
+    // l'arrêter.
+    toggleAutoScroll(true);
+  }
+
+  updateSongNavButtons(active);
 }
 
 // Taille du texte adaptée à la longueur du paragraphe affiché : un
