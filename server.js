@@ -222,6 +222,15 @@ let activePlaybackDeviceId = '';
 let currentPlaybackPosition = null;
 let leaderCleanupTimer = null;
 let pendingPlaybackStop = null;
+// État du "pas à pas" karaoké : quel paragraphe (voir getKaraokeGroupAnchor()
+// côté client) le Leader a choisi d'afficher aux invités en mode karaoké.
+// Remplace l'ancien calcul automatique dérivé du scroll (mauvais proxy du
+// tempo réel, vu qu'on ne joue pas au métronome) par un pointeur explicite,
+// avancé uniquement par le Leader (boutons ◀/▶, voir 'karaoke-pace' plus
+// bas) — jamais interprété ici, simplement mémorisé pour remettre à niveau
+// un appareil qui rejoint en cours de morceau (register-user /
+// request-sync-position) ou qui a raté l'événement (state-heartbeat).
+let currentKaraokePace = { anchor: '', index: -1, total: 0 };
 
 // Diffusion périodique de l'état complet (morceau + lecture) à tout le
 // monde, indépendamment de ce que chaque appareil pense déjà savoir. Sans
@@ -240,7 +249,8 @@ setInterval(() => {
     fileName: currentSongFileName,
     active: currentAutoScrollState.active,
     speed: currentAutoScrollState.speed,
-    controllerDeviceId: currentAutoScrollState.active ? activePlaybackDeviceId : ''
+    controllerDeviceId: currentAutoScrollState.active ? activePlaybackDeviceId : '',
+    karaokePace: currentKaraokePace
   });
 }, STATE_HEARTBEAT_INTERVAL_MS);
 
@@ -1665,6 +1675,10 @@ io.on('connection', (socket) => {
         replay: true
       });
     }
+
+    if (currentKaraokePace.anchor) {
+      socket.emit('karaoke-pace', { ...currentKaraokePace, replay: true });
+    }
   });
 
 socket.on('mark-played', ({ fileName, played }) => {
@@ -1815,6 +1829,12 @@ socket.on('reset-played-tonight', () => {
       active: false,
       speed: currentAutoScrollState.speed || 50
     };
+    // Nouveau morceau : le pas-à-pas karaoké du morceau précédent n'a plus de
+    // sens (les ancres de paragraphe sont propres à chaque morceau). Le
+    // Leader repart de zéro ; voir updateLeaderParagraphHighlight() côté
+    // client, qui réémet automatiquement le premier paragraphe dès que des
+    // invités karaoké sont connectés.
+    currentKaraokePace = { anchor: '', index: -1, total: 0 };
 
     io.emit('apply-autoscroll', {
       ...currentAutoScrollState,
@@ -1863,6 +1883,21 @@ socket.on('reset-played-tonight', () => {
     socket.broadcast.emit('apply-scroll', { anchor, progress, top, scrollRatio, manual, official, karaokeAnchor });
   });
 
+  // Pas-à-pas karaoké piloté par le Leader (voir commentaire sur
+  // currentKaraokePace) : contrairement à scroll-sync, ceci ne vient jamais
+  // du scroll — seul le Leader peut décider quel paragraphe afficher, via
+  // les boutons ◀/▶ (isLeaderSocket, même restriction que sync-autoscroll).
+  socket.on('karaoke-pace', (payload) => {
+    if (!isLeaderSocket(socket)) return;
+
+    const anchor = String(payload?.anchor || '').trim();
+    const index = Number.isFinite(Number(payload?.index)) ? Number(payload.index) : -1;
+    const total = Number.isFinite(Number(payload?.total)) ? Math.max(0, Number(payload.total)) : 0;
+
+    currentKaraokePace = { anchor, index, total };
+    socket.broadcast.emit('karaoke-pace', currentKaraokePace);
+  });
+
   socket.on('request-sync-position', () => {
     // Resync complet (morceau + défilement), pas juste la position : si un
     // appareil a raté le changement de morceau du Turn/Leader (socket
@@ -1890,6 +1925,10 @@ socket.on('reset-played-tonight', () => {
       controllerDeviceId: currentAutoScrollState.active ? activePlaybackDeviceId : '',
       replay: true
     });
+
+    if (currentKaraokePace.anchor) {
+      socket.emit('karaoke-pace', { ...currentKaraokePace, replay: true });
+    }
   });
 
   socket.on('sync-autoscroll', (d) => {
