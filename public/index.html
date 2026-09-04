@@ -2690,7 +2690,13 @@ function syncSetlistButtons() {
 function updateResyncButton() {
   const btn = document.getElementById('resyncLeaderBtn');
   if (!btn) return;
-  btn.style.display = (playbackActive && !isLeader && isViewerOpen()) ? 'block' : 'none';
+  // Avant, ce bouton n'apparaissait que si l'appareil pensait déjà être en
+  // lecture (playbackActive) — donc invisible pile dans le cas où on en a le
+  // plus besoin : un appareil qui a raté l'événement de départ ne sait pas
+  // qu'il devrait l'être, et n'avait alors aucun moyen de se rattraper à la
+  // main. Toujours visible pour les non-Leaders dès que le morceau est
+  // ouvert.
+  btn.style.display = (!isLeader && isViewerOpen()) ? 'block' : 'none';
 }
 
 function requestLeaderPosition() {
@@ -5080,7 +5086,13 @@ function toggleAutoScroll(emitSync) {
   renderChordPro();
 });
 
-socket.on('apply-autoscroll', d => {
+// Factorisé pour être appelé à la fois par l'événement ponctuel
+// apply-autoscroll (vrai changement décidé par le Leader) et par le
+// state-heartbeat périodique (filet de rattrapage si un appareil a raté le
+// vrai événement). Idempotent : startAutoScroll()/stopAutoScroll() ne font
+// rien si on est déjà dans l'état demandé, donc le rejouer régulièrement ne
+// provoque aucun à-coup chez quelqu'un déjà synchronisé.
+function applyAutoScrollPayload(d) {
   const speed = Number(d.speed) || 50;
   const wantActive = !!d.active;
   const controllerDeviceId = String(d?.controllerDeviceId || '').trim();
@@ -5107,6 +5119,22 @@ socket.on('apply-autoscroll', d => {
   if (!wantActive && isScrolling) stopAutoScroll();
   updateLeaderPlayButton();
   updateResyncButton();
+}
+
+socket.on('apply-autoscroll', d => applyAutoScrollPayload(d));
+
+// Filet de rattrapage périodique, indépendant de tout ce que cet appareil
+// croit déjà savoir (voir le commentaire côté serveur sur
+// STATE_HEARTBEAT_INTERVAL_MS) : si le morceau ou l'état de lecture diffère
+// de ce que le serveur vient de rediffuser, on se recale, même si on ne
+// s'est jamais rendu compte d'avoir raté quoi que ce soit.
+socket.on('state-heartbeat', d => {
+  const fileName = String(d?.fileName || '').trim();
+  if (fileName && fileName !== currentFileName && !isLoadingSong) {
+    openRemoteSong(fileName);
+  }
+
+  applyAutoScrollPayload(d);
 });
 
   socket.on('apply-fontsize', value => {
@@ -6286,15 +6314,41 @@ updateSpeedPercent();
   ensureWakeLockSoon();
 })();
 
+// Écran verrouillé, appli mise en arrière-plan puis reprise au premier
+// plan : le socket peut être "zombie" (encore ouvert selon le navigateur,
+// mais plus rien ne transite dessus) sans que Socket.IO ne s'en aperçoive
+// avant son pingTimeout (jusqu'à ~85s, voir server.js). On vérifie donc
+// activement la connexion à ce moment précis au lieu d'attendre.
+function verifyConnectionHealth() {
+  if (!socket.connected) return; // reconnexion normale déjà prise en charge
+
+  socket.timeout(3000).emit('ping-check', {}, (err) => {
+    if (err) {
+      // Pas de réponse dans le délai : on force une vraie reconnexion plutôt
+      // que d'attendre que Socket.IO finisse par déclarer la connexion morte.
+      socket.disconnect();
+      socket.connect();
+    } else {
+      // Connexion bien vivante : on se recale quand même tout de suite, au
+      // cas où on aurait raté un événement pendant qu'on était en arrière-plan.
+      requestLeaderPosition();
+    }
+  });
+}
+
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     ensureWakeLockSoon();
+    verifyConnectionHealth();
   } else {
     releaseWakeLock().catch(() => {});
   }
 });
 
-window.addEventListener('focus', ensureWakeLockSoon);
+window.addEventListener('focus', () => {
+  ensureWakeLockSoon();
+  verifyConnectionHealth();
+});
 window.addEventListener('pageshow', ensureWakeLockSoon);
 window.addEventListener('pagehide', () => {
   releaseWakeLock().catch(() => {});
