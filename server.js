@@ -223,6 +223,27 @@ let currentPlaybackPosition = null;
 let leaderCleanupTimer = null;
 let pendingPlaybackStop = null;
 
+// Diffusion périodique de l'état complet (morceau + lecture) à tout le
+// monde, indépendamment de ce que chaque appareil pense déjà savoir. Sans
+// ça, un événement isolé perdu (connexion "zombie" pas encore détectée par
+// le pingTimeout, coupure furtive) peut laisser un appareil bloqué sur
+// l'ancien morceau ou en pause pendant que le reste du groupe a avancé, sans
+// aucun moyen de s'en apercevoir avant la prochaine reconnexion complète.
+// Volontairement minimal (pas la position de défilement, déjà couverte par
+// scroll-sync/request-sync-position) pour ne jamais provoquer de à-coup
+// visible chez quelqu'un déjà synchronisé.
+const STATE_HEARTBEAT_INTERVAL_MS = 8000;
+setInterval(() => {
+  if (!currentSongFileName) return;
+
+  io.emit('state-heartbeat', {
+    fileName: currentSongFileName,
+    active: currentAutoScrollState.active,
+    speed: currentAutoScrollState.speed,
+    controllerDeviceId: currentAutoScrollState.active ? activePlaybackDeviceId : ''
+  });
+}, STATE_HEARTBEAT_INTERVAL_MS);
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 
@@ -1555,6 +1576,15 @@ io.on('connection', (socket) => {
   broadcastConnectedUsers();
   broadcastPlayedTonight();
   socket.emit('karaoke-guests', { count: karaokeDeviceIds.size });
+
+  // Vérification légère de la santé de la connexion, utilisée par le client
+  // au retour au premier plan (écran déverrouillé, appli remise devant) pour
+  // savoir si le socket est encore vraiment utilisable ou s'il vaut mieux
+  // forcer une reconnexion tout de suite plutôt que d'attendre le
+  // pingTimeout (jusqu'à ~85s dans le pire cas).
+  socket.on('ping-check', (payload, callback) => {
+    if (typeof callback === 'function') callback({ ok: true, at: Date.now() });
+  });
 
   // Rôle purement client (voir syncKaraokeModeToServer côté front) : on ne
   // fait que compter combien d'appareils sont en mode karaoké, pour que le
