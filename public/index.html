@@ -1035,12 +1035,11 @@ nav{
     }
 
     /* Paragraphe "instrumental" de la scène karaoké (voir isInstrumentalGroup
-       dans computeKaraokeParagraphGroups()) : regroupe un ou plusieurs
-       éléments consécutifs sans paroles (commentaire {i:}/{d:}, ligne
-       d'accords {a:}, ligne de notes {n:}, tablature {tab}...{/tab}) en un
-       seul écran générique, sans jamais révéler aux invités les accords/
-       notes/tabs réels de la partition. Mise en forme dédiée en clamp(),
-       comme le paragraphe "titre" ci-dessus. */
+       dans computeKaraokeParagraphGroups()) : tout le contenu d'une section
+       {soi}...{eoi} (voir .instrumental-block plus bas) devient un seul
+       écran générique, sans jamais révéler aux invités les accords/notes/
+       tabs/commentaires réels de la partition qu'elle contient. Mise en
+       forme dédiée en clamp(), comme le paragraphe "titre" ci-dessus. */
     #karaokeCard .karaoke-instrumental-card{
       display:flex;
       flex-direction:column;
@@ -1080,33 +1079,20 @@ nav{
       transition:width 300ms linear;
     }
 
+    /* Sur demande de Nemo : plus aucun contenu de {c:}, {f:}, {d:}, {n:},
+       {a:} ou {tab}...{/tab} ne s'affiche côté scène karaoké — seul un
+       {soi}...{eoi} déclenche l'écran générique "Instrumental" (voir
+       computeKaraokeParagraphGroups(), qui ne clone même plus ces éléments
+       dans #karaokeCard hors d'un tel bloc). Ces règles restent en place en
+       filet de sécurité au cas où l'un d'eux se retrouverait quand même
+       cloné sur la scène. */
     body.karaoke-mode #karaokeStage .chord-cell .chord,
     body.karaoke-mode #karaokeStage .commentline,
-    body.karaoke-mode #karaokeStage .inline-music-line.notes-only,
+    body.karaoke-mode #karaokeStage .inline-music-line,
     body.karaoke-mode #karaokeStage .pu-block,
-    body.karaoke-mode #karaokeStage .annotline.sound{
+    body.karaoke-mode #karaokeStage .tab-block,
+    body.karaoke-mode #karaokeStage .annotline{
       display:none;
-    }
-    /* .annotline (sans .sound), c'est-à-dire {c:} "qui chante/joue", reste
-       volontairement visible côté scène karaoké — voir addAnnotationLine()
-       et isInstrumentalEl(). {f:} ("quel son"), lui, n'a d'intérêt que pour
-       le groupe sur scène : masqué aux invités ci-dessus. */
-
-    body.karaoke-mode #karaokeStage .inline-music-line.chords-only{
-      visibility:hidden;
-      position:relative;
-    }
-
-    body.karaoke-mode #karaokeStage .inline-music-line.chords-only::after{
-      content:"🎵 instrumental";
-      visibility:visible;
-      position:absolute;
-      left:0;
-      top:0;
-      color:var(--text);
-      font-family:'Poppins', sans-serif;
-      font-weight:700;
-      opacity:0.65;
     }
 
     /* En mode concert + karaoké, l'appareil est tendu à l'invité : on
@@ -1166,8 +1152,8 @@ nav{
 
     /* {c:} (qui chante/joue) et {f:} (quel son/patch) : même pastille que
        .commentwrap/.commentline ci-dessus (même famille visuelle), mais
-       wrapper distinct exprès pour ne pas être capté par isInstrumentalEl()
-       — voir addAnnotationLine(). */
+       wrapper distinct — voir addAnnotationLine() et isKaraokeHiddenEl()
+       dans computeKaraokeParagraphGroups(). */
     .annotwrap{ margin:12px 0; }
 
     .annotline{
@@ -1187,7 +1173,7 @@ nav{
       color:var(--detail-comment-text);
     }
 
-    /* [Am] entre crochets à l'intérieur d'un {i:}/{c:}/{f:}/{d:}/{n:} :
+    /* [Am] entre crochets à l'intérieur d'un {c:}/{f:}/{d:}/{n:} :
        habillage identique à un accord normal (même couleur que
        .chord-cell .chord / .inline-music-line.chords-only), pour qu'il se
        distingue clairement du texte de commentaire autour — voir
@@ -1198,7 +1184,8 @@ nav{
 
     .chorus-block,
     .verse-block,
-    .bridge-block{
+    .bridge-block,
+    .instrumental-block{
       padding:12px 12px;
       border-radius:12px;
       margin:14px 0;
@@ -1220,6 +1207,19 @@ nav{
       background:var(--bridge-bg);
       border-left:4px solid var(--bridge-border);
       color:var(--bridge-text);
+    }
+
+    /* Section {soi}...{eoi} : englobe librement paroles, accords, {c:}/{f:}/
+       {d:}/{n:} et tablature — tout son contenu, quel qu'il soit, devient un
+       seul écran générique "Instrumental" côté scène karaoké (voir
+       isInstrumentalGroup dans computeKaraokeParagraphGroups()). Couleur
+       ambre pour rappeler celle des accords (--chord-color), volontairement
+       pas déclinée clair/sombre comme chorus/verse/bridge : peu d'intérêt à
+       calquer leur système de variables pour un simple repère visuel chez
+       le Leader/Turn/Follow. */
+    .instrumental-block{
+      background:rgba(255,152,0,0.10);
+      border-left:4px solid var(--chord-color);
     }
 
     .pu-block{
@@ -1716,7 +1716,7 @@ nav{
   <button class="btn" onclick="insertTemplateSection('sob', 'eob')">+ {sob}</button>
   <button class="btn" onclick="insertTemplateComment()">+ {c:}</button>
   <button class="btn" onclick="insertTemplateSound()">+ {f:}</button>
-  <button class="btn" onclick="insertTemplateInstrumental()">+ {i:}</button>
+  <button class="btn" onclick="insertTemplateSection('soi', 'eoi')">+ {soi}</button>
   <button class="btn" onclick="insertTemplateDetail()">+ {d:}</button>
   <button class="btn" onclick="insertTemplateChordLine()">+ {a:}</button>
   <button class="btn" onclick="insertTemplateNotesLine()">+ {n:}</button>
@@ -4331,28 +4331,23 @@ function computeKaraokeParagraphGroups() {
     return !!(el.dataset && el.dataset.kind === 'lyric' && !el.textContent.trim());
   }
 
-  // Élément "instrumental" : ligne de commentaire ({i:}/{d:}, wrapper
-  // .commentwrap — {i:} a remplacé {c:} comme repère de vraie coupure
-  // instrumentale, voir addAnnotationLine plus bas), ligne d'accords ou de
-  // notes seule ({a:}/{n:}, .inline-music-line), ou bloc de tablature
-  // ({tab}...{/tab}, .tab-block) — rien à chanter/lire aux invités, mais du
-  // contenu "réel" (une intro, un pont, un solo...) qui doit rester
-  // scrollable/repérable chez le Leader et s'afficher comme un vrai
-  // paragraphe "Instrumental" côté scène karaoké, plutôt que de disparaître
-  // silencieusement entre deux paragraphes de paroles (voir
-  // isInstrumentalGroup ci-dessous).
-  //
-  // {c:} (qui chante/joue) et {f:} (quel son/patch utiliser) ne sont PAS
-  // des éléments instrumentaux depuis la refonte du repérage des
-  // sections instrumentales (issue remontée par Nemo sur "I'm a Believer",
-  // "A Nos Souvenirs" etc. : {c:tous}/{c:nemo} collé à une vraie parole
-  // déclenchait à tort la carte "Instrumental" juste avant que ça chante).
-  // Ils utilisent désormais un wrapper distinct, .annotwrap (voir
-  // addAnnotationLine), rattaché au paragraphe de paroles en cours plutôt
-  // que traité comme une coupure — voir plus bas dans cette fonction.
-  function isInstrumentalEl(el) {
+  // Depuis le passage de {i: ...} à {soi}...{eoi} (demande de Nemo) : seul
+  // un bloc {soi}...{eoi} (wrapper .instrumental-block, voir plus bas dans
+  // cette fonction) déclenche désormais l'écran générique "Instrumental"
+  // côté scène karaoké. Tout le reste — commentaire ({d:}, wrapper
+  // .commentwrap), annotation ({c:}/{f:}, wrapper .annotwrap), ligne
+  // d'accords ou de notes seule ({a:}/{n:}, .inline-music-line), tablature
+  // ({tab}...{/tab}, .tab-block) — n'affiche plus RIEN côté scène karaoké
+  // en dehors d'une telle section : ni son propre contenu, ni l'écran
+  // "Instrumental". On les ignore donc entièrement pour le regroupement
+  // karaoké (jamais poussés dans un groupe, jamais clonés sur la scène),
+  // sans pour autant couper le paragraphe de paroles en cours — ils restent
+  // par ailleurs affichés normalement chez le Leader/Turn/Follow, seule la
+  // scène karaoké des invités est concernée.
+  function isKaraokeHiddenEl(el) {
     return !!(el.classList && (
       el.classList.contains('commentwrap') ||
+      el.classList.contains('annotwrap') ||
       el.classList.contains('tab-block') ||
       (el.classList.contains('inline-music-line') && (el.classList.contains('chords-only') || el.classList.contains('notes-only')))
     ));
@@ -4360,26 +4355,13 @@ function computeKaraokeParagraphGroups() {
 
   const groups = [];
   let current = [];
-  let instrumental = [];
   function flushLyric() {
     if (current.length) {
-      // Un paragraphe de "paroles" entièrement composé de lignes qui
-      // ressemblent à une section instrumentale écrite en texte libre
-      // (voir looksLikeFreeTextInstrumentalLine) est en réalité, lui
-      // aussi, un paragraphe instrumental — au même titre que les
-      // sections balisées {i:}/{a:}/{tab}. On ne le marque ainsi que si
-      // TOUTES ses lignes qualifient : la moindre vraie parole dans le
-      // même paragraphe (aucune ligne vide ne les sépare) suffit à garder
-      // l'affichage normal, par prudence contre les faux positifs.
-      const allFreeInstrumental = current.every(el => el.dataset && el.dataset.freeInstrumental === '1');
-      groups.push({ blocks: current, isInstrumentalGroup: allFreeInstrumental });
+      groups.push({ blocks: current, isInstrumentalGroup: false });
       current = [];
     }
   }
-  function flushInstrumental() {
-    if (instrumental.length) { groups.push({ blocks: instrumental, isInstrumentalGroup: true }); instrumental = []; }
-  }
-  function flushAll() { flushLyric(); flushInstrumental(); }
+  function flushAll() { flushLyric(); }
 
   // {title:}/{subtitle:} ChordPro, rendus par addCenteredTitle() en
   // <h1>/<h2> tout en haut de #songContent : capturés à part tant qu'aucun
@@ -4392,8 +4374,18 @@ function computeKaraokeParagraphGroups() {
   Array.from(songContentEl.children).forEach(child => {
     if (child.id === 'overlayLayer' || child.classList.contains('song-end-spacer')) return;
 
-    if (!groups.length && !current.length && !instrumental.length && (child.tagName === 'H1' || child.tagName === 'H2')) {
+    if (!groups.length && !current.length && (child.tagName === 'H1' || child.tagName === 'H2')) {
       titleBlocks.push(child);
+      return;
+    }
+
+    if (child.classList.contains('instrumental-block')) {
+      // Bloc {soi}...{eoi} : quel que soit son contenu (paroles, accords,
+      // {c:}/{f:}/{d:}/{n:}, tablature...), il forme toujours, à lui seul,
+      // un seul paragraphe/écran "Instrumental" générique côté scène
+      // karaoké (voir renderKaraokeStage()) — jamais le contenu réel.
+      flushAll();
+      groups.push({ blocks: [child], isInstrumentalGroup: true });
       return;
     }
 
@@ -4409,39 +4401,19 @@ function computeKaraokeParagraphGroups() {
     }
 
     if (child.dataset && child.dataset.kind === 'lyric') {
-      // Une ligne vide sépare deux paragraphes de paroles, mais ne doit pas
-      // couper une section instrumentale en cours (typiquement une ligne
-      // vide de mise en forme entre "{i: Intro}" et la ligne d'accords qui
-      // suit dans le fichier) : on ne referme donc que le paragraphe de
-      // paroles ici, jamais le buffer instrumental.
+      // Une ligne vide sépare deux paragraphes de paroles.
       if (isBlankLyric(child)) { flushLyric(); return; }
-      flushInstrumental();
       current.push(child);
       return;
     }
 
-    if (isInstrumentalEl(child)) {
-      // Une section instrumentale (intro, pont, solo...) peut s'écrire sur
-      // plusieurs lignes consécutives dans la partition — un commentaire
-      // suivi d'une ligne d'accords et/ou d'une tablature, par exemple. On
-      // les regroupe en un seul paragraphe/écran "Instrumental" plutôt que
-      // d'en faire un par ligne (voir renderKaraokeStage()).
-      flushLyric();
-      instrumental.push(child);
-      return;
-    }
-
-    if (child.classList && child.classList.contains('annotwrap')) {
-      // {c:} (qui chante/joue) et {f:} (quel son) : une annotation visible
-      // mais qui ne doit jamais interrompre l'écran karaoké — on la
-      // rattache donc au paragraphe de paroles en cours (comme une vraie
-      // ligne de parole), sans jamais la faire passer par le buffer
-      // "instrumental". On referme quand même un buffer instrumental
-      // encore ouvert (ex: {i:...} suivi directement de {c:nemo}), pour ne
-      // pas fusionner à tort une vraie coupure instrumentale avec les
-      // paroles qui suivent.
-      flushInstrumental();
-      current.push(child);
+    if (isKaraokeHiddenEl(child)) {
+      // {c:}, {f:}, {d:}, {n:}, {a:} ou tablature en dehors d'un
+      // {soi}...{eoi} : totalement transparents pour le regroupement
+      // karaoké (voir isKaraokeHiddenEl ci-dessus) — on ne les ajoute à
+      // aucun groupe et on ne coupe pas non plus le paragraphe de paroles
+      // en cours, pour ne pas scinder inutilement un couplet à cause d'une
+      // simple annotation glissée au milieu.
       return;
     }
 
@@ -4451,17 +4423,10 @@ function computeKaraokeParagraphGroups() {
   });
   flushAll();
 
-  // Contrairement aux sections balisées {c:}/{a:}/{tab} (dont le buffer
-  // "instrumental" ignore les lignes vides et reste donc déjà groupé sur
-  // plusieurs lignes séparées par des blancs, voir plus haut), un
-  // paragraphe "texte libre" détecté via looksLikeFreeTextInstrumentalLine
-  // passe par le buffer normal des paroles et se referme donc à chaque
-  // ligne vide comme n'importe quel paragraphe de paroles — deux repères
-  // libres consécutifs séparés seulement par une ligne vide de mise en
-  // forme ("Instrumental : 4X" puis "Voix (instrumental) : 4X", repéré sur
-  // "A Bailar Calypso") formeraient donc deux écrans "Instrumental"
-  // successifs au lieu d'un seul. On les fusionne ici après coup, plutôt
-  // que de compliquer la logique de groupage ci-dessus.
+  // Deux sections {soi}...{eoi} consécutives, séparées seulement par une
+  // ligne vide de mise en forme, doivent rester un seul écran "Instrumental"
+  // plutôt que deux successifs : on les fusionne ici après coup, plutôt que
+  // de compliquer la logique de groupage ci-dessus.
   const mergedGroups = [];
   for (const g of groups) {
     const prev = mergedGroups[mergedGroups.length - 1];
@@ -5498,7 +5463,7 @@ socket.on('apply-speed', value => {
   }
 
   // Accords entre crochets [Am] à l'intérieur du texte d'une annotation ou
-  // d'un commentaire ({i:}, {c:}, {f:}, {d:}) : sur demande de Nemo, ils
+  // d'un commentaire ({c:}, {f:}, {d:}) : sur demande de Nemo, ils
   // doivent être traités comme des accords normaux — transposés avec
   // transChord() comme n'importe quel accord de la partition, et habillés
   // visuellement comme un accord (voir .inline-chord) — plutôt que restitués
@@ -5617,9 +5582,12 @@ socket.on('apply-speed', value => {
   function addCommentLine(text, targetEl, type = 'comment', anchorId) {
     const wrap = document.createElement('div');
     wrap.className = 'commentwrap';
-    // Ancre stable pour le regroupement karaoké (voir isInstrumentalGroup
-    // dans computeKaraokeParagraphGroups()) : posée sur wrap, le vrai enfant
-    // direct de #songContent (le <span>.commentline est imbriqué dedans).
+    // Ancre stable, posée sur wrap, le vrai enfant direct de #songContent
+    // (le <span>.commentline est imbriqué dedans) — sans effet côté scène
+    // karaoké depuis le passage à {soi}...{eoi} : .commentwrap n'entre plus
+    // jamais dans aucun groupe (voir isKaraokeHiddenEl dans
+    // computeKaraokeParagraphGroups()), reste utile pour d'éventuels autres
+    // usages de cette ancre chez le Leader/Turn/Follow.
     if (anchorId) wrap.dataset.anchor = anchorId;
 
     const span = document.createElement('span');
@@ -5632,12 +5600,12 @@ socket.on('apply-speed', value => {
 
   // {c:} (qui chante/joue, ex: "nemo", "tous") et {f:} (quel son/patch
   // utiliser, ex: "Piano : N264-combiA41") : une annotation visible sur la
-  // partition et, pour {c:}, sur la scène karaoké elle-même — mais qui ne
-  // doit jamais déclencher la carte plein écran "Instrumental" (voir
-  // isInstrumentalEl dans computeKaraokeParagraphGroups(), qui ne reconnaît
-  // plus que .commentwrap, pas .annotwrap). Rendu très proche
-  // d'addCommentLine ci-dessus (même style de pastille), mais avec un
-  // wrapper distinct exprès pour ne pas être capté par isInstrumentalEl.
+  // partition chez le Leader/Turn/Follow, mais masquée côté scène karaoké et
+  // qui ne déclenche jamais la carte plein écran "Instrumental" (voir
+  // isKaraokeHiddenEl dans computeKaraokeParagraphGroups(), qui ne reconnaît
+  // plus aucun contenu — .commentwrap comme .annotwrap — en dehors d'un
+  // {soi}...{eoi}). Rendu très proche d'addCommentLine ci-dessus (même style
+  // de pastille), mais avec un wrapper distinct.
   function addAnnotationLine(text, targetEl, kind = 'who', anchorId) {
     const wrap = document.createElement('div');
     wrap.className = 'annotwrap';
@@ -5709,56 +5677,12 @@ socket.on('apply-speed', value => {
     return expanded;
   }
 
-  // Mots-clés reconnus comme repère de section instrumentale écrite en
-  // texte libre (voir looksLikeFreeTextInstrumentalLine ci-dessous) — liste
-  // volontairement restreinte à des termes techniques qui n'ont normalement
-  // aucune chance d'apparaître dans une vraie parole chantée. Des mots plus
-  // "parlants" comme "pont" (aussi un mot français ordinaire — cf. "Sur le
-  // Pont d'Avignon"), "gamme", "thème" ou "bridge"/"break" (mots anglais
-  // courants) ont été délibérément exclus : le risque de faux positif sur
-  // une vraie parole dépassait le bénéfice, pour des cas non observés dans
-  // les morceaux réels testés.
-  const FREE_TEXT_INSTRUMENTAL_KEYWORDS = [
-    'intro', 'instrumental', 'solo', 'interlude', 'outro',
-    'impro', 'improvisation', 'coda', 'riff',
-  ];
-
-  // Une ligne de paroles "classique" (bloc .block, data-kind="lyric") peut
-  // en réalité être une indication de section instrumentale écrite en
-  // texte libre plutôt qu'avec les directives ChordPro dédiées
-  // ({i:}/{a:}/{tab}...) — typiquement une ligne d'accords seuls
-  // ("[Am]     [G]     [F]     [E]") suivie ou non d'un court repère
-  // textuel ("INTRO :  4X", "Instrumental : 4 X", "Solo guitare: ...
-  // Pentatonique Am"). Repéré sur "A Bailar Calypso" et "74-75" : de
-  // telles lignes restaient désormais atteignables au scroll (voir
-  // pickKaraokeGroupForScroll) mais s'affichaient côté scène karaoké comme
-  // de fausses "paroles" (les noms d'accords bruts, "INTRO : 4X"...) au
-  // lieu de la carte générique "Instrumental" (voir isInstrumentalGroup
-  // dans computeKaraokeParagraphGroups()).
-  //
-  // Heuristique volontairement prudente pour éviter tout faux positif sur
-  // une vraie ligne de parole, même courte : on ne marque QUE les lignes
-  // très courtes (≤45 caractères une fois les accords retirés, ≤8 mots)
-  // contenant un des mots-clés ci-dessus — ou entièrement vides une fois
-  // les accords retirés (une ligne composée uniquement d'accords, sans
-  // aucun texte, ne peut de toute façon jamais être une parole).
-  function looksLikeFreeTextInstrumentalLine(lyricLine) {
-    const t = String(lyricLine || '').replace(/\s+/g, ' ').trim();
-    if (!t) return true;
-    if (t.length > 45) return false;
-    const lower = t.toLowerCase();
-    if (!FREE_TEXT_INSTRUMENTAL_KEYWORDS.some(kw => lower.includes(kw))) return false;
-    const wordCount = t.split(' ').filter(Boolean).length;
-    return wordCount <= 8;
-  }
-
   function addChordBlock(segments, lyricLine, targetEl, anchorId) {
     const block = document.createElement('div');
     block.className = 'block';
     block.style.fontSize = (fontSize * currentSongZoom) + 'px';
     block.dataset.kind = 'lyric';
     if (anchorId) block.dataset.anchor = anchorId;
-    if (looksLikeFreeTextInstrumentalLine(lyricLine)) block.dataset.freeInstrumental = '1';
 
     const hasChords = segments.some(segment => String(segment.chord || '').trim());
     const row = document.createElement('span');
@@ -5908,10 +5832,12 @@ function renderPUContent(targetEl, text) {
 function renderTabBlock(targetEl, text, anchorId) {
   const wrap = document.createElement('div');
   wrap.className = 'tab-block';
-  // Ancre stable pour le regroupement karaoké (voir isInstrumentalGroup
-  // dans computeKaraokeParagraphGroups()) — seulement posée par les
-  // appelants du rendu principal (renderChordPro()), pas depuis un bloc de
-  // notes privées (renderPUContent()), sans lien avec la scène karaoké.
+  // Ancre stable, seulement posée par les appelants du rendu principal
+  // (renderChordPro()), pas depuis un bloc de notes privées
+  // (renderPUContent()) — sans effet côté scène karaoké depuis le passage à
+  // {soi}...{eoi} : .tab-block n'entre plus jamais dans aucun groupe hors
+  // d'une telle section (voir isKaraokeHiddenEl dans
+  // computeKaraokeParagraphGroups()).
   if (anchorId) wrap.dataset.anchor = anchorId;
   wrap.style.fontSize = (fontSize * currentSongZoom) + 'px';
 
@@ -6071,6 +5997,30 @@ function renderTabBlock(targetEl, text, anchorId) {
         continue;
       }
 
+      // {soi}...{eoi} (start/end of instrumental) : remplace l'ancien
+      // marqueur {i: ...} sur une seule ligne — a le même rôle (repérer une
+      // vraie coupure instrumentale : intro, solo, pont sans parole...) mais
+      // englobe désormais un bloc entier, comme {sov}/{soc}/{sob}, plutôt
+      // qu'une seule ligne suivie d'un éventuel texte collé. Tout ce qui se
+      // trouve entre les deux — paroles, accords, {c:}/{f:}/{d:}/{n:},
+      // tablature... — devient un seul écran "Instrumental" générique côté
+      // scène karaoké (voir isInstrumentalGroup dans
+      // computeKaraokeParagraphGroups()), qui ne se fie plus qu'à ce
+      // balisage explicite pour cet écran.
+      if (/\{soi\s*:\s*\}/i.test(line) || /\{soi\s*\}/i.test(line)) {
+        sectionType = 'instrumental';
+        sectionContainer = startSectionBlock('instrumental-block');
+        continue;
+      }
+
+      if (/\{eoi\s*:\s*\}/i.test(line) || /\{eoi\s*\}/i.test(line)) {
+        if (sectionType === 'instrumental') {
+          sectionType = '';
+          sectionContainer = null;
+        }
+        continue;
+      }
+
       const chordLine = line.match(/^\{a\s*:\s*(.*?)\}\s*$/i);
       if (chordLine) {
         const rendered = chordLine[1].replace(/\[([^\]]+)\]/g, (_, chord) => transChord(chord, transposeValue));
@@ -6116,35 +6066,11 @@ function renderTabBlock(targetEl, text, anchorId) {
         continue;
       }
 
-      // {i:} : vraie coupure instrumentale (intro, solo, pont sans
-      // parole...) — a remplacé {c:} dans ce rôle (voir isInstrumentalEl) ;
-      // {c:}/{f:} ci-dessous ne sont plus jamais traités comme
-      // instrumentaux, voir plus bas.
-      const instrumentalMark = line.match(/^\{i\s*:\s*(.*)\}(.*)$/i);
-      if (instrumentalMark) {
-        const instruKey = normAnchorText('@i:' + instrumentalMark[1]);
-        renderChordPro._occ[instruKey] = (renderChordPro._occ[instruKey] || 0) + 1;
-        const instruAnchor = hashDJB2(instruKey) + "-" + renderChordPro._occ[instruKey];
-        addCommentLine(instrumentalMark[1], target, 'comment', instruAnchor);
-
-        const trailingLine = String(instrumentalMark[2] || '');
-        if (!trailingLine.trim()) {
-          continue;
-        }
-
-        const { segments, lyricLine } = parseChordProLine(trailingLine);
-        const key = normAnchorText(lyricLine);
-        renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
-        const anchorId = hashDJB2(key) + "-" + renderChordPro._occ[key];
-        addChordBlock(segments, lyricLine, target, anchorId);
-        continue;
-      }
-
       // {f:} : quel son/patch utiliser (ex: "Piano : N264-combiA41") —
       // annotation visible sur la partition, masquée côté scène karaoké
-      // (voir la règle CSS .annotline.sound en mode karaoké) puisque sans
-      // intérêt pour les invités, mais qui ne doit jamais déclencher la
-      // carte "Instrumental".
+      // (voir la règle CSS .annotline en mode karaoké) puisque sans intérêt
+      // pour les invités, et qui ne déclenche jamais la carte
+      // "Instrumental" (seul {soi}...{eoi} le fait désormais).
       const soundMark = line.match(/^\{f\s*:\s*(.*)\}(.*)$/i);
       if (soundMark) {
         const soundKey = normAnchorText('@f:' + soundMark[1]);
@@ -6165,10 +6091,10 @@ function renderTabBlock(targetEl, text, anchorId) {
         continue;
       }
 
-      // {c:} : qui chante/joue (ex: "nemo", "tous") — annotation visible
-      // aussi bien sur la partition que sur la scène karaoké (voir
-      // addAnnotationLine), mais qui ne doit jamais déclencher la carte
-      // "Instrumental" (voir {i:} ci-dessus pour les vraies coupures).
+      // {c:} : qui chante/joue (ex: "nemo", "tous") — annotation visible sur
+      // la partition chez le Leader/Turn/Follow (voir addAnnotationLine),
+      // mais masquée côté scène karaoké et qui ne déclenche jamais la carte
+      // "Instrumental" (seul {soi}...{eoi} le fait désormais).
       const comment = line.match(/^\{c\s*:\s*(.*)\}(.*)$/i);
       if (comment) {
         const commentKey = normAnchorText('@c:' + comment[1]);
@@ -6421,10 +6347,6 @@ function insertAtCursor(text){
 
   function insertTemplateSound(){
     insertAtCursor(`{f: }\n`);
-  }
-
-  function insertTemplateInstrumental(){
-    insertAtCursor(`{i: }\n`);
   }
 
   function insertTemplateDetail(){
