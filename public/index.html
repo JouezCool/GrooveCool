@@ -1187,6 +1187,15 @@ nav{
       color:var(--detail-comment-text);
     }
 
+    /* [Am] entre crochets à l'intérieur d'un {i:}/{c:}/{f:}/{d:}/{n:} :
+       habillage identique à un accord normal (même couleur que
+       .chord-cell .chord / .inline-music-line.chords-only), pour qu'il se
+       distingue clairement du texte de commentaire autour — voir
+       appendInlineChordText() / appendNotesDirectiveContent(). */
+    .inline-chord{
+      color:var(--chord-color);
+    }
+
     .chorus-block,
     .verse-block,
     .bridge-block{
@@ -5488,6 +5497,53 @@ socket.on('apply-speed', value => {
     ));
   }
 
+  // Accords entre crochets [Am] à l'intérieur du texte d'une annotation ou
+  // d'un commentaire ({i:}, {c:}, {f:}, {d:}) : sur demande de Nemo, ils
+  // doivent être traités comme des accords normaux — transposés avec
+  // transChord() comme n'importe quel accord de la partition, et habillés
+  // visuellement comme un accord (voir .inline-chord) — plutôt que restitués
+  // tels quels en texte brut, non transposés, comme avant ce correctif.
+  function appendInlineChordText(container, text, steps) {
+    const str = String(text || '');
+    const re = /\[([^\]]+)\]/g;
+    let lastIndex = 0;
+    let m;
+    while ((m = re.exec(str)) !== null) {
+      if (m.index > lastIndex) {
+        container.appendChild(document.createTextNode(str.slice(lastIndex, m.index)));
+      }
+      const chordSpan = document.createElement('span');
+      chordSpan.className = 'inline-chord';
+      chordSpan.textContent = transChord(m[1], steps);
+      container.appendChild(chordSpan);
+      lastIndex = re.lastIndex;
+    }
+    container.appendChild(document.createTextNode(str.slice(lastIndex)));
+  }
+
+  // Même principe qu'appendInlineChordText ci-dessus, pour le contenu d'une
+  // ligne {n:} : le texte hors crochets reste des noms de notes (transposés
+  // via transNotesText, ex. "Do Ré Mi"), mais un éventuel [Am] entre
+  // crochets est traité comme un vrai accord (transChord), pas comme un nom
+  // de note isolé.
+  function appendNotesDirectiveContent(container, text, steps) {
+    const str = String(text || '');
+    const re = /\[([^\]]+)\]/g;
+    let lastIndex = 0;
+    let m;
+    while ((m = re.exec(str)) !== null) {
+      if (m.index > lastIndex) {
+        container.appendChild(document.createTextNode(transNotesText(str.slice(lastIndex, m.index), steps)));
+      }
+      const chordSpan = document.createElement('span');
+      chordSpan.className = 'inline-chord';
+      chordSpan.textContent = transChord(m[1], steps);
+      container.appendChild(chordSpan);
+      lastIndex = re.lastIndex;
+    }
+    container.appendChild(document.createTextNode(transNotesText(str.slice(lastIndex), steps)));
+  }
+
   function parseChordProLine(line) {
     const segments = [];
     let pendingChord = '';
@@ -5568,7 +5624,7 @@ socket.on('apply-speed', value => {
 
     const span = document.createElement('span');
     span.className = type === 'detail' ? 'commentline detail' : 'commentline';
-    span.textContent = renderInlineNotesTags(text);
+    appendInlineChordText(span, renderInlineNotesTags(text), transposeValue);
 
     wrap.appendChild(span);
     targetEl.appendChild(wrap);
@@ -5589,17 +5645,21 @@ socket.on('apply-speed', value => {
 
     const span = document.createElement('span');
     span.className = kind === 'sound' ? 'annotline sound' : 'annotline';
-    span.textContent = renderInlineNotesTags(text);
+    appendInlineChordText(span, renderInlineNotesTags(text), transposeValue);
 
     wrap.appendChild(span);
     targetEl.appendChild(wrap);
   }
 
-  function addInlineMusicLine(text, targetEl, type = 'chords-only', anchorId) {
+  function addInlineMusicLine(content, targetEl, type = 'chords-only', anchorId) {
     const el = document.createElement('div');
     el.className = `inline-music-line ${type}`;
     el.style.fontSize = (fontSize * currentSongZoom) + 'px';
-    el.textContent = text;
+    if (content instanceof Node) {
+      el.appendChild(content);
+    } else {
+      el.textContent = content;
+    }
     if (anchorId) el.dataset.anchor = anchorId;
     targetEl.appendChild(el);
   }
@@ -6023,11 +6083,16 @@ function renderTabBlock(targetEl, text, anchorId) {
 
       const notesLine = line.match(/^\{n\s*:\s*(.*?)\}\s*$/i);
       if (notesLine) {
-        const notesRendered = transNotesText(notesLine[1], transposeValue);
-        const notesKey = normAnchorText('@n:' + notesRendered);
+        // [Am] entre crochets dans un {n:} : traité comme un vrai accord
+        // (transChord), pas comme un nom de note — voir
+        // appendNotesDirectiveContent().
+        const notesFragment = document.createDocumentFragment();
+        appendNotesDirectiveContent(notesFragment, notesLine[1], transposeValue);
+        const notesRenderedText = notesFragment.textContent;
+        const notesKey = normAnchorText('@n:' + notesRenderedText);
         renderChordPro._occ[notesKey] = (renderChordPro._occ[notesKey] || 0) + 1;
         const notesAnchor = hashDJB2(notesKey) + "-" + renderChordPro._occ[notesKey];
-        addInlineMusicLine(notesRendered, target, 'notes-only', notesAnchor);
+        addInlineMusicLine(notesFragment, target, 'notes-only', notesAnchor);
         continue;
       }
 
