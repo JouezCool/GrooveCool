@@ -6010,6 +6010,22 @@ function renderTabBlock(targetEl, text, anchorId) {
       if (/\{soi\s*:\s*\}/i.test(line) || /\{soi\s*\}/i.test(line)) {
         sectionType = 'instrumental';
         sectionContainer = startSectionBlock('instrumental-block');
+        // Ancre stable, indispensable au pas-à-pas karaoké (voir
+        // getKaraokeGroupAnchor() : lit le data-anchor du tout premier
+        // "block" du groupe) — sans elle le groupe {soi}...{eoi} a une
+        // ancre vide, ce qui casse le pas-à-pas dès qu'on l'atteint (chez
+        // l'invité, l'écran ne se met plus à jour ; chez le Leader, le
+        // "suivant" suivant repart de zéro au lieu d'avancer, l'ancre vide
+        // n'étant jamais retrouvée par karaokePaceGroupIndex). Clé fixe
+        // "@soi" + compteur d'occurrence : chaque {soi} du morceau reçoit
+        // ainsi une ancre unique et déterministe, identique sur tous les
+        // appareils puisque basée sur l'ordre d'apparition dans le fichier,
+        // pas sur une mesure d'écran.
+        {
+          const soiKey = normAnchorText('@soi');
+          renderChordPro._occ[soiKey] = (renderChordPro._occ[soiKey] || 0) + 1;
+          sectionContainer.dataset.anchor = hashDJB2(soiKey) + "-" + renderChordPro._occ[soiKey];
+        }
         continue;
       }
 
