@@ -101,11 +101,9 @@ function registerGuestQueue(app, io, { isValidSongName, listDriveSongs, readSong
         return res.status(400).json({ error: 'morceau_non_karaoke' });
       }
 
-      // Une seule demande active a la fois par appareil (voir deviceId
-      // cote guest.html) : evite qu'une meme personne monopolise la file.
-      if (queue.some(e => e.deviceId === deviceId)) {
-        return res.status(409).json({ error: 'deja_en_attente' });
-      }
+      // Plus de limite a une seule demande active par appareil : un meme
+      // invite peut s'inscrire plusieurs fois (ex. pour plusieurs morceaux),
+      // y compris avant que sa demande precedente soit passee.
 
       if (queue.length >= MAX_QUEUE_SIZE) {
         return res.status(429).json({ error: 'file_pleine' });
