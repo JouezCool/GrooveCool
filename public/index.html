@@ -1353,6 +1353,42 @@ nav{
 
     .btn-blue{ border-color:var(--edit); color:var(--edit); }
 
+    /* Petite bulle d'explication sur les raccourcis du bandeau d'édition
+       (voir #editor-toolbar) : au survol souris ET au doigt sur écran
+       tactile (:active, pendant l'appui, avant même le relâchement qui
+       déclenche le clic) — demande de Nemo. Texte porté par data-tip plutôt
+       que l'attribut title natif, dont le rendu (délai, absence quasi
+       systématique sur tactile) est hors de contrôle. */
+    #editor-toolbar .btn[data-tip]{
+      position:relative;
+    }
+
+    #editor-toolbar .btn[data-tip]:hover::after,
+    #editor-toolbar .btn[data-tip]:focus-visible::after,
+    #editor-toolbar .btn[data-tip]:active::after{
+      content:attr(data-tip);
+      position:absolute;
+      bottom:100%;
+      left:50%;
+      transform:translateX(-50%);
+      margin-bottom:8px;
+      max-width:200px;
+      width:max-content;
+      white-space:normal;
+      text-align:center;
+      background:#111;
+      color:#fff;
+      border:1px solid rgba(255,255,255,0.15);
+      padding:6px 10px;
+      border-radius:8px;
+      font-size:12px;
+      font-weight:normal;
+      line-height:1.35;
+      box-shadow:0 4px 12px rgba(0,0,0,0.35);
+      pointer-events:none;
+      z-index:60;
+    }
+
     .active-btn{ background:#444; color:#fff; }
 
     .leader-only{
@@ -1710,18 +1746,18 @@ nav{
   </div>
 
 <div id="editor-toolbar">
-  <button class="btn" onclick="insertTemplatePU()">+ {pu}</button>
-  <button class="btn" onclick="insertTemplateSection('soc', 'eoc')">+ {soc}</button>
-  <button class="btn" onclick="insertTemplateSection('sov', 'eov')">+ {sov}</button>
-  <button class="btn" onclick="insertTemplateSection('sob', 'eob')">+ {sob}</button>
-  <button class="btn" onclick="insertTemplateComment()">+ {c:}</button>
-  <button class="btn" onclick="insertTemplateSound()">+ {f:}</button>
-  <button class="btn" onclick="insertTemplateSection('soi', 'eoi')">+ {soi}</button>
-  <button class="btn" onclick="insertTemplateDetail()">+ {d:}</button>
-  <button class="btn" onclick="insertTemplateChordLine()">+ {a:}</button>
-  <button class="btn" onclick="insertTemplateNotesLine()">+ {n:}</button>
-  <button class="btn" onclick="insertTemplateTab()">+ {tab}</button>
-  <button class="btn" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
+  <button class="btn" data-tip="Bloc de notes personnelles, visible seulement par toi" onclick="insertTemplatePU()">+ {pu}</button>
+  <button class="btn" data-tip="Refrain" onclick="insertTemplateSection('soc', 'eoc')">+ {soc}</button>
+  <button class="btn" data-tip="Couplet" onclick="insertTemplateSection('sov', 'eov')">+ {sov}</button>
+  <button class="btn" data-tip="Pont" onclick="insertTemplateSection('sob', 'eob')">+ {sob}</button>
+  <button class="btn" data-tip="Qui chante ou joue (ex: Nemo, tous)" onclick="insertTemplateComment()">+ {c:}</button>
+  <button class="btn" data-tip="Quel son/patch utiliser (masqué aux invités karaoké)" onclick="insertTemplateSound()">+ {f:}</button>
+  <button class="btn" data-tip="Section instrumentale : écran 'Instrumental' pour les invités karaoké" onclick="insertTemplateSection('soi', 'eoi')">+ {soi}</button>
+  <button class="btn" data-tip="Commentaire ou détail technique (masqué aux invités karaoké)" onclick="insertTemplateDetail()">+ {d:}</button>
+  <button class="btn" data-tip="Ligne d'accords seuls, sans paroles" onclick="insertTemplateChordLine()">+ {a:}</button>
+  <button class="btn" data-tip="Ligne de noms de notes (ex: Do Ré Mi)" onclick="insertTemplateNotesLine()">+ {n:}</button>
+  <button class="btn" data-tip="Bloc de tablature" onclick="insertTemplateTab()">+ {tab}</button>
+  <button class="btn" data-tip="Insère un accord entre crochets à l'endroit du curseur" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
 
   <div style="flex:1"></div>
 
