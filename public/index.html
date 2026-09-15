@@ -1793,6 +1793,7 @@ nav{
         </label>
         <button class="btn" id="settingsThemeBtn" onclick="toggleTheme()">Thème: Sombre</button>
 		<button class="btn" onclick="openUserColorModal()">🎨 Ma couleur</button>
+		<button class="btn" onclick="forgetCachedPin()">🔒 Oublier le code</button>
 		<button class="btn" onclick="openCreateSongModal()">➕ Nouveau morceau</button>
         <button class="btn" onclick="exportBackup()">⬇️ Exporter sauvegarde</button>
         <button class="btn" onclick="triggerImport()">⬆️ Importer sauvegarde</button>
@@ -2119,6 +2120,63 @@ const importChordsPreview = document.getElementById('importChordsPreview');
   let chordStyle = localStorage.getItem('bandapp_chordStyle') || 'latin';
   let themeMode = localStorage.getItem('bandapp_theme') || 'dark';
   let chordColor = localStorage.getItem('bandapp_chordColor') || '#ff9800';
+
+// Mémorise le PIN une fois validé par le serveur, pour éviter de le retaper
+// à chaque enregistrement pendant une répét (Leader/Turn uniquement, demande
+// de Nemo : pas mal de modifications d'affilée en répét, embêtant de
+// reintroduire le code à chaque fois). Durée glissante : chaque utilisation
+// réussie repousse l'expiration de 3h, donc tant qu'on enregistre
+// régulièrement on n'est jamais redemandé. Bouton "🔒 Oublier le code" dans
+// Réglages (forgetCachedPin()) pour reverrouiller manuellement avant les 3h.
+// La suppression d'un morceau n'utilise volontairement pas ce cache : elle
+// redemande toujours le PIN, filet de sécurité pour une action irréversible.
+const PIN_CACHE_KEY = 'bandapp_pinCache';
+const PIN_CACHE_DURATION_MS = 3 * 60 * 60 * 1000;
+
+function getCachedPin(){
+  if (!(isLeader || isTurn)) return '';
+  try {
+    const raw = localStorage.getItem(PIN_CACHE_KEY);
+    if (!raw) return '';
+    const data = JSON.parse(raw);
+    if (!data || !data.pin || !data.expiresAt || Date.now() > data.expiresAt) {
+      localStorage.removeItem(PIN_CACHE_KEY);
+      return '';
+    }
+    return data.pin;
+  } catch (e) {
+    return '';
+  }
+}
+
+function cachePin(pin){
+  if (!(isLeader || isTurn)) return;
+  if (!pin) return;
+  try {
+    localStorage.setItem(PIN_CACHE_KEY, JSON.stringify({
+      pin,
+      expiresAt: Date.now() + PIN_CACHE_DURATION_MS
+    }));
+  } catch (e) {}
+}
+
+function clearCachedPin(){
+  try { localStorage.removeItem(PIN_CACHE_KEY); } catch (e) {}
+}
+
+function forgetCachedPin(){
+  clearCachedPin();
+  showToast("Code oublié 🔒");
+}
+
+// À utiliser à la place de prompt("PIN requis...") partout où le PIN sert à
+// valider un enregistrement (réglages, morceau, restauration...) : réutilise
+// le code mémorisé s'il est encore valide, sinon redemande comme avant.
+function askPin(message){
+  const cached = getCachedPin();
+  if (cached) return cached;
+  return prompt(message || "PIN requis") || "";
+}
 
 function getAutoUserColor(userName) {
   if (!userName) return "#c7b6ff";
@@ -2544,7 +2602,7 @@ async function openEditSongMetaModal() {
 }
 
 async function saveSongMetaModal() {
-  const pin = prompt("PIN requis") || "";
+  const pin = askPin("PIN requis");
   const cleanPin = String(pin).trim();
   if (!cleanPin) return;
 
@@ -2611,6 +2669,7 @@ async function saveSongMetaModal() {
     }
 
     if (res.ok) {
+      cachePin(cleanPin);
       closeSongMetaModal();
       await fetchSongMeta();
       await fetchSongs();
@@ -2622,6 +2681,7 @@ async function saveSongMetaModal() {
         showToast("Infos morceau enregistrées ✅");
       }
     } else if (res.status === 403) {
+      clearCachedPin();
       alert("PIN invalide");
     } else if (res.status === 409) {
       alert("Le morceau existe déjà");
@@ -3828,7 +3888,7 @@ async function saveCurrentSongSettings() {
   if (!isLeader) return;
   if (!currentFileName) return;
 
-  const pin = prompt("PIN requis pour enregistrer les réglages du morceau") || "";
+  const pin = askPin("PIN requis pour enregistrer les réglages du morceau");
   const cleanPin = String(pin).trim();
   if (!cleanPin) return;
 
@@ -3846,6 +3906,7 @@ async function saveCurrentSongSettings() {
     });
 
     if (res.ok) {
+      cachePin(cleanPin);
       songSettingsCache.set(currentFileName, {
         fontSize,
         speed: Number(speedInput.value) || 50,
@@ -3854,6 +3915,7 @@ async function saveCurrentSongSettings() {
 
       showToast("Réglages du morceau enregistrés ✅");
     } else if (res.status === 403) {
+      clearCachedPin();
       alert("PIN invalide");
     } else {
       const message = await res.text().catch(() => "");
@@ -6301,7 +6363,7 @@ async function saveEditor() {
   const newContent = document.getElementById('editor-textarea').value;
   if (!currentFileName) return;
 
-  const pin = prompt("PIN requis pour enregistrer les modifications") || "";
+  const pin = askPin("PIN requis pour enregistrer les modifications");
   const cleanPin = String(pin).trim();
   if (!cleanPin) return;
 
@@ -6317,6 +6379,7 @@ async function saveEditor() {
   });
 
   if (res.ok) {
+cachePin(cleanPin);
 currentRaw = newContent;
 songTextCache.set(currentFileName, newContent);
 renderChordPro();
@@ -6326,6 +6389,7 @@ closeEditor();
 
     showToast("Modification enregistrée ✅");
   } else if (res.status === 403) {
+    clearCachedPin();
     alert("PIN invalide");
   } else {
     alert("Erreur d'enregistrement");
@@ -6666,7 +6730,7 @@ async function restoreHistoryVersion(historyId) {
   const ok = confirm("Restaurer cette version du morceau ?");
   if (!ok) return;
 
-  const pin = prompt("PIN requis pour restaurer une ancienne version") || "";
+  const pin = askPin("PIN requis pour restaurer une ancienne version");
   const cleanPin = String(pin).trim();
   if (!cleanPin) return;
 
@@ -6683,18 +6747,20 @@ async function restoreHistoryVersion(historyId) {
     });
 
     if (res.ok) {
+      cachePin(cleanPin);
       closeHistoryModal();
       stopAutoScroll();
-	  
+
 	  songTextCache.delete(currentFileName);
 	songSettingsCache.delete(currentFileName);
-	
+
       await loadSong(currentFileName);
 
       if (isLeader) socket.emit('change-song', currentFileName);
 
       showToast("Version restaurée ✅");
     } else if (res.status === 403) {
+      clearCachedPin();
       alert("PIN invalide");
     } else {
       alert("Erreur lors de la restauration");
