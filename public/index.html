@@ -1758,6 +1758,7 @@ nav{
   <button class="btn" data-tip="Ligne de noms de notes (ex: Do Ré Mi)" onclick="insertTemplateNotesLine()">+ {n:}</button>
   <button class="btn" data-tip="Bloc de tablature" onclick="insertTemplateTab()">+ {tab}</button>
   <button class="btn" data-tip="Insère un accord entre crochets à l'endroit du curseur" onclick="insertAtCursor('[Accord]')">+ [ ]</button>
+  <button class="btn" data-tip="Colle des paroles+accords copiés d'un site (accords sur une ligne au-dessus des paroles) : conversion automatique en accords entre crochets" onclick="openImportChordsModal()">📋 Importer</button>
 
   <div style="flex:1"></div>
 
@@ -1920,6 +1921,47 @@ nav{
   </div>
 </div>
 
+<!-- Import paroles+accords copiés depuis un site externe (ex: boiteachansons.net) :
+     ces sites affichent les accords sur une ligne au-dessus des paroles, alignés
+     par espaces (police à chasse fixe), jamais entre crochets comme dans l'appli.
+     Voir convertPastedChordsToChordPro() : convertit cette mise en page en accords
+     entre crochets insérés directement dans le texte, avec aperçu avant insertion
+     (demande de Nemo) pour pouvoir corriger un éventuel décalage avant de valider. -->
+<div id="importChordsBackdrop" style="
+  position:fixed; inset:0; display:none; z-index:6900;
+  background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:18px;">
+  <div style="width:min(760px,100%); max-height:85vh; background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden; display:flex; flex-direction:column;">
+    <header style="padding:14px 16px; border-bottom:1px solid #2a2a2a; background:#161616;">
+      <h3 style="margin:0; font-size:14px; color:#fff;">Importer paroles + accords</h3>
+    </header>
+
+    <div class="meta-form" style="padding:14px 16px; overflow:auto; flex:1 1 auto; display:grid; gap:12px;">
+      <div style="font-size:13px; color:#9a9a9a; line-height:1.4;">
+        Colle ici le texte copié depuis un site de paroles+accords (accords sur une ligne au-dessus des paroles, ex: boiteachansons.net), puis clique sur "Convertir". Vérifie et corrige le résultat si besoin avant de l'insérer dans l'éditeur.
+      </div>
+
+      <label>
+        <div class="meta-label">Texte collé</div>
+        <textarea id="importChordsInput" spellcheck="false" style="min-height:160px; resize:vertical; font-family:monospace;"></textarea>
+      </label>
+
+      <div>
+        <button class="btn btn-blue" onclick="convertPastedChordsPreview()">Convertir</button>
+      </div>
+
+      <label>
+        <div class="meta-label">Aperçu (accords entre crochets)</div>
+        <textarea id="importChordsPreview" spellcheck="false" style="min-height:160px; resize:vertical; font-family:monospace;"></textarea>
+      </label>
+    </div>
+
+    <div style="padding:14px 16px; border-top:1px solid #2a2a2a; display:flex; justify-content:flex-end; gap:10px;">
+      <button class="btn" onclick="closeImportChordsModal()">ANNULER</button>
+      <button class="btn btn-blue" onclick="insertImportedChords()">INSÉRER DANS L'ÉDITEUR</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const socket = io({
     // Reconnexion plus rapide après une micro-coupure réseau (WiFi de salle,
@@ -2058,6 +2100,10 @@ const userColorBackdrop = document.getElementById('userColorBackdrop');
 const userColorInput = document.getElementById('userColorInput');
 const userColorPreview = document.getElementById('userColorPreview');
 const userColorCurrentName = document.getElementById('userColorCurrentName');
+
+const importChordsBackdrop = document.getElementById('importChordsBackdrop');
+const importChordsInput = document.getElementById('importChordsInput');
+const importChordsPreview = document.getElementById('importChordsPreview');
 
   const DEFAULT_USERS = ["Nemo","Estelle","Gillou","Bubu","Christian","Christophe"];
   let currentUser = "";
@@ -6419,6 +6465,109 @@ function insertAtCursor(text){
 
   function insertTemplateTab(){
     insertAtCursor(`{tab}\n\n{/tab}\n`);
+  }
+
+  // Import paroles+accords copiés depuis un site externe (voir bouton
+  // "📋 Importer" dans #editor-toolbar et la modale importChordsBackdrop) :
+  // ces sites (ex: boiteachansons.net) affichent une ligne d'accords
+  // au-dessus de chaque ligne de paroles, alignée par espaces (police à
+  // chasse fixe) — jamais entre crochets comme dans GrooveCool. On repère
+  // les lignes d'accords, puis on insère chaque accord entre crochets dans
+  // la ligne de paroles juste en-dessous, à la colonne où il est positionné.
+
+  // Un "mot" de ligne d'accords : accord standard (note + altération +
+  // extension courte + degré + basse), ou repère de mesure/répétition
+  // (barres "|", "%", "x2"...). Volontairement strict (vocabulaire
+  // d'extensions limité, pas de continuation libre) pour ne jamais
+  // confondre un mot de paroles avec un accord : un vrai mot de paroles
+  // commençant par une majuscule A-G (ex: "Dans", "Elle") ne colle jamais
+  // entièrement à ce motif une fois la lettre initiale consommée.
+  const CHORD_TOKEN_RE = /^(?:\|+|%|\(?x\d+\)?|[A-G](?:#|b|♯|♭)?(?:maj|min|dim|aug|sus|add|m)?\d{0,2}[+\-]?(?:\/[A-G](?:#|b)?)?)$/;
+
+  function isChordLine(line){
+    const trimmed = line.trim();
+    if (!trimmed) return false;
+    const tokens = trimmed.split(/\s+/);
+    return tokens.every(t => CHORD_TOKEN_RE.test(t));
+  }
+
+  // Insère les accords d'une ligne d'accords dans la ligne de paroles
+  // juste en-dessous, à la colonne où chaque accord est positionné dans
+  // le texte source. Traite les accords de droite à gauche pour que les
+  // colonnes déjà calculées restent valables après chaque insertion.
+  function mergeChordLineIntoLyric(chordLine, lyricLine){
+    const tokenRe = /\S+/g;
+    const positions = [];
+    let m;
+    while ((m = tokenRe.exec(chordLine)) !== null){
+      positions.push({ token: m[0], col: m.index });
+    }
+    positions.sort((a, b) => b.col - a.col);
+
+    let result = lyricLine;
+    for (const { token, col } of positions){
+      const at = Math.min(col, result.length);
+      result = result.slice(0, at) + '[' + token + ']' + result.slice(at);
+    }
+    return result;
+  }
+
+  function convertPastedChordsToChordPro(raw){
+    const lines = String(raw || '').replace(/\r\n/g, '\n').split('\n');
+    const out = [];
+    let i = 0;
+    while (i < lines.length){
+      const line = lines[i];
+
+      if (isChordLine(line)){
+        const next = lines[i + 1];
+        if (next !== undefined && next.trim() && !isChordLine(next)){
+          out.push(mergeChordLineIntoLyric(line, next));
+          i += 2;
+          continue;
+        }
+        // Ligne d'accords seule (intro, pont instrumental...) : pas de
+        // paroles en-dessous, on la transforme en directive {a: ...}
+        // existante (ligne d'accords seuls, sans paroles).
+        out.push(`{a: ${line.trim()}}`);
+        i += 1;
+        continue;
+      }
+
+      out.push(line);
+      i += 1;
+    }
+    return out.join('\n');
+  }
+
+  function openImportChordsModal(){
+    if (importChordsInput) importChordsInput.value = '';
+    if (importChordsPreview) importChordsPreview.value = '';
+    if (importChordsBackdrop) importChordsBackdrop.style.display = 'flex';
+  }
+
+  function closeImportChordsModal(){
+    if (importChordsBackdrop) importChordsBackdrop.style.display = 'none';
+  }
+
+  function convertPastedChordsPreview(){
+    if (!importChordsInput || !importChordsPreview) return;
+    if (!importChordsInput.value.trim()){
+      alert('Colle d\'abord du texte à convertir.');
+      return;
+    }
+    importChordsPreview.value = convertPastedChordsToChordPro(importChordsInput.value);
+  }
+
+  function insertImportedChords(){
+    if (!importChordsPreview || !importChordsPreview.value.trim()){
+      alert('Rien à insérer : clique sur "Convertir" d\'abord (ou vérifie l\'aperçu).');
+      return;
+    }
+    let text = importChordsPreview.value;
+    if (!text.endsWith('\n')) text += '\n';
+    insertAtCursor(text);
+    closeImportChordsModal();
   }
 
   function extractChordsFromText(text){
