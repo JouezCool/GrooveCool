@@ -1778,12 +1778,12 @@ nav{
   <div id="settingsBackdrop" style="
     position:fixed; inset:0; display:none; z-index:6500;
     background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:18px;">
-    <div id="settingsModal" style="width:min(560px,100%); background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden;">
+    <div id="settingsModal" style="width:min(560px,100%); max-height:85vh; background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden; display:flex; flex-direction:column;">
       <header style="padding:14px 16px; border-bottom:1px solid #2a2a2a; background:#161616;">
         <h3 style="margin:0; font-size:14px; color:#fff;">Réglages</h3>
       </header>
 
-      <div style="padding:14px 16px; display:grid; gap:10px;">
+      <div style="padding:14px 16px; display:grid; gap:10px; overflow:auto; flex:1 1 auto;">
         <button class="btn" onclick="openUserFromSettings()">👤 Utilisateur</button>
         <button class="btn" id="settingsChordBtn" onclick="toggleChordStyle()">Accords: Do</button>
         <label class="btn" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
@@ -1835,15 +1835,22 @@ nav{
   </div>
 </div>
 
+<!-- max-height:85vh + colonne flex + zone de contenu en overflow:auto (voir
+     aussi settingsModal et userColorBackdrop juste en dessous) : sans ça, sur
+     un écran bas (fenêtre desktop peu haute), cette modale à 3 champs à choix
+     multiples pouvait dépasser la hauteur visible et rendre ANNULER/ENREGISTRER
+     inatteignables — remonté par Nemo (OK sur iPad, boutons hors champ sur
+     ordinateur). Même mécanique déjà en place sur historyBackdrop/
+     importChordsBackdrop. -->
 <div id="songMetaBackdrop" style="
   position:fixed; inset:0; display:none; z-index:6700;
   background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:18px;">
-  <div style="width:min(680px,100%); background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden;">
+  <div style="width:min(680px,100%); max-height:85vh; background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden; display:flex; flex-direction:column;">
     <header style="padding:14px 16px; border-bottom:1px solid #2a2a2a; background:#161616;">
       <h3 id="songMetaTitle" style="margin:0; font-size:14px; color:#fff;">Morceau</h3>
     </header>
 
-<div class="meta-form" style="padding:14px 16px; display:grid; gap:12px;">
+<div class="meta-form" style="padding:14px 16px; display:grid; gap:12px; overflow:auto; flex:1 1 auto;">
   <label>
     <div class="meta-label">Titre du morceau</div>
     <input id="songMetaTitleInput" type="text" placeholder="Ex: Rolling in the Deep">
@@ -1895,12 +1902,12 @@ nav{
 <div id="userColorBackdrop" style="
   position:fixed; inset:0; display:none; z-index:6800;
   background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:18px;">
-  <div style="width:min(420px,100%); background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden;">
+  <div style="width:min(420px,100%); max-height:85vh; background:#121212; border:1px solid #2a2a2a; border-radius:14px; overflow:hidden; display:flex; flex-direction:column;">
     <header style="padding:14px 16px; border-bottom:1px solid #2a2a2a; background:#161616;">
       <h3 style="margin:0; font-size:14px; color:#fff;">Couleur de mes blocs perso</h3>
     </header>
 
-    <div style="padding:16px; display:grid; gap:14px;">
+    <div style="padding:16px; display:grid; gap:14px; overflow:auto; flex:1 1 auto;">
       <div style="font-size:14px; color:#ddd;">
         Utilisateur : <b id="userColorCurrentName"></b>
       </div>
