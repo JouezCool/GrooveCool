@@ -4803,7 +4803,11 @@ function karaokePaceGroupIndex(groups, anchor) {
 // contenu fraîchement reconstruit — sinon elle resterait figée sur
 // l'ancienne version (transposition, taille...) jusqu'au prochain appui du
 // Leader ou au filet de rattrapage (jusqu'à 8s, voir state-heartbeat). Chez
-// Follow, applyKaraokePaceFromServer() ne fait rien (pas en mode karaoké).
+// Follow (et chez Leader/Turn quand c'est l'AUTRE qui pilote), c'est aussi
+// applyKaraokePaceFromServer() qui s'en charge désormais, en appliquant le
+// même repère couleur que le pilote (voir son commentaire plus bas — demande
+// de Nemo : plus le scroll auto ne suit plus au pas-à-pas karaoké, tout le
+// monde doit pouvoir se repérer visuellement, pas seulement le pilote).
 // Voir karaokePaceStep() pour qui décide réellement de l'ancre une fois le
 // morceau lancé (Leader uniquement, contrairement à ce démarrage initial).
 //
@@ -4892,24 +4896,48 @@ function centerKaraokeHighlightForLeader(group) {
   viewerElement.scrollTo({ top: target, behavior: 'smooth' });
 }
 
-// Applique une ancre reçue du serveur (Leader, via 'karaoke-pace' ou le
-// filet de rattrapage 'state-heartbeat') : ne fait rien chez Leader/Turn/
-// Follow (dont l'écran n'a jamais affiché la scène karaoké), met à jour la
-// scène plein écran chez un invité karaoké.
+// Applique une ancre reçue du serveur (émise par celui des deux qui pilote
+// — Leader via karaokePaceStep(), ou Leader/Turn via
+// updateLeaderParagraphHighlight() au tout premier paragraphe d'un morceau
+// — voir 'karaoke-pace' ou le filet de rattrapage 'state-heartbeat').
+// socket.broadcast.emit() côté serveur n'est jamais renvoyé à l'émetteur
+// (voir server.js), donc cette fonction, pour un appareil donné, n'est
+// appelée que quand c'est un AUTRE appareil qui pilote — jamais en écho de
+// son propre calcul.
+//
+// Chez un invité karaoké (body.karaoke-mode) : met à jour la scène plein
+// écran, comme avant.
+//
+// Chez tous les autres (Follow toujours, et Leader/Turn quand ce n'est pas
+// eux qui pilotent en ce moment) : demande de Nemo — depuis que le pas-à-pas
+// karaoké ne fait plus défiler automatiquement l'écran de personne, plus
+// personne ne pouvait se repérer facilement à part le pilote. On applique
+// donc ici le même repère couleur que lui (#songContent .karaoke-current-line,
+// voir setKaraokeHighlightGroup()), uniquement tant qu'au moins un invité
+// karaoké est connecté (sinon ça n'a plus de sens, et on l'efface).
 function applyKaraokePaceFromServer(anchor) {
   karaokePaceAnchor = anchor || '';
 
-  if (!document.body.classList.contains('karaoke-mode')) return;
+  if (document.body.classList.contains('karaoke-mode')) {
+    const group = karaokePaceAnchor ? findKaraokeParagraphByAnchor(karaokePaceAnchor) : null;
+    if (!group) return;
+    if (!setKaraokeHighlightGroup(group)) return;
+
+    renderKaraokeStage(group);
+
+    const groups = getKaraokeParagraphGroups();
+    const idx = karaokePaceGroupIndex(groups, karaokePaceAnchor);
+    updateKaraokeProgress(groups.length > 1 ? idx / (groups.length - 1) : 0);
+    return;
+  }
+
+  if (karaokeGuestsCount <= 0) {
+    setKaraokeHighlightGroup(null);
+    return;
+  }
 
   const group = karaokePaceAnchor ? findKaraokeParagraphByAnchor(karaokePaceAnchor) : null;
-  if (!group) return;
-  if (!setKaraokeHighlightGroup(group)) return;
-
-  renderKaraokeStage(group);
-
-  const groups = getKaraokeParagraphGroups();
-  const idx = karaokePaceGroupIndex(groups, karaokePaceAnchor);
-  updateKaraokeProgress(groups.length > 1 ? idx / (groups.length - 1) : 0);
+  setKaraokeHighlightGroup(group);
 }
 
 // Vrai quand PRÉC./SUIV. doivent piloter le pas-à-pas karaoké plutôt que
