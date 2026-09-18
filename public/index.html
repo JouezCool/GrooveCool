@@ -1668,7 +1668,19 @@ nav{
         <span id="transposeVal" style="min-width:20px; text-align:center">0</span>
         <button class="btn" onclick="updateTranspose(1)">+</button>
       </div>
-	  
+
+      <!-- Capo perso (demande de Nemo) : décalage d'accords visible UNIQUEMENT
+           chez soi (jamais synchronisé, jamais vu par les autres ni la scène
+           karaoké) — donc pas dans .leader-only, tout le monde peut avoir son
+           propre capo sur sa guitare. Voir updatePersonalCapo()/
+           getEffectiveTranspose(). -->
+      <div class="controls-group" title="Capo perso : décale les accords affichés uniquement chez toi (les autres et la scène karaoké ne voient rien de différent).">
+        <span style="font-size:12px; opacity:0.75; margin-right:2px;">Capo</span>
+        <button class="btn" onclick="updatePersonalCapo(-1)">-</button>
+        <span id="capoVal" style="min-width:20px; text-align:center">0</span>
+        <button class="btn" onclick="updatePersonalCapo(1)">+</button>
+      </div>
+
 	  <div class="controls-group leader-only">
   <button class="btn" onclick="saveCurrentSongSettings()">💾</button>
 </div>
@@ -1988,7 +2000,66 @@ nav{
   let isLeader = false, isTurn = false, allSongs = [], currentIndex = -1;
   let guestQueue = []; // file d'attente karaoké des invités (voir /guest.html)
   let currentRaw = "", currentFileName = "", fontSize = 26, transposeValue = 0;
-  
+
+  // Capo perso (demande de Nemo) : un décalage d'accords purement local à
+  // CET appareil, jamais envoyé au serveur (contrairement à transposeValue,
+  // piloté par le Leader et partagé avec tout le monde via 'leader-transpose'/
+  // currentSongSettings). Sert à afficher les accords tels qu'il faut les
+  // jouer avec un capodastre, sans changer ce que voient les autres (y
+  // compris la scène karaoké des invités, qui reste basée sur transposeValue
+  // seul — voir getEffectiveTranspose()). Mémorisé par morceau dans
+  // localStorage, sous la forme { [fileName]: décalage }.
+  let personalCapoOffset = 0;
+  const PERSONAL_CAPO_STORAGE_KEY = 'bandapp_personalCapo';
+
+  function loadPersonalCapoMap() {
+    try {
+      return JSON.parse(localStorage.getItem(PERSONAL_CAPO_STORAGE_KEY) || '{}') || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function loadPersonalCapoForSong(fileName) {
+    const map = loadPersonalCapoMap();
+    const v = Number(map[normName(fileName)]);
+    return Number.isFinite(v) ? v : 0;
+  }
+
+  function savePersonalCapoForSong(fileName, value) {
+    const map = loadPersonalCapoMap();
+    const key = normName(fileName);
+    if (value) {
+      map[key] = value;
+    } else {
+      delete map[key]; // 0 = valeur par défaut, inutile de l'stocker
+    }
+    try {
+      localStorage.setItem(PERSONAL_CAPO_STORAGE_KEY, JSON.stringify(map));
+    } catch (e) {
+      // localStorage indisponible (navigation privée, quota...) : tant pis,
+      // le capo perso ne survivra pas à un rechargement, mais la session en
+      // cours fonctionne quand même.
+    }
+  }
+
+  // Valeur réellement utilisée pour transposer/afficher les accords et notes
+  // chez CET appareil : la transposition partagée (Leader, vue par tout le
+  // monde) plus le capo perso local. #transposeVal continue lui d'afficher
+  // transposeValue seul, pour que le repère partagé reste lisible tel quel.
+  function getEffectiveTranspose() {
+    return transposeValue + personalCapoOffset;
+  }
+
+  function updatePersonalCapo(dir) {
+    personalCapoOffset += dir;
+    document.getElementById('capoVal').innerText =
+      (personalCapoOffset > 0 ? '+' : '') + personalCapoOffset;
+    savePersonalCapoForSong(currentFileName, personalCapoOffset);
+    renderChordPro();
+    renderGrids();
+  }
+
   const songTextCache = new Map();
   const songSettingsCache = new Map();
   const songBundlePrefetches = new Map();
@@ -4162,6 +4233,15 @@ async function loadSong(f) {
     currentRaw = raw;
     currentFileName = f;
 
+    // Capo perso : remémoré par morceau (localStorage, jamais synchronisé —
+    // voir loadPersonalCapoForSong()), rechargé à chaque changement de
+    // morceau, sur ce seul appareil.
+    personalCapoOffset = loadPersonalCapoForSong(f);
+    const capoValEl = document.getElementById('capoVal');
+    if (capoValEl) {
+      capoValEl.innerText = (personalCapoOffset > 0 ? '+' : '') + personalCapoOffset;
+    }
+
     updatePlayedButton();
     updateKaraokeTitleBadge();
 
@@ -5647,7 +5727,7 @@ socket.on('apply-speed', value => {
 
   function renderInlineNotesTags(text) {
     return String(text || '').replace(/\{n\s*:\s*([^}]*)\}/gi, (_, notes) => (
-      transNotesText(notes, transposeValue)
+      transNotesText(notes, getEffectiveTranspose())
     ));
   }
 
@@ -5722,7 +5802,7 @@ socket.on('apply-speed', value => {
             segments.push({ chord: pendingChord, text });
           }
 
-          pendingChord = transChord(line.slice(i + 1, end), transposeValue);
+          pendingChord = transChord(line.slice(i + 1, end), getEffectiveTranspose());
           text = wordPrefix;
           i = end + 1;
           continue;
@@ -5781,7 +5861,7 @@ socket.on('apply-speed', value => {
 
     const span = document.createElement('span');
     span.className = type === 'detail' ? 'commentline detail' : 'commentline';
-    appendInlineChordText(span, renderInlineNotesTags(text), transposeValue);
+    appendInlineChordText(span, renderInlineNotesTags(text), getEffectiveTranspose());
 
     wrap.appendChild(span);
     targetEl.appendChild(wrap);
@@ -5802,7 +5882,7 @@ socket.on('apply-speed', value => {
 
     const span = document.createElement('span');
     span.className = kind === 'sound' ? 'annotline sound' : 'annotline';
-    appendInlineChordText(span, renderInlineNotesTags(text), transposeValue);
+    appendInlineChordText(span, renderInlineNotesTags(text), getEffectiveTranspose());
 
     wrap.appendChild(span);
     targetEl.appendChild(wrap);
@@ -5995,7 +6075,7 @@ function renderPUContent(targetEl, text) {
     const chordLine = line.match(/^\{a\s*:\s*(.*?)\}\s*$/i);
     if (chordLine) {
       flushText();
-      const rendered = chordLine[1].replace(/\[([^\]]+)\]/g, (_, chord) => transChord(chord, transposeValue));
+      const rendered = chordLine[1].replace(/\[([^\]]+)\]/g, (_, chord) => transChord(chord, getEffectiveTranspose()));
       addInlineMusicLine(rendered, targetEl, 'chords-only');
       continue;
     }
@@ -6003,7 +6083,7 @@ function renderPUContent(targetEl, text) {
     const notesLine = line.match(/^\{n\s*:\s*(.*?)\}\s*$/i);
     if (notesLine) {
       flushText();
-      addInlineMusicLine(transNotesText(notesLine[1], transposeValue), targetEl, 'notes-only');
+      addInlineMusicLine(transNotesText(notesLine[1], getEffectiveTranspose()), targetEl, 'notes-only');
       continue;
     }
 
@@ -6228,7 +6308,7 @@ function renderTabBlock(targetEl, text, anchorId) {
 
       const chordLine = line.match(/^\{a\s*:\s*(.*?)\}\s*$/i);
       if (chordLine) {
-        const rendered = chordLine[1].replace(/\[([^\]]+)\]/g, (_, chord) => transChord(chord, transposeValue));
+        const rendered = chordLine[1].replace(/\[([^\]]+)\]/g, (_, chord) => transChord(chord, getEffectiveTranspose()));
         const chordKey = normAnchorText('@a:' + rendered);
         renderChordPro._occ[chordKey] = (renderChordPro._occ[chordKey] || 0) + 1;
         const chordAnchor = hashDJB2(chordKey) + "-" + renderChordPro._occ[chordKey];
@@ -6242,7 +6322,7 @@ function renderTabBlock(targetEl, text, anchorId) {
         // (transChord), pas comme un nom de note — voir
         // appendNotesDirectiveContent().
         const notesFragment = document.createDocumentFragment();
-        appendNotesDirectiveContent(notesFragment, notesLine[1], transposeValue);
+        appendNotesDirectiveContent(notesFragment, notesLine[1], getEffectiveTranspose());
         const notesRenderedText = notesFragment.textContent;
         const notesKey = normAnchorText('@n:' + notesRenderedText);
         renderChordPro._occ[notesKey] = (renderChordPro._occ[notesKey] || 0) + 1;
