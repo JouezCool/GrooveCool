@@ -1883,12 +1883,20 @@ socket.on('reset-played-tonight', () => {
     socket.broadcast.emit('apply-scroll', { anchor, progress, top, scrollRatio, manual, official, karaokeAnchor });
   });
 
-  // Pas-à-pas karaoké piloté par le Leader (voir commentaire sur
-  // currentKaraokePace) : contrairement à scroll-sync, ceci ne vient jamais
-  // du scroll — seul le Leader peut décider quel paragraphe afficher, via
-  // les boutons ◀/▶ (isLeaderSocket, même restriction que sync-autoscroll).
+  // Diffusion du paragraphe karaoké en cours. Deux origines chez le client
+  // (voir index.html) : le pas-à-pas ◀/▶ pendant un morceau, strictement
+  // réservé au Leader (le client ne permet ça qu'à lui, voir
+  // karaokePaceStep() — inchangé, "un seul pilote à la fois" pour naviguer),
+  // et le tout premier paragraphe calculé juste après un changement de
+  // morceau (updateLeaderParagraphHighlight()), que Leader ET Turn peuvent
+  // déclencher puisque canChangeSong() les autorise tous les deux à changer
+  // de morceau. On accepte donc ici les deux (canChangeSong), pas seulement
+  // isLeaderSocket — sinon la scène karaoké des invités (et, depuis peu, le
+  // repère couleur partagé chez tout le monde, voir
+  // applyKaraokePaceFromServer() côté client) reste figée quand c'est Turn
+  // qui vient de changer de morceau sans Leader connecté.
   socket.on('karaoke-pace', (payload) => {
-    if (!isLeaderSocket(socket)) return;
+    if (!canChangeSong(socket)) return;
 
     const anchor = String(payload?.anchor || '').trim();
     const index = Number.isFinite(Number(payload?.index)) ? Number(payload.index) : -1;
