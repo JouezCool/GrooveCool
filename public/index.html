@@ -4798,20 +4798,25 @@ function karaokePaceGroupIndex(groups, anchor) {
 // contenu fraîchement reconstruit — sinon elle resterait figée sur
 // l'ancienne version (transposition, taille...) jusqu'au prochain appui du
 // Leader ou au filet de rattrapage (jusqu'à 8s, voir state-heartbeat). Chez
-// Turn/Follow, applyKaraokePaceFromServer() ne fait rien (pas en mode
-// karaoké). Voir karaokePaceStep() pour qui décide réellement de l'ancre.
+// Follow, applyKaraokePaceFromServer() ne fait rien (pas en mode karaoké).
+// Voir karaokePaceStep() pour qui décide réellement de l'ancre une fois le
+// morceau lancé (Leader uniquement, contrairement à ce démarrage initial).
 //
-// Chez le Leader : affichage local (aperçu dans #songContent) reflétant
-// karaokePaceAnchor, plus jamais le scroll (voir le commentaire sur
-// karaokeParagraphGroups plus haut) — ne s'affiche que si au moins un
-// invité est en mode karaoké (sinon inutile). Si l'ancre mémorisée n'existe
-// plus dans les groupes fraîchement recalculés (nouveau morceau, ou tout
-// premier appui à venir), on démarre directement sur le premier paragraphe
-// plutôt que de laisser la scène karaoké vide en attendant que le Leader
-// pense à appuyer sur ▶ — et on le diffuse aussitôt, pour que les invités
-// déjà connectés n'attendent pas non plus.
+// Chez le Leader OU le Turn (les deux peuvent changer de morceau — voir
+// canChangeSong() côté serveur) : affichage local (aperçu dans
+// #songContent) reflétant karaokePaceAnchor, plus jamais le scroll (voir le
+// commentaire sur karaokeParagraphGroups plus haut) — ne s'affiche que si
+// au moins un invité est en mode karaoké (sinon inutile). Si l'ancre
+// mémorisée n'existe plus dans les groupes fraîchement recalculés (nouveau
+// morceau, ou tout premier appui à venir), on démarre directement sur le
+// premier paragraphe plutôt que de laisser la scène karaoké vide en
+// attendant que quelqu'un pense à appuyer sur ▶ — et on le diffuse
+// aussitôt, pour que les invités déjà connectés n'attendent pas non plus.
+// Corrige un bug remonté par Nemo en répét : Turn changeait de morceau,
+// tout se mettait à jour sauf la scène karaoké (restée sur l'ancien
+// morceau) faute de Leader connecté pour déclencher ce premier calcul.
 function updateLeaderParagraphHighlight() {
-  if (!isLeader) {
+  if (!(isLeader || isTurn)) {
     applyKaraokePaceFromServer(karaokePaceAnchor);
     return;
   }
