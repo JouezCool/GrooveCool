@@ -3495,10 +3495,62 @@ function updateConcertModeUI() {
   updateKaraokeTitleBadge();
 }
 
+// Plein écran natif (demande de Nemo) : le mode concert masquait déjà tout
+// en CSS (voir body.concert-mode plus haut), mais les barres du navigateur
+// lui-même (onglets, barre d'adresse, favoris...) restaient visibles —
+// gênant sur la scène karaoké. La Fullscreen API fait sortir la fenêtre du
+// chrome du navigateur ; préfixes webkit/ms inclus pour compat Safari/vieux
+// Edge. Sur iPhone Safari, cette API ne fonctionne pas pour un élément
+// quelconque (limitation connue de WebKit, seules les balises <video> s'y
+// prêtent) — le mode concert continue alors de fonctionner comme avant
+// (plein viewport en CSS), simplement sans plein écran natif ; sur cet
+// appareil, "Ajouter à l'écran d'accueil" (déjà supporté, voir les balises
+// apple-mobile-web-app-* en tête de fichier) lance l'app sans aucune barre
+// Safari, y compris en dehors du mode concert.
+function requestFullscreenCompat(el) {
+  const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+  if (!fn) return Promise.reject(new Error('Fullscreen API non supportée'));
+  return fn.call(el);
+}
+
+function exitFullscreenCompat() {
+  const fn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+  if (!fn) return Promise.resolve();
+  return fn.call(document);
+}
+
+function isFullscreenActive() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+}
+
 function toggleConcertMode() {
   concertMode = !concertMode;
   updateConcertModeUI();
+
+  if (concertMode) {
+    // Doit rester synchrone dans le handler de clic (exigence des
+    // navigateurs pour la Fullscreen API) — requestFullscreenCompat() est
+    // appelée directement ici, pas après un await. Échec silencieux
+    // (catch vide) si non supporté : le mode concert reste utilisable en
+    // CSS plein viewport comme avant ce correctif.
+    requestFullscreenCompat(document.documentElement).catch(() => {});
+  } else if (isFullscreenActive()) {
+    exitFullscreenCompat().catch(() => {});
+  }
 }
+
+// Si l'utilisateur sort du plein écran par un autre moyen que notre bouton
+// (touche Échap, geste navigateur...), on désactive le mode concert en
+// retour plutôt que de laisser les deux états diverger (mode concert actif
+// mais barres du navigateur revenues).
+['fullscreenchange', 'webkitfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
+  document.addEventListener(evt, () => {
+    if (concertMode && !isFullscreenActive()) {
+      concertMode = false;
+      updateConcertModeUI();
+    }
+  });
+});
 
 // Sur la scène karaoké en mode concert (plein écran), le bouton "MODE
 // CONCERT" est masqué (voir CSS) : c'est le logo qui sert de bouton retour.
