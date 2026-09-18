@@ -4466,7 +4466,12 @@ function invalidateKaraokeParagraphGroups() {
 // (voir hashDJB2() plus bas, assigné indépendamment du groupement), donc ce
 // découpage reste identique et stable sur tous les appareils pour un même
 // morceau, sans rien changer à la synchro par ancre.
-const MAX_KARAOKE_GROUP_LINES = 4;
+//
+// Valeur abaissée de 4 à 2 (demande de Nemo) : ce même découpage pilote à
+// la fois la scène plein écran des invités karaoké (#karaokeStage) et le
+// repère couleur local chez Leader/Turn (#songContent .karaoke-current-line,
+// voir updateLeaderParagraphHighlight()) — un seul réglage pour les deux.
+const MAX_KARAOKE_GROUP_LINES = 2;
 
 function chunkKaraokeBlocks(blocks) {
   if (blocks.length <= MAX_KARAOKE_GROUP_LINES) return [blocks];
