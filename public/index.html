@@ -6431,15 +6431,38 @@ function renderTabBlock(targetEl, text, anchorId) {
       // {c:} : qui chante/joue (ex: "nemo", "tous") — annotation visible sur
       // la partition chez le Leader/Turn/Follow (voir addAnnotationLine),
       // mais masquée côté scène karaoké et qui ne déclenche jamais la carte
-      // "Instrumental" (seul {soi}...{eoi} le fait désormais).
-      const comment = line.match(/^\{c\s*:\s*(.*)\}(.*)$/i);
+      // "Instrumental" (seul {soi}...{eoi} le fait désormais). Contrairement
+      // à {f:}/{d:} ci-dessus, {c:} peut aussi apparaître au milieu d'une
+      // phrase chez Nemo (un changement de chanteur en plein vers, sans
+      // couper la ligne en deux dans le fichier source) — on capture donc en
+      // plus un éventuel texte AVANT l'accolade ouvrante (comment[1], rendu
+      // comme un bloc paroles/accords normal juste avant l'annotation), en
+      // plus du texte après (comment[3], déjà géré comme avant). Sans ce
+      // texte "avant", une ligne comme "Et là {c: tous} reprise" ne matchait
+      // aucune regex de directive ci-dessus (celle-ci exigeait {c:...} en
+      // tout début de ligne) et tombait telle quelle dans le rendu "paroles"
+      // par défaut plus bas, {c: tous} inclus tel quel comme texte brut au
+      // lieu d'être reconnu comme annotation. Groupe de contenu non-greedy
+      // (.*?) plutôt que (.*) : s'arrête à la première accolade fermante
+      // rencontrée, pour rester correct si jamais {c:} n'est pas le seul
+      // couple d'accolades de la ligne.
+      const comment = line.match(/^(.*?)\{c\s*:\s*(.*?)\}(.*)$/i);
       if (comment) {
-        const commentKey = normAnchorText('@c:' + comment[1]);
+        const leadingLine = String(comment[1] || '');
+        if (leadingLine.trim()) {
+          const { segments: leadingSegments, lyricLine: leadingLyricLine } = parseChordProLine(leadingLine);
+          const leadingKey = normAnchorText(leadingLyricLine);
+          renderChordPro._occ[leadingKey] = (renderChordPro._occ[leadingKey] || 0) + 1;
+          const leadingAnchor = hashDJB2(leadingKey) + "-" + renderChordPro._occ[leadingKey];
+          addChordBlock(leadingSegments, leadingLyricLine, target, leadingAnchor);
+        }
+
+        const commentKey = normAnchorText('@c:' + comment[2]);
         renderChordPro._occ[commentKey] = (renderChordPro._occ[commentKey] || 0) + 1;
         const commentAnchor = hashDJB2(commentKey) + "-" + renderChordPro._occ[commentKey];
-        addAnnotationLine(comment[1], target, 'who', commentAnchor);
+        addAnnotationLine(comment[2], target, 'who', commentAnchor);
 
-        const trailingLine = String(comment[2] || '');
+        const trailingLine = String(comment[3] || '');
         if (!trailingLine.trim()) {
           continue;
         }
