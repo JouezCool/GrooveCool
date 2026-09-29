@@ -826,9 +826,9 @@ nav{
       font-family:'Poppins', sans-serif;
       /* Le reste de l'app n'a pas de bascule clair/sombre (fond toujours
          noir), mais sans ceci certains navigateurs affichent quand même
-         les contrôles natifs (barre de défilement de #karaokeCard, etc.)
-         dans un style clair par défaut si l'appareil est en mode clair —
-         ça détonnait sur la scène karaoké. */
+         les contrôles natifs (barre de défilement, etc.) dans un style
+         clair par défaut si l'appareil est en mode clair — ça détonnait
+         sur la scène karaoké. */
       color-scheme:dark;
     }
 
@@ -959,36 +959,54 @@ nav{
       display:block;
     }
 
-    /* La "carte" lyrics : c'est elle qui reçoit le zoom dynamique (voir
-       applyKaraokeZoom()) et le fondu entre paragraphes (voir
-       renderKaraokeStage()) — le logo, les icônes et la barre de
-       progression restent en dehors, à taille fixe. */
+    /* La "carte" lyrics — sur demande de Nemo (le rectangle qui "bougeait"
+       tantôt dedans tantôt dehors par rapport à l'aperçu suivant) : c'est
+       désormais un cadre à taille FIXE (plus de max-height qui suivait le
+       zoom du contenu), qui ne bouge ni ne se redimensionne plus jamais
+       d'un paragraphe à l'autre. #karaokeNextPreview (voir plus bas) est
+       positionné juste en dessous en flux normal, donc toujours au même
+       endroit relatif au cadre — plus jamais chevauché ni flottant loin de
+       lui. Le zoom dynamique et la transition entre paragraphes portent
+       maintenant sur #karaokeCardContent (voir plus bas), pas sur ce cadre
+       lui-même : lui ne fait plus qu'habiller (fond, bordure, ombre) et
+       recadrer (overflow:hidden) ce qui se passe dedans. */
     #karaokeCard{
       position:relative;
       z-index:1;
-      max-width:90vw;
-      max-height:74vh;
-      overflow:auto;
-      padding:5vh 6vw;
+      width:min(90vw, 900px);
+      height:clamp(240px, 48vh, 440px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      padding:0 6vw;
+      box-sizing:border-box;
       border-radius:28px;
       background:rgba(255,255,255,0.045);
       border:1px solid rgba(var(--karaoke-accent-rgb),0.5);
       box-shadow:0 0 40px rgba(var(--karaoke-accent-rgb),0.25), inset 0 0 60px rgba(var(--karaoke-accent-rgb),0.05);
-      transition:opacity 220ms ease, transform 220ms ease;
+    }
+
+    /* Contenu réel (copie du paragraphe repéré, voir renderKaraokeStage()) :
+       c'est LUI qui reçoit le zoom dynamique (voir applyKaraokeZoom()) et
+       qui anime entre deux paragraphes — le cadre #karaokeCard ci-dessus
+       reste toujours immobile et pleinement visible pendant la transition.
+       overflow:hidden sur #karaokeCard fait que ce contenu se fait vraiment
+       couper en haut du cadre en sortant, plutôt qu'un simple fondu. */
+    #karaokeCardContent{
+      width:100%;
+      transition:opacity 320ms ease, transform 320ms ease;
       opacity:1;
       transform:translateY(0);
     }
 
-    /* translateY passe de 8px à 26px (ligne suivante) : sur demande de
-       Nemo, l'ancien nudge de 8px se lisait comme un simple fondu, pas
-       comme un vrai glissement bas→haut. Même distance pour #karaokeCard
-       et #karaokeNextPreview (voir plus bas) afin que les deux avancent
-       ensemble d'un même mouvement, l'aperçu suivant donnant le sens
-       "ça vient d'en dessous" que la carte seule ne suffisait pas à
-       montrer. */
-    #karaokeCard.karaoke-card-out{
+    /* Glissement vers le HAUT (et non plus vers le bas comme l'ancien
+       crossfade) : sur demande de Nemo, "le texte central glisse vers le
+       haut et disparaît", pendant que #karaokeNextPreview grandit à sa
+       place (voir plus bas). */
+    #karaokeCardContent.karaoke-content-out{
       opacity:0;
-      transform:translateY(26px);
+      transform:translateY(-6vh);
     }
 
     /* Police "fun" pour la scène karaoké : Poppins Bold plutôt que le
@@ -997,10 +1015,10 @@ nav{
        masqués en mode karaoké). !important pour passer devant les règles
        .lyricline/.chord-cell .lyric (poids/police normaux, nécessaires
        dans la partition classique) qui sont plus spécifiques que
-       #karaokeCard seul. On retire aussi le liseré/l'ombre du texte
+       #karaokeCardContent seul. On retire aussi le liseré/l'ombre du texte
        normal : avec un poids déjà très gras, ça épaississait le rendu. */
-    #karaokeCard,
-    #karaokeCard *{
+    #karaokeCardContent,
+    #karaokeCardContent *{
       font-family:'Poppins', sans-serif !important;
       font-weight:700 !important;
       -webkit-text-stroke:0 !important;
@@ -1012,9 +1030,9 @@ nav{
        et le text-align:center hérité de #karaokeStage ne s'applique pas au
        contenu d'un conteneur flex — il faut recentrer explicitement via
        justify-content, sinon chaque ligne reste collée à gauche de la
-       carte malgré le text-align. Uniquement dans #karaokeCard : ailleurs
-       dans l'app, .chord-row doit rester alignée à gauche. */
-    #karaokeCard .chord-row{
+       carte malgré le text-align. Uniquement dans #karaokeCardContent :
+       ailleurs dans l'app, .chord-row doit rester alignée à gauche. */
+    #karaokeCardContent .chord-row{
       justify-content:center;
     }
 
@@ -1022,20 +1040,20 @@ nav{
        titre + artiste (voir isTitleGroup / renderKaraokeStage()), avant les
        paroles. Mise en forme dédiée en clamp() plutôt que le zoom
        dynamique utilisé pour les paragraphes de paroles. */
-    #karaokeCard .karaoke-title-card{
+    #karaokeCardContent .karaoke-title-card{
       display:flex;
       flex-direction:column;
       align-items:center;
       gap:2vh;
     }
 
-    #karaokeCard .karaoke-title-main{
+    #karaokeCardContent .karaoke-title-main{
       font-size:clamp(30px, 6vw, 68px);
       line-height:1.15;
       text-align:center;
     }
 
-    #karaokeCard .karaoke-title-artist{
+    #karaokeCardContent .karaoke-title-artist{
       font-size:clamp(16px, 2.8vw, 30px);
       opacity:0.7;
       text-align:center;
@@ -1047,57 +1065,71 @@ nav{
        écran générique, sans jamais révéler aux invités les accords/notes/
        tabs/commentaires réels de la partition qu'elle contient. Mise en
        forme dédiée en clamp(), comme le paragraphe "titre" ci-dessus. */
-    #karaokeCard .karaoke-instrumental-card{
+    #karaokeCardContent .karaoke-instrumental-card{
       display:flex;
       flex-direction:column;
       align-items:center;
       gap:3vh;
     }
 
-    #karaokeCard .karaoke-instrumental-icons{
+    #karaokeCardContent .karaoke-instrumental-icons{
       font-size:clamp(28px, 6vw, 56px);
       letter-spacing:0.3em;
       opacity:0.85;
     }
 
-    #karaokeCard .karaoke-instrumental-label{
+    #karaokeCardContent .karaoke-instrumental-label{
       font-size:clamp(24px, 5vw, 52px);
       letter-spacing:0.08em;
       text-transform:uppercase;
       opacity:0.9;
     }
 
-    /* Aperçu des 1-2 lignes suivantes, sous la carte principale — demande
-       de Nemo : sur les morceaux plus rapides, le pas-à-pas seul (une
-       paire de lignes à la fois, voir MAX_KARAOKE_GROUP_LINES) ne laisse
-       pas le temps d'anticiper la suite. position:absolute (et non un
-       flex-child de #karaokeStage comme #karaokeCard) : ancré à une
-       hauteur fixe de l'écran, indépendante de la taille de #karaokeCard,
-       pour ne jamais déplacer la carte principale — qui doit rester
-       pile centrée, comme avant cet ajout. Rempli par renderKaraokeStage(),
-       qui applique aussi un zoom CSS réduit (voir applyKaraokeZoom()) —
-       plus petit et moins opaque que la carte principale pour bien
-       signaler "ce n'est pas la ligne en cours". Vide/masqué (display:none
-       posé en JS) quand il n'y a rien à annoncer (fin de morceau, ou
-       prochain paragraphe = titre/instrumental, qui ont leur propre mise
-       en forme dédiée non adaptée à un simple aperçu). */
+    /* Aperçu des 1-2 lignes suivantes — demande de Nemo : sur les morceaux
+       plus rapides, le pas-à-pas seul (une paire de lignes à la fois, voir
+       MAX_KARAOKE_GROUP_LINES) ne laisse pas le temps d'anticiper la
+       suite. En flux normal juste après #karaokeCard (et non plus en
+       position:absolute calée sur un %vh fixe) : #karaokeCard ayant
+       désormais une hauteur fixe (voir plus haut), l'aperçu se retrouve
+       TOUJOURS exactement au même endroit, juste sous le cadre — feedback
+       de Nemo : "ça fait bizarre, des fois c'est dedans et des fois
+       dehors" avec l'ancien calage en %vh fixe, qui ne suivait pas la
+       vraie taille de la carte (elle, variable avec le zoom du contenu).
+       Rempli par renderKaraokeStage(), avec le vrai zoom "cible" du
+       prochain paragraphe (celui qu'il aura une fois promu, voir
+       applyKaraokeZoom()) — le côté "plus petit" au repos vient uniquement
+       du transform:scale() ci-dessous, pas du zoom, pour pouvoir l'animer
+       proprement (voir .karaoke-preview-advancing). Vide/masqué
+       (display:none posé en JS) quand il n'y a rien à annoncer (fin de
+       morceau, ou prochain paragraphe = titre/instrumental, qui ont leur
+       propre mise en forme dédiée non adaptée à un simple aperçu). */
     #karaokeNextPreview{
-      position:absolute;
       z-index:1;
-      left:6vw; right:6vw;
-      top:68vh;
+      width:min(90vw, 900px);
+      margin-top:2.6vh;
       max-height:18vh;
       overflow:hidden;
       text-align:center;
       pointer-events:none;
       opacity:0.42;
-      transition:opacity 220ms ease, transform 220ms ease;
-      transform:translateY(0);
+      transform-origin:50% 0%;
+      /* "Un peu plus grand" (demande de Nemo) : 0.64 plutôt que le 0.5
+         d'origine, tout en restant nettement plus petit/gris que la carte
+         principale pour qu'on distingue bien "ce n'est pas la ligne en
+         cours". */
+      transform:translateY(0) scale(0.64);
+      transition:opacity 320ms ease, transform 320ms ease;
     }
 
-    #karaokeNextPreview.karaoke-card-out{
-      opacity:0;
-      transform:translateY(26px);
+    /* Glissement + grossissement vers le centre de la carte — demande de
+       Nemo : "le texte en dessous glisse au centre et s'agrandit". La
+       distance à parcourir (--karaoke-advance-distance) est mesurée en JS
+       à chaque transition (écarts réels entre les deux éléments, voir
+       renderKaraokeStage()), pas une valeur devinée, donc toujours exacte
+       quelle que soit la taille d'écran. */
+    #karaokeNextPreview.karaoke-preview-advancing{
+      opacity:1;
+      transform:translateY(var(--karaoke-advance-distance, -34vh)) scale(1);
     }
 
     #karaokeNextPreview,
@@ -1798,13 +1830,16 @@ nav{
              (voir #karaokeTitleBadge en CSS et updateKaraokeTitleBadge()). -->
         <div id="karaokeTitleBadge"></div>
         <img id="karaokeLogo" alt="Jouez Cool" src="karaoke-logo.png" onclick="exitConcertModeFromLogo()">
-        <div id="karaokeCard"></div>
-        <!-- Aperçu discret des 1-2 lignes suivantes, sous la carte
-             principale (position fixe indépendante de #karaokeStage, voir
-             CSS) : demande de Nemo pour les morceaux plus rapides, où le
-             pas-à-pas seul laisse trop peu de temps pour anticiper la
-             ligne d'après. Rempli par renderKaraokeStage(), jamais visible
-             pour un titre/instrumental à venir (voir ce fichier plus bas). -->
+        <!-- Cadre à taille fixe (voir CSS) : #karaokeCardContent est le
+             seul élément qui change/anime réellement entre deux
+             paragraphes, le cadre lui-même reste toujours immobile. -->
+        <div id="karaokeCard"><div id="karaokeCardContent"></div></div>
+        <!-- Aperçu discret des 1-2 lignes suivantes, toujours juste sous la
+             carte principale (flux normal, voir CSS) : demande de Nemo
+             pour les morceaux plus rapides, où le pas-à-pas seul laisse
+             trop peu de temps pour anticiper la ligne d'après. Rempli par
+             renderKaraokeStage(), jamais visible pour un titre/instrumental
+             à venir (voir ce fichier plus bas). -->
         <div id="karaokeNextPreview"></div>
         <div id="karaokeProgress"><div id="karaokeProgressFill"></div></div>
       </div>
@@ -2187,6 +2222,7 @@ let currentSongSettings = {
   const songContentEl = document.getElementById('songContent');
   const karaokeStageEl = document.getElementById('karaokeStage');
   const karaokeCardEl = document.getElementById('karaokeCard');
+  const karaokeCardContentEl = document.getElementById('karaokeCardContent');
   const karaokeNextPreviewEl = document.getElementById('karaokeNextPreview');
   const karaokeProgressFillEl = document.getElementById('karaokeProgressFill');
   const karaokeTitleBadgeEl = document.getElementById('karaokeTitleBadge');
@@ -5200,23 +5236,21 @@ function updateKaraokeLeaderControls() {
 // du zoom dynamique ici — on le laisse à 1 pour éviter un double effet.
 //
 // nextGroup (optionnel) : aperçu des lignes suivantes affiché sous la
-// carte principale (#karaokeNextPreview, voir renderKaraokeStage()). On
-// lui applique le même calcul de zoom que la carte principale, réduit de
-// moitié (KARAOKE_NEXT_PREVIEW_ZOOM_RATIO) — il grossit/rétrécit donc en
-// suivant la longueur du prochain paragraphe comme la carte principale le
-// fait pour le sien, tout en restant nettement plus petit qu'elle (avec
-// l'opacité réduite posée en CSS, ça suffit à signaler "ce n'est pas la
-// ligne en cours" sans recalcul indépendant).
-const KARAOKE_NEXT_PREVIEW_ZOOM_RATIO = 0.5;
-
+// carte principale (#karaokeNextPreview, voir renderKaraokeStage()). On lui
+// applique le MÊME calcul de zoom que la carte principale (la vraie taille
+// qu'il aura une fois promu "ligne en cours") — plus de ratio réduit ici :
+// le côté "plus petit" au repos vient uniquement du transform:scale() posé
+// en CSS (#karaokeNextPreview), pour pouvoir l'animer proprement quand il
+// grandit vers le centre de la carte (voir renderKaraokeStage()).
 function applyKaraokeZoom(group, nextGroup) {
-  if (!karaokeCardEl) return;
-  if (group && (group.isTitleGroup || group.isInstrumentalGroup)) {
-    karaokeCardEl.style.zoom = 1;
-  } else {
-    const lineCount = group ? Math.max(1, group.blocks.length) : 1;
-    const zoom = Math.max(1.4, Math.min(2.0, 2.0 - (lineCount - 1) * 0.12));
-    karaokeCardEl.style.zoom = zoom;
+  if (karaokeCardContentEl) {
+    if (group && (group.isTitleGroup || group.isInstrumentalGroup)) {
+      karaokeCardContentEl.style.zoom = 1;
+    } else {
+      const lineCount = group ? Math.max(1, group.blocks.length) : 1;
+      const zoom = Math.max(1.4, Math.min(2.0, 2.0 - (lineCount - 1) * 0.12));
+      karaokeCardContentEl.style.zoom = zoom;
+    }
   }
 
   if (!karaokeNextPreviewEl) return;
@@ -5224,8 +5258,7 @@ function applyKaraokeZoom(group, nextGroup) {
     return;
   }
   const nextLineCount = Math.max(1, nextGroup.blocks.length);
-  const nextZoom = Math.max(1.4, Math.min(2.0, 2.0 - (nextLineCount - 1) * 0.12)) * KARAOKE_NEXT_PREVIEW_ZOOM_RATIO;
-  karaokeNextPreviewEl.style.zoom = nextZoom;
+  karaokeNextPreviewEl.style.zoom = Math.max(1.4, Math.min(2.0, 2.0 - (nextLineCount - 1) * 0.12));
 }
 
 // Barre de progression du morceau : réutilise le ratio de défilement déjà
@@ -5238,15 +5271,30 @@ function updateKaraokeProgress(ratio) {
 
 let karaokeCardTransitionTimer = null;
 
+// Durée de la transition entre deux paragraphes — doit rester synchronisée
+// avec les transitions CSS de #karaokeCardContent et #karaokeNextPreview
+// (voir plus haut dans ce fichier : 320ms sur les deux).
+const KARAOKE_TRANSITION_MS = 320;
+
 // Affichage en mode karaoké (invités) : on ne fait plus défiler l'écran du
 // tout — plus aucune position de scroll à synchroniser entre appareils,
-// donc plus aucune dérive possible. On affiche seulement, dans une carte
-// fixe et centrée (#karaokeCard, à l'intérieur de #karaokeStage), une
-// copie du paragraphe repéré ; le vrai #songContent reste caché mais
-// toujours mesuré, pour continuer à savoir quel paragraphe correspond à
-// la position du Leader.
+// donc plus aucune dérive possible. On affiche seulement, dans un cadre
+// fixe et centré (#karaokeCard, à l'intérieur de #karaokeStage), une copie
+// du paragraphe repéré ; le vrai #songContent reste caché mais toujours
+// mesuré, pour continuer à savoir quel paragraphe correspond à la position
+// du Leader.
+//
+// Transition — sur demande de Nemo ("le rectangle reste, le texte central
+// glisse vers le haut et disparaît, et le texte en dessous glisse au
+// centre et s'agrandit") : le cadre #karaokeCard ne bouge plus jamais ;
+// seuls #karaokeCardContent (glisse vers le haut, disparaît) et
+// #karaokeNextPreview (glisse vers le haut, grandit jusqu'à recouvrir le
+// centre du cadre) animent. La distance à parcourir par l'aperçu est
+// mesurée en vrai (getBoundingClientRect) à chaque transition plutôt que
+// devinée en dur, pour rester exacte quels que soient la taille d'écran et
+// le nombre de lignes du paragraphe affiché.
 function renderKaraokeStage(group) {
-  if (!karaokeCardEl) return;
+  if (!karaokeCardContentEl) return;
 
   // Paragraphe juste après celui affiché, pour l'aperçu discret sous la
   // carte principale (#karaokeNextPreview, voir plus haut dans ce
@@ -5266,9 +5314,9 @@ function renderKaraokeStage(group) {
     ? nextGroup
     : null;
 
-  const swap = () => {
-    karaokeCardEl.innerHTML = '';
-    if (group && group.isTitleGroup) {
+  const fillGroupInto = (containerEl, targetGroup) => {
+    containerEl.innerHTML = '';
+    if (targetGroup && targetGroup.isTitleGroup) {
       // Titre + artiste "propres" (même source que #karaokeTitleBadge et
       // la bibliothèque, via getSongDisplayInfo()) plutôt qu'un clone brut
       // du {title:...}/{subtitle:...} du fichier ChordPro, qui contient
@@ -5286,8 +5334,8 @@ function renderKaraokeStage(group) {
         artistEl.textContent = info.artist;
         card.appendChild(artistEl);
       }
-      karaokeCardEl.appendChild(card);
-    } else if (group && group.isInstrumentalGroup) {
+      containerEl.appendChild(card);
+    } else if (targetGroup && targetGroup.isInstrumentalGroup) {
       // Section instrumentale (voir isInstrumentalGroup dans
       // computeKaraokeParagraphGroups()) : écran générique, jamais les
       // accords/notes/tablature réels de la partition.
@@ -5301,46 +5349,62 @@ function renderKaraokeStage(group) {
       label.textContent = 'Instrumental';
       card.appendChild(icons);
       card.appendChild(label);
-      karaokeCardEl.appendChild(card);
-    } else if (group) {
-      group.blocks.forEach(el => {
-        karaokeCardEl.appendChild(el.cloneNode(true));
+      containerEl.appendChild(card);
+    } else if (targetGroup) {
+      targetGroup.blocks.forEach(el => {
+        containerEl.appendChild(el.cloneNode(true));
       });
     }
+  };
 
-    if (karaokeNextPreviewEl) {
+  // Réinitialise #karaokeNextPreview sur le paragraphe d'après (celui qui
+  // suivra `group`), instantanément et sans transition — sinon, en
+  // enlevant juste la classe d'animation, il se serait visuellement
+  // "rétréci en glissant vers le bas" jusqu'à son état de repos, un
+  // artefact bien visible. Le double appel offsetHeight force le
+  // navigateur à appliquer le style avant de réactiver la transition.
+  const resetPreview = (targetGroup) => {
+    if (!karaokeNextPreviewEl) return;
+    karaokeNextPreviewEl.style.transition = 'none';
+    karaokeNextPreviewEl.classList.remove('karaoke-preview-advancing');
+    if (targetGroup) {
+      fillGroupInto(karaokeNextPreviewEl, targetGroup);
+      karaokeNextPreviewEl.style.display = '';
+    } else {
       karaokeNextPreviewEl.innerHTML = '';
-      if (previewGroup) {
-        previewGroup.blocks.forEach(el => {
-          karaokeNextPreviewEl.appendChild(el.cloneNode(true));
-        });
-        karaokeNextPreviewEl.style.display = '';
-      } else {
-        karaokeNextPreviewEl.style.display = 'none';
-      }
-      karaokeNextPreviewEl.classList.remove('karaoke-card-out');
+      karaokeNextPreviewEl.style.display = 'none';
     }
+    void karaokeNextPreviewEl.offsetHeight;
+    karaokeNextPreviewEl.style.transition = '';
+  };
 
+  const swap = () => {
+    fillGroupInto(karaokeCardContentEl, group);
     applyKaraokeZoom(group, previewGroup);
-    karaokeCardEl.classList.remove('karaoke-card-out');
+    karaokeCardContentEl.classList.remove('karaoke-content-out');
+    resetPreview(previewGroup);
   };
 
   clearTimeout(karaokeCardTransitionTimer);
-  if (!karaokeCardEl.childNodes.length) {
+  if (!karaokeCardContentEl.childNodes.length) {
     // Première apparition (on vient d'entrer en mode karaoké) : on affiche
-    // directement, pas de fondu de sortie sur une carte vide.
+    // directement, pas d'animation de sortie sur une carte vide.
     swap();
     return;
   }
 
-  // Glissement enchaîné entre deux paragraphes (bas → haut, voir la
-  // transition CSS sur #karaokeCard et #karaokeNextPreview) plutôt qu'un
-  // remplacement brutal du contenu. Les deux éléments sortent ensemble
-  // pour que l'aperçu du dessous avance visuellement à la place de
-  // l'ancienne carte principale.
-  karaokeCardEl.classList.add('karaoke-card-out');
-  if (karaokeNextPreviewEl) karaokeNextPreviewEl.classList.add('karaoke-card-out');
-  karaokeCardTransitionTimer = setTimeout(swap, 220);
+  // Rien à faire glisser vers le centre si l'aperçu n'est pas visible
+  // (prochain paragraphe = titre/instrumental, ou fin de morceau) — le
+  // texte central glisse quand même vers le haut et disparaît seul.
+  if (previewGroup && karaokeNextPreviewEl) {
+    const cardRect = karaokeCardContentEl.getBoundingClientRect();
+    const previewRect = karaokeNextPreviewEl.getBoundingClientRect();
+    const distance = (cardRect.top + cardRect.height / 2) - (previewRect.top + previewRect.height / 2);
+    karaokeNextPreviewEl.style.setProperty('--karaoke-advance-distance', `${distance}px`);
+    karaokeNextPreviewEl.classList.add('karaoke-preview-advancing');
+  }
+  karaokeCardContentEl.classList.add('karaoke-content-out');
+  karaokeCardTransitionTimer = setTimeout(swap, KARAOKE_TRANSITION_MS);
 }
 
 // Note : l'ancienne applyKaraokeStage(leaderReferenceTop, karaokeAnchor),
