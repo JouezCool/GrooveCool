@@ -1062,6 +1062,22 @@ nav{
       justify-content:center;
     }
 
+    /* Demande de Nemo : les paroles d'un refrain ({soc}...{eoc}) s'affichent
+       en bleu (au lieu du blanc habituel) côté scène karaoké — cadre
+       principal ET aperçu discret du paragraphe suivant (#karaokeNextPreview,
+       qui réutilise le même fillGroupInto()) — pour distinguer le refrain
+       d'un coup d'œil. Couplet/pont restent blancs, inchangés. Classe posée
+       sur le wrapper .karaoke-lines-card par fillGroupInto() quand le
+       paragraphe vient d'un chorus-block (voir isChorusGroup dans
+       computeKaraokeParagraphGroups()). Même bleu que l'accent déjà utilisé
+       pour le halo/contour de #karaokeCard (--karaoke-accent-rgb), donc
+       cohérent avec le reste de la scène et suffisamment lumineux sur fond
+       noir. */
+    .karaoke-lines-card.karaoke-chorus-lines,
+    .karaoke-lines-card.karaoke-chorus-lines *{
+      color:rgb(var(--karaoke-accent-rgb));
+    }
+
     /* Tout premier "paragraphe" de la scène karaoké pour chaque morceau :
        titre + artiste (voir isTitleGroup / renderKaraokeStage()), avant les
        paroles. Mise en forme dédiée en clamp() plutôt que le zoom
@@ -4798,7 +4814,11 @@ function computeKaraokeParagraphGroups() {
     ) {
       flushAll();
       const lyrics = Array.from(child.querySelectorAll('[data-kind="lyric"]')).filter(el => !isBlankLyric(el));
-      if (lyrics.length) groups.push({ blocks: lyrics, isInstrumentalGroup: false });
+      // isChorusGroup : uniquement pour un refrain ({soc}...{eoc}, classe
+      // chorus-block) — demande de Nemo de colorer en bleu côté scène
+      // karaoké UNIQUEMENT le refrain, pas couplet/pont (voir CSS
+      // .karaoke-chorus-lines et fillGroupInto() dans renderKaraokeStage()).
+      if (lyrics.length) groups.push({ blocks: lyrics, isInstrumentalGroup: false, isChorusGroup: child.classList.contains('chorus-block') });
       return;
     }
 
@@ -4835,7 +4855,7 @@ function computeKaraokeParagraphGroups() {
     if (prev && prev.isInstrumentalGroup && g.isInstrumentalGroup) {
       prev.blocks = prev.blocks.concat(g.blocks);
     } else {
-      mergedGroups.push({ blocks: g.blocks.slice(), isInstrumentalGroup: g.isInstrumentalGroup });
+      mergedGroups.push({ blocks: g.blocks.slice(), isInstrumentalGroup: g.isInstrumentalGroup, isChorusGroup: g.isChorusGroup });
     }
   }
 
@@ -4845,6 +4865,7 @@ function computeKaraokeParagraphGroups() {
       const chunks = g.isInstrumentalGroup ? [g.blocks] : chunkKaraokeBlocks(g.blocks);
       return chunks.map(blocks => ({
         blocks,
+        isChorusGroup: g.isChorusGroup,
         isInstrumentalGroup: g.isInstrumentalGroup,
         top: Math.min(...blocks.map(el => el.offsetTop)),
         bottom: Math.max(...blocks.map(el => el.offsetTop + el.offsetHeight)),
@@ -5438,6 +5459,9 @@ function renderKaraokeStage(group) {
       // fitKaraokeCardZoom(), jamais containerEl lui-même.
       const card = document.createElement('div');
       card.className = 'karaoke-lines-card';
+      // Refrain ({soc}...{eoc}) : classe qui bascule le texte en bleu côté
+      // scène karaoké (voir CSS .karaoke-chorus-lines) — demande de Nemo.
+      if (targetGroup.isChorusGroup) card.classList.add('karaoke-chorus-lines');
       // .karaoke-current-line est la classe d'accent (fond coloré +
       // coins arrondis) posée sur les VRAIS blocs de #songContent par
       // setKaraokeHighlightGroup(), appelée avec ce même `targetGroup`
