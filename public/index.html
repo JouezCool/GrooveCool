@@ -5320,10 +5320,9 @@ function fitKaraokeCardZoom(containerEl, targetGroup) {
 // rapport à sa taille "pleine" une fois promu au centre — demande de Nemo
 // ("que ce soit un peu plus grand, mais en gris c'est bien") : plus gros
 // qu'avant, mais toujours nettement plus petit/dimmed que le texte central.
-// Remonté une seconde fois (0.64 -> 0.80) après retour de Nemo : les deux
-// lignes suivantes restaient un peu petites une fois le nouveau cadre en
-// place.
-const KARAOKE_PREVIEW_REST_RATIO = 0.80;
+// Remonté une troisième fois (0.64 -> 0.80 -> 0.90) après retours successifs
+// de Nemo : les deux lignes suivantes restaient un peu petites.
+const KARAOKE_PREVIEW_REST_RATIO = 0.90;
 
 // Barre de progression du morceau : réutilise le ratio de défilement déjà
 // calculé pour positionner la scène (aucune donnée supplémentaire à faire
