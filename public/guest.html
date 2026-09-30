@@ -67,6 +67,7 @@
     <form id="joinForm">
       <label>
         Ton morceau
+        <input id="songSearch" type="text" placeholder="Rechercher un artiste ou un titre..." autocomplete="off" />
         <select id="songSelect" required></select>
       </label>
 
@@ -99,6 +100,7 @@
   const confirmCard = document.getElementById('confirmCard');
   const confirmText = document.getElementById('confirmText');
   const joinForm = document.getElementById('joinForm');
+  const songSearchInput = document.getElementById('songSearch');
   const songSelect = document.getElementById('songSelect');
   const nameInput = document.getElementById('nameInput');
   const statusEl = document.getElementById('status');
@@ -138,10 +140,36 @@
 
     emptyState.style.display = 'none';
     joinForm.style.display = 'grid';
-    songSelect.innerHTML = songs.map(s =>
-      `<option value="${escapeHtml(s.fileName)}">${escapeHtml(s.title)}${s.artist ? ' — ' + escapeHtml(s.artist) : ''}</option>`
-    ).join('');
+    renderSongOptions(songSearchInput.value);
   }
+
+  // Liste déjà triée par artiste côté serveur (/guest/songs) : on affiche
+  // "Artiste — Titre" pour que ce tri se voie et se parcoure facilement, et
+  // on filtre sur les deux champs pour la recherche manuelle. La sélection
+  // en cours est préservée quand elle fait encore partie des résultats
+  // filtrés, pour ne pas la perdre pendant que l'invité tape.
+  function renderSongOptions(filterText) {
+    const q = String(filterText || '').trim().toLowerCase();
+    const filtered = !q ? songs : songs.filter(s =>
+      (s.title || '').toLowerCase().includes(q) || (s.artist || '').toLowerCase().includes(q)
+    );
+    const previousValue = songSelect.value;
+
+    if (filtered.length === 0) {
+      songSelect.innerHTML = '<option value="" disabled selected>Aucun résultat</option>';
+      return;
+    }
+
+    songSelect.innerHTML = filtered.map(s =>
+      `<option value="${escapeHtml(s.fileName)}">${s.artist ? escapeHtml(s.artist) + ' — ' : ''}${escapeHtml(s.title)}</option>`
+    ).join('');
+
+    if (filtered.some(s => s.fileName === previousValue)) {
+      songSelect.value = previousValue;
+    }
+  }
+
+  songSearchInput.addEventListener('input', () => renderSongOptions(songSearchInput.value));
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, c => ({
@@ -192,6 +220,7 @@
     confirmCard.style.display = 'none';
     formCard.style.display = 'block';
     nameInput.value = '';
+    songSearchInput.value = '';
     loadSongs();
   });
 
