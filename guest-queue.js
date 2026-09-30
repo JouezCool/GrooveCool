@@ -75,7 +75,14 @@ function registerGuestQueue(app, io, { isValidSongName, listDriveSongs, readSong
           const { title, artist } = songDisplayInfo(fileName, meta);
           return { fileName, title, artist };
         })
-        .sort((a, b) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }));
+        // Trié par artiste (demande de Nemo, "ce sera plus simple" pour les
+        // invités qui parcourent la liste) puis par titre pour départager
+        // un même artiste.
+        .sort((a, b) => {
+          const byArtist = a.artist.localeCompare(b.artist, 'fr', { sensitivity: 'base' });
+          if (byArtist !== 0) return byArtist;
+          return a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' });
+        });
 
       res.json(karaokeSongs);
     } catch (err) {
