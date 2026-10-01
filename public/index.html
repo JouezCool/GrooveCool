@@ -72,6 +72,8 @@
       --comment-text:#000;
       --detail-comment-bg:#4b5563;
       --detail-comment-text:#fff;
+      --notes-comment-bg:#ffb300;
+      --notes-comment-text:#000;
     }
 	
 	.meta-form{
@@ -1276,6 +1278,23 @@ nav{
     .annotline.sound{
       background:var(--detail-comment-bg);
       color:var(--detail-comment-text);
+    }
+
+    /* {n:} (noms de notes) placé au milieu d'une phrase : sur demande de
+       Nemo, rendu comme une pastille en ligne (teinte ambrée, cohérente avec
+       --chord-color) plutôt qu'en texte brut non reconnu — voir
+       addMixedAnnotationLine() / createAnnotationCellEl(). */
+    .annotline.notes{
+      background:var(--notes-comment-bg);
+      color:var(--notes-comment-text);
+    }
+
+    /* Cellule d'annotation ({c:}/{f:}/{d:}/{n:}) insérée au milieu d'une
+       ligne de paroles : même cellule flex qu'un mot normal (voir
+       .chord-cell plus haut), pour rester exactement à sa place dans le
+       flux au lieu de forcer un retour à la ligne. */
+    .chord-cell.annotation-cell{
+      align-self:flex-end;
     }
 
     /* [Am] entre crochets à l'intérieur d'un {c:}/{f:}/{d:}/{n:} :
@@ -2587,6 +2606,8 @@ async function deleteCurrentSong() {
       root.style.setProperty('--comment-text', '#111');
       root.style.setProperty('--detail-comment-bg', '#6b7280');
       root.style.setProperty('--detail-comment-text', '#fff');
+      root.style.setProperty('--notes-comment-bg', '#ffc14d');
+      root.style.setProperty('--notes-comment-text', '#111');
       settingsBtnFixed.style.background = 'rgba(255,255,255,0.7)';
     } else {
       root.style.setProperty('--bg', '#000');
@@ -2608,6 +2629,8 @@ async function deleteCurrentSong() {
       root.style.setProperty('--comment-text', '#000');
       root.style.setProperty('--detail-comment-bg', '#4b5563');
       root.style.setProperty('--detail-comment-text', '#fff');
+      root.style.setProperty('--notes-comment-bg', '#ffb300');
+      root.style.setProperty('--notes-comment-text', '#000');
       settingsBtnFixed.style.background = 'rgba(0,0,0,0.25)';
     }
   }
@@ -6349,6 +6372,148 @@ socket.on('apply-speed', value => {
     targetEl.appendChild(block);
   }
 
+  // {c:} (qui chante/joue), {f:} (son/patch), {d:} (détail) et {n:} (noms de
+  // notes) peuvent désormais apparaître n'importe où dans une ligne de
+  // paroles — pas seulement en tout début de ligne — et doivent s'afficher
+  // exactement là où Nemo les a tapées dans l'éditeur, sous forme de
+  // pastille EN LIGNE dans la même phrase, plutôt que de couper la ligne en
+  // plusieurs blocs séparés (ancien comportement de {c:}/{d:}/{f:} au milieu
+  // d'une phrase) ou de ne pas être reconnu du tout ({n:} au milieu d'une
+  // phrase ressortait tel quel en texte brut). hasInlineAnnotation()/
+  // isBareAnnotationLine()/splitLineAroundAnnotations() ci-dessous ne
+  // changent rien quand une telle directive est SEULE sur sa ligne (ce cas
+  // continue d'être géré plus bas par notesLine/detail/soundMark/comment,
+  // inchangé) — uniquement quand elle est mêlée à du texte réel ailleurs sur
+  // la même ligne.
+  function hasInlineAnnotation(line) {
+    return /\{(?:c|f|d|n)\s*:\s*[^}]*\}/i.test(String(line || ''));
+  }
+
+  function isBareAnnotationLine(line) {
+    const stripped = String(line || '').replace(/\{(?:c|f|d|n)\s*:\s*[^}]*\}/gi, '');
+    return !stripped.trim();
+  }
+
+  function splitLineAroundAnnotations(line) {
+    const str = String(line || '');
+    const parts = [];
+    const re = /\{(c|f|d|n)\s*:\s*([^}]*)\}/gi;
+    let lastIndex = 0;
+    let m;
+    while ((m = re.exec(str)) !== null) {
+      if (m.index > lastIndex) parts.push({ type: 'text', value: str.slice(lastIndex, m.index) });
+      parts.push({ type: 'annot', kind: m[1].toLowerCase(), raw: m[2] });
+      lastIndex = re.lastIndex;
+    }
+    if (lastIndex < str.length) parts.push({ type: 'text', value: str.slice(lastIndex) });
+    return parts;
+  }
+
+  // Pastille d'annotation sous forme de cellule flex (même structure qu'une
+  // cellule mot normale : un emplacement "accord" vide au-dessus, pour rester
+  // au même rythme vertical que les mots voisins). Couleur/police selon le
+  // type : {c:} = pastille "qui chante" par défaut (.annotline), {f:} =
+  // variante "détail" (.annotline.sound), {d:} = même famille que les
+  // anciens blocs .commentline.detail, {n:} = nouvelle variante ambrée
+  // (.annotline.notes). Un éventuel [Am] entre crochets à l'intérieur reste
+  // traité comme un vrai accord, comme pour les anciens blocs autonomes
+  // (voir appendInlineChordText()/appendNotesDirectiveContent()).
+  function createAnnotationCellEl(kind, raw, leadingSpaces) {
+    const cell = document.createElement('span');
+    cell.className = 'chord-cell annotation-cell';
+    cell.style.marginLeft = ((Number(leadingSpaces) || 0) * 0.62) + 'em';
+
+    const chordSlot = document.createElement('span');
+    chordSlot.className = 'chord';
+    chordSlot.textContent = '\u00a0';
+    cell.appendChild(chordSlot);
+
+    const pill = document.createElement('span');
+    pill.className = kind === 'f' ? 'annotline sound'
+      : kind === 'd' ? 'commentline detail'
+      : kind === 'n' ? 'annotline notes'
+      : 'annotline';
+
+    if (kind === 'n') {
+      appendNotesDirectiveContent(pill, raw, getEffectiveTranspose());
+    } else {
+      appendInlineChordText(pill, renderInlineNotesTags(raw), getEffectiveTranspose());
+    }
+
+    cell.appendChild(pill);
+    return cell;
+  }
+
+  // Équivalent de addChordBlock() ci-dessus, pour une ligne qui mélange du
+  // texte réel (paroles/accords) et une ou plusieurs directives {c:}/{f:}/
+  // {d:}/{n:} ailleurs sur la même ligne : un seul bloc/chord-row est créé,
+  // avec les mots et les pastilles d'annotation comme cellules flex dans
+  // l'ordre d'apparition dans le fichier source — la ligne reste donc
+  // visuellement une seule ligne, comme dans l'éditeur.
+  function addMixedAnnotationLine(line, targetEl) {
+    const parts = splitLineAroundAnnotations(line);
+
+    const block = document.createElement('div');
+    block.className = 'block';
+    block.style.fontSize = (fontSize * currentSongZoom) + 'px';
+    block.dataset.kind = 'lyric';
+
+    const row = document.createElement('span');
+    let anyChord = false;
+
+    let carry = 0; // espaces "perdus" en fin de fragment de texte précédent
+    let lyricLineAcc = '';
+
+    for (const part of parts) {
+      if (part.type === 'text') {
+        const { segments, lyricLine } = parseChordProLine(part.value);
+        lyricLineAcc += lyricLine;
+        if (segments.some(s => String(s.chord || '').trim())) anyChord = true;
+
+        const expanded = expandSegmentsForWordWrapping(segments);
+
+        if (!expanded.length) {
+          carry += part.value.length;
+          continue;
+        }
+
+        expanded.forEach((segment, idx) => {
+          const cell = document.createElement('span');
+          cell.className = 'chord-cell';
+          const leading = (idx === 0 ? carry : 0) + (Number(segment.leadingSpaces) || 0);
+          cell.style.marginLeft = (leading * 0.62) + 'em';
+
+          const chord = document.createElement('span');
+          chord.className = 'chord';
+          chord.textContent = segment.chord || '\u00a0';
+
+          const lyric = document.createElement('span');
+          lyric.className = 'lyric';
+          lyric.textContent = segment.text || '\u00a0';
+
+          cell.appendChild(chord);
+          cell.appendChild(lyric);
+          row.appendChild(cell);
+        });
+
+        carry = (part.value.match(/\s+$/)?.[0] || '').length;
+      } else {
+        lyricLineAcc += `{${part.kind}:${part.raw}}`;
+        row.appendChild(createAnnotationCellEl(part.kind, part.raw, carry));
+        carry = 0;
+      }
+    }
+
+    row.className = anyChord ? 'chord-row' : 'chord-row no-chords';
+
+    const key = normAnchorText(lyricLineAcc);
+    renderChordPro._occ[key] = (renderChordPro._occ[key] || 0) + 1;
+    block.dataset.anchor = hashDJB2(key) + "-" + renderChordPro._occ[key];
+
+    block.appendChild(row);
+    targetEl.appendChild(block);
+  }
+
   function normAnchorText(s){
     return String(s || "").toLowerCase().replace(/\s+/g, ' ').trim();
   }
@@ -6672,6 +6837,18 @@ function renderTabBlock(targetEl, text, anchorId) {
           sectionType = '';
           sectionContainer = null;
         }
+        continue;
+      }
+
+      // {c:}/{f:}/{d:}/{n:} mêlée à du texte réel (paroles/accords) ailleurs
+      // sur la même ligne (ex: un {n:} en fin de phrase, un {c:} qui change
+      // de chanteur en plein vers) : une seule ligne/bloc, avec la directive
+      // en pastille exactement là où elle a été tapée — voir
+      // addMixedAnnotationLine(). Si la directive est SEULE sur sa ligne
+      // (rien d'autre autour), on laisse le traitement existant plus bas
+      // s'en charger, inchangé.
+      if (hasInlineAnnotation(line) && !isBareAnnotationLine(line)) {
+        addMixedAnnotationLine(line, target);
         continue;
       }
 
