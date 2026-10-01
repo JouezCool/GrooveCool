@@ -4132,6 +4132,19 @@ if (remoteScrollRaf) {
 }
 pendingRemoteScrollTop = 0;
 isRemoteScrolling = false;
+// Une position de défilement reçue (via 'apply-scroll') pendant le
+// chargement du morceau PRÉCÉDENT, mais pas encore "rejouée" (voir
+// pendingRemoteScrollData dans applyRemoteScroll()/loadSong()), concerne un
+// morceau qui n'est plus le bon : son ancre ne correspond à rien dans le
+// nouveau morceau, et son éventuel "progress" (ex: proche de 1 si Turn avait
+// scrollé vers la fin de l'ancien morceau juste avant de changer) se
+// retrouverait réinterprété contre la hauteur du nouveau morceau une fois
+// loadSong() terminé — observé chez Nemo : le Leader atterrit tout en bas
+// de la partition au lieu du haut quand c'est Turn qui change de morceau.
+// On la jette systématiquement ici, à chaque changement de morceau (déclenché
+// localement ou à distance), plutôt que de la laisser être rejouée contre un
+// contenu qui n'a plus rien à voir.
+pendingRemoteScrollData = null;
 viewerElement.scrollTop = 0;
 forceViewerTopForNewSong(2500);
 
