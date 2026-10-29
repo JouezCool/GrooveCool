@@ -282,6 +282,118 @@ app.get('/logout', (req, res) => {
 	  res.redirect('/login');
 });
 
+// Page publique de règles de confidentialité, exigée par Google pour publier
+// l'écran de consentement OAuth hors mode "Test" (voir /auth/google). Placée
+// avant requireAuth pour rester accessible sans mot de passe, comme /login.
+app.get('/privacy', (req, res) => {
+  res.type('html').send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GrooveCool - Règles de confidentialité</title>
+<style>
+  body{background:#000;color:#eee;font-family:-apple-system,Segoe UI,Roboto,sans-serif;
+    margin:0;padding:32px 20px 64px;line-height:1.6;}
+  .wrap{max-width:640px;margin:0 auto;}
+  h1{font-size:22px;color:#ff9800;margin:0 0 4px;}
+  .updated{color:#9a9a9a;font-size:13px;margin:0 0 28px;}
+  h2{font-size:16px;color:#ff9800;margin:28px 0 8px;}
+  p, li{font-size:14.5px;color:#ddd;}
+  ul{padding-left:20px;margin:8px 0;}
+  a{color:#ff9800;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎵 GrooveCool — Règles de confidentialité</h1>
+  <p class="updated">Dernière mise à jour : ${new Date().toISOString().slice(0, 10)}</p>
+
+  <p>GrooveCool est un outil interne développé pour Jouez-Cool, l'orchestre de la police cantonale genevoise, afin de gérer les partitions et les sessions de karaoké lors des répétitions et concerts du groupe. Cette page explique quelles données l'application traite.</p>
+
+  <h2>Quelles données sont collectées</h2>
+  <ul>
+    <li><b>Prénom ou pseudonyme</b> : saisi librement par la personne (membre du groupe ou invité karaoké) à chaque session, pour l'afficher dans l'interface et dans la file d'attente karaoké. Rien n'oblige à utiliser son vrai nom.</li>
+    <li><b>Identifiant d'appareil</b> : un identifiant généré aléatoirement et stocké uniquement dans le navigateur (localStorage), sans lien avec une identité réelle, utilisé pour reconnaître un même appareil d'une visite à l'autre (par exemple pour limiter une personne à une seule demande karaoké active à la fois).</li>
+    <li><b>Morceaux demandés ou joués</b> : conservés le temps de la soirée, à des fins d'organisation de la set-list et de la file d'attente.</li>
+    <li><b>Partitions musicales et métadonnées associées</b> (titre, artiste, style...) : le contenu même géré par l'outil pour les musiciens du groupe.</li>
+  </ul>
+  <p>Aucune adresse e-mail, aucun numéro de téléphone, aucun mot de passe personnel, aucune donnée de paiement, de santé ni de localisation ne sont collectés. L'accès à l'application pour les membres du groupe est protégé par un mot de passe partagé à l'ensemble du groupe, et non par un compte individuel nécessitant des identifiants personnels.</p>
+
+  <h2>Pourquoi ces données sont collectées</h2>
+  <p>Uniquement pour faire fonctionner l'application dans son usage prévu : afficher qui est sur scène ou dans la file d'attente karaoké, éviter les doublons de demandes depuis un même appareil, et donner accès aux membres du groupe aux partitions pendant les répétitions et concerts.</p>
+
+  <h2>Où les données sont stockées</h2>
+  <p>Les données ci-dessus, ainsi que les partitions musicales, sont stockées dans un compte Google Drive dédié à l'association, via l'API Google Drive (connexion en lecture/écriture OAuth ou compte de service Google selon la configuration du serveur). L'application elle-même tourne sur l'hébergeur Render (render.com), dans un centre de données situé en Europe (Francfort).</p>
+
+  <h2>Durée de conservation</h2>
+  <p>Les prénoms/pseudonymes et identifiants d'appareil liés à une session karaoké ou de répétition sont conservés le temps de la soirée puis supprimés ou écrasés lors de la session suivante. Les partitions et leurs métadonnées sont conservées tant qu'elles sont utiles au répertoire du groupe, et peuvent être supprimées à tout moment par un administrateur de l'application.</p>
+
+  <h2>Partage avec des tiers</h2>
+  <p>Ces données ne sont ni vendues, ni partagées avec des tiers à des fins commerciales ou publicitaires, ni utilisées pour du profilage. Elles transitent uniquement par Google (stockage Drive) et Render (hébergement du serveur), nécessaires au fonctionnement technique de l'application.</p>
+
+  <h2>Vos droits</h2>
+  <p>Vous pouvez demander l'accès, la correction ou la suppression des données vous concernant (prénom affiché, demande karaoké en cours) à tout moment, y compris en cours de soirée auprès de la personne qui gère l'application sur place.</p>
+
+  <h2>Données des mineurs</h2>
+  <p>Cette application est destinée à un usage interne par les membres adultes du groupe Jouez-Cool et leurs invités lors d'événements. Elle n'est pas conçue pour collecter sciemment des données de mineurs en dehors de ce contexte ponctuel et non identifiant (prénom/pseudonyme libre).</p>
+
+  <h2>Modifications de cette page</h2>
+  <p>Cette politique peut être mise à jour si l'usage de l'application évolue. La date de dernière mise à jour est indiquée en haut de cette page.</p>
+
+  <h2>Contact</h2>
+  <p>Pour toute question concernant ces règles ou pour demander la suppression de données vous concernant, contactez <a href="mailto:jouezcool1991@gmail.com">jouezcool1991@gmail.com</a>.</p>
+</div>
+</body>
+</html>`);
+});
+
+// Page d'accueil publique, distincte de /login : exigée par Google comme
+// "URL de la page d'accueil" de l'écran de consentement OAuth, avec deux
+// contraintes précises — accessible sans connexion, et expliquant l'objet
+// de l'application (voir /auth/google et /privacy ci-dessus).
+app.get('/about', (req, res) => {
+  res.type('html').send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GrooveCool</title>
+<style>
+  body{background:#000;color:#eee;font-family:-apple-system,Segoe UI,Roboto,sans-serif;
+    margin:0;padding:48px 20px 64px;line-height:1.6;}
+  .wrap{max-width:640px;margin:0 auto;}
+  h1{font-size:26px;color:#ff9800;margin:0 0 18px;}
+  h2{font-size:16px;color:#ff9800;margin:28px 0 8px;}
+  p, li{font-size:14.5px;color:#ddd;}
+  ul{padding-left:20px;margin:8px 0;}
+  a{color:#ff9800;}
+  .cta{display:inline-block;margin-top:28px;padding:12px 20px;border-radius:8px;
+    background:#ff9800;color:#000;font-weight:600;text-decoration:none;font-size:15px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎵 GrooveCool</h1>
+  <p>GrooveCool est un outil interne développé pour <b>Jouez-Cool</b>, l'orchestre officiel de la police cantonale genevoise, pour gérer les partitions musicales du groupe et animer les sessions de karaoké lors de ses répétitions et concerts.</p>
+
+  <h2>Ce que fait l'application</h2>
+  <ul>
+    <li>Afficher et faire défiler les partitions (paroles, accords) pendant que le groupe joue.</li>
+    <li>Synchroniser l'affichage entre les musiciens du groupe en temps réel.</li>
+    <li>Permettre au public présent de s'inscrire pour chanter un morceau en karaoké via une page dédiée, sans création de compte.</li>
+  </ul>
+
+  <p>L'accès complet à l'application est réservé aux membres du groupe Jouez-Cool et protégé par un mot de passe partagé. La page d'inscription karaoké, elle, est ouverte au public lors des événements où elle est proposée.</p>
+
+  <p>Pour le détail des données traitées par l'application, voir les <a href="/privacy">règles de confidentialité</a>.</p>
+
+  <a class="cta" href="/login">Accès membres du groupe →</a>
+</div>
+</body>
+</html>`);
+});
+
 app.use(requireAuth);
 
 app.use(express.static('public', {
