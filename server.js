@@ -358,6 +358,7 @@ app.get('/about', (req, res) => {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="gqKsCzBeIcq1WQkNedreznaixMVTfg5w9hS3a6x4OJ4" />
 <title>GrooveCool</title>
 <style>
   body{background:#000;color:#eee;font-family:-apple-system,Segoe UI,Roboto,sans-serif;
