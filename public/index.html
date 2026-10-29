@@ -1363,13 +1363,35 @@ nav{
       margin-bottom:8px;
     }
 
+    .pu-size-btn{
+      font-family:sans-serif;
+      font-size:11px;
+      font-weight:700;
+      line-height:1;
+      padding:3px 6px;
+      border-radius:6px;
+      border:1px solid var(--pu-border);
+      background:transparent;
+      color:var(--text);
+      opacity:.75;
+      cursor:pointer;
+    }
+    .pu-size-btn:hover{
+      opacity:1;
+    }
+
     .pu-pre{
       margin:0;
       white-space:pre;
       overflow-x:auto;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
-      font-size: calc(14px * var(--song-zoom, 1));
-      line-height: calc(17.5px * var(--song-zoom, 1));
+      /* Taille personnelle (voir --pu-font-size, réglée par updatePUFontSize()
+         côté JS et mémorisée en local par appareil, cf. bandapp_puFontSize) :
+         16px par défaut, modifiable par chacun sans affecter les autres,
+         puisque le contenu d'un bloc {pu} n'est de toute façon visible que
+         par son auteur (voir showContent dans renderPUBlock()). */
+      font-size: calc(var(--pu-font-size, 16px) * var(--song-zoom, 1));
+      line-height: calc(var(--pu-font-size, 16px) * 1.25 * var(--song-zoom, 1));
     }
 
     .tab-block{
@@ -2341,6 +2363,33 @@ const importChordsPreview = document.getElementById('importChordsPreview');
   let themeMode = localStorage.getItem('bandapp_theme') || 'dark';
   let chordColor = localStorage.getItem('bandapp_chordColor') || '#ff9800';
 
+  // Taille du texte des blocs {pu} (notes personnelles) : réglage local à
+  // cet appareil, jamais synchronisé entre musiciens (voir --pu-font-size
+  // dans .pu-pre et renderPUBlock() plus bas), puisque le contenu d'un bloc
+  // {pu} n'est visible que par son auteur de toute façon.
+  const PU_FONT_SIZE_MIN = 10;
+  const PU_FONT_SIZE_MAX = 32;
+  let puFontSize = parseInt(localStorage.getItem('bandapp_puFontSize'), 10);
+  if (!isFinite(puFontSize) || puFontSize < PU_FONT_SIZE_MIN || puFontSize > PU_FONT_SIZE_MAX) {
+    puFontSize = 16;
+  }
+
+  function applyPUFontSize() {
+    document.documentElement.style.setProperty('--pu-font-size', puFontSize + 'px');
+  }
+
+  function updatePUFontSize(delta) {
+    puFontSize = Math.min(PU_FONT_SIZE_MAX, Math.max(PU_FONT_SIZE_MIN, puFontSize + delta));
+    localStorage.setItem('bandapp_puFontSize', String(puFontSize));
+    applyPUFontSize();
+
+    document.querySelectorAll('.pu-size-val').forEach(el => {
+      el.textContent = puFontSize + 'px';
+    });
+  }
+
+  applyPUFontSize();
+
 // Mémorise le PIN une fois validé par le serveur, pour éviter de le retaper
 // à chaque enregistrement pendant une répét (Leader/Turn uniquement, demande
 // de Nemo : pas mal de modifications d'affilée en répét, embêtant de
@@ -2832,6 +2881,7 @@ async function saveSongMetaModal() {
 
   try {
     let res;
+    let fileName;
 
     if (songMetaMode === 'create') {
       const title = String(songMetaTitleInput.value || "").trim();
@@ -2847,7 +2897,7 @@ async function saveSongMetaModal() {
         return;
       }
 
-      const fileName = `${title} - ${artist}.pro`;
+      fileName = `${title} - ${artist}.pro`;
 
       const payload = {
         fileName,
@@ -2867,7 +2917,7 @@ async function saveSongMetaModal() {
         body: JSON.stringify(payload)
       });
     } else {
-      const fileName = String(songMetaFileName.value || "").trim();
+      fileName = String(songMetaFileName.value || "").trim();
       if (!fileName) {
         alert("Nom de fichier requis");
         return;
@@ -2901,6 +2951,16 @@ async function saveSongMetaModal() {
 
       if (songMetaMode === 'create') {
         showToast("Morceau créé ✅");
+
+        // Ouvre directement le nouveau morceau et bascule en mode édition
+        // des paroles, pour ne pas avoir à le rechercher dans la liste
+        // juste après l'avoir créé (comportement perdu à un moment,
+        // signalé par Nemo).
+        const idx = allSongs.indexOf(fileName);
+        if (idx !== -1) {
+          await openSong(idx);
+          openEditor();
+        }
       } else {
         showToast("Infos morceau enregistrées ✅");
       }
@@ -4148,8 +4208,13 @@ pendingRemoteScrollData = null;
 viewerElement.scrollTop = 0;
 forceViewerTopForNewSong(2500);
 
-  loadSong(targetFileName);
+  // Valeur de retour utilisée par certains appelants (ex: création d'un
+  // nouveau morceau, voir saveSongMetaModal()) pour attendre que le
+  // morceau soit réellement chargé (currentRaw/currentFileName à jour)
+  // avant d'enchaîner, par exemple en ouvrant directement l'éditeur.
+  const loadPromise = loadSong(targetFileName);
   setTimeout(loadNotes, 10);
+  return loadPromise;
 }
 
 function openRemoteSong(fileName) {
@@ -6555,11 +6620,36 @@ function renderPUBlock(targetEl, showContent, label, text){
   const linesCount = (String(text || "").split('\n').length);
 
   if (showContent) {
+    const labRow = document.createElement('div');
+    labRow.style.display = 'flex';
+    labRow.style.alignItems = 'center';
+    labRow.style.justifyContent = 'space-between';
+    labRow.style.gap = '8px';
+
     const lab = document.createElement('div');
     lab.className = 'pu-label';
+    lab.style.margin = '0';
     lab.textContent = label;
     lab.style.color = userColor;
-    wrap.appendChild(lab);
+    labRow.appendChild(lab);
+
+    // Réglage de la taille du texte de CE bloc {pu}, en fait global à tous
+    // tes blocs {pu} sur cet appareil (voir updatePUFontSize()) : affiché
+    // discrètement à côté du nom, visible uniquement par l'auteur puisque
+    // tout le bloc l'est déjà.
+    const sizeCtrl = document.createElement('div');
+    sizeCtrl.style.display = 'flex';
+    sizeCtrl.style.alignItems = 'center';
+    sizeCtrl.style.gap = '4px';
+    sizeCtrl.title = "Taille du texte de tes notes personnelles (sur cet appareil)";
+    sizeCtrl.innerHTML = `
+      <button type="button" class="pu-size-btn" onclick="updatePUFontSize(-1)">A-</button>
+      <span class="pu-size-val" style="font-size:11px;opacity:.65;min-width:28px;text-align:center;">${puFontSize}px</span>
+      <button type="button" class="pu-size-btn" onclick="updatePUFontSize(1)">A+</button>
+    `;
+    labRow.appendChild(sizeCtrl);
+
+    wrap.appendChild(labRow);
   } else if (linesCount > 10) {
     const lab = document.createElement('div');
     lab.className = 'pu-label';
